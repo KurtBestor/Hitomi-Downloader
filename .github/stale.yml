@@ -10,6 +10,8 @@ exemptLabels:
   - Announcement
   - help wanted
   - To investigate
+  - notice
+  - enhancement
 # Label to use when marking as stale
 staleLabel: stale
 # Comment to post when marking as stale. Set to `false` to disable
