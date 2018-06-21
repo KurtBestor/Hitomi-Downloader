@@ -10,6 +10,25 @@ from translator import tr_
 import urllib
 import sys
 from time import sleep
+import constants
+from constants import clean_url
+LIMIT = 100
+
+
+def get_tags(url):
+    url = clean_url(url)
+    parsed_url = urlparse(url)
+    qs = parse_qs(parsed_url.query)
+    if 'page=favorites' in url:
+        id = qs.get('id', ['N/A'])[0]
+        id = u'fav_{}'.format(id)
+    else:
+        tags = qs.get('tags', [])
+        tags.sort()
+        id = u' '.join(tags)
+    if not id:
+        id = u'N/A'
+    return id
 
 
 class Downloader_gelbooru(Downloader):
@@ -17,6 +36,7 @@ class Downloader_gelbooru(Downloader):
         self._id = None
         self.type = 'gelbooru'
         self.customWidget.anime = False
+        #self.user_agent = downloader.hdr['User-Agent']
         self.url = self.url.replace('gelbooru_', '')
         if 'gelbooru.com' in self.url:
             self.url = self.url.replace('http://', 'https://')
@@ -32,23 +52,13 @@ class Downloader_gelbooru(Downloader):
     @property
     def id(self):
         if self._id is None:
-            parsed_url = urlparse(self.url)
-            qs = parse_qs(parsed_url.query)
-            if 'page=favorites' in self.url:
-                id = qs.get('id', ['N/A'])[0]
-                id = u'fav_{}'.format(id)
-            else:
-                tags = qs.get('tags', [])
-                tags.sort()
-                id = u' '.join(tags)
-            if not id:
-                id = u'N/A'
-            self._id = id
-        return clean_title(self._id)
+            tags = get_tags(self.url)
+            self._id = tags
+        return self._id
 
     @property
     def name(self):
-        return self.id
+        return clean_title(self.id)
 
     def read(self):
         self.title = self.name
@@ -57,23 +67,24 @@ class Downloader_gelbooru(Downloader):
 
         for img in imgs:
             self.urls.append(img.url)
+            self.filenames[img.url] = img.filename
 
         sleep(.1)
         self.title = self.name
     
 
 class Image(object):
-    def __init__(self, id, url):
+    def __init__(self, id, url, local=False):
         self.id = id
         self.filename = None
-            
-        def f(url):
-            html = downloader.read_html(url)
-            url = re.findall('".{0,20}gelbooru.com//images/.*?"', html)[0][1:-1]
-            ext = os.path.splitext(url)[1]
-            self.filename = u'{}{}'.format(id, ext)
-            return url
-        self.url = LazyUrl(url, f, self)
+        if local:
+            self.filename = os.path.basename(url)
+            self.url = url
+            return
+
+        ext = os.path.splitext(url)[1]
+        self.filename = u'{}{}'.format(id, ext)
+        self.url = url
 
 
 def setPage(url, page):
@@ -90,8 +101,13 @@ def setPage(url, page):
 
 
 def get_imgs(url, title=None, customWidget=None):
+    url = clean_url(url)
     if 's=view' in url and 'page=favorites' not in url:
         raise NotImplementedError('Not Implemented')
+
+    if 'page=dapi' not in url.lower():
+        tags = get_tags(url).replace(' ', '+')
+        url = "https://gelbooru.com/index.php?page=dapi&s=post&q=index&tags={}&pid={}&limit={}".format(tags, 0, LIMIT)
 
     if customWidget is not None:
         print_ = customWidget.print_
@@ -110,46 +126,31 @@ def get_imgs(url, title=None, customWidget=None):
         max_pid = 2000
         
     imgs = []
-    pid = 0
     url_imgs = set()
-    while pid < max_pid:
-        url = setPage(url, pid)
-        print_(url)
+    for p in range(100):
+        url = setPage(url, p)
+        #print_(url)
         html = downloader.read_html(url)
+
         soup = BeautifulSoup(html, 'html.parser')
-        articles = soup.findAll('div', {'class': 'thumbnail-preview'}) + soup.findAll('span', {'class': 'thumb'})
-        
-        if not articles:
+        posts = soup.findAll('post')
+        if not posts:
             break
-            
-        for article in articles:
-            try:
-                url_img = article.span.a.attrs['href']
-            except:
-                url_img = article.a.attrs['href']
-            if not url_img.startswith('http'):
-                url_img = urljoin('https://gelbooru.com', url_img)
-            parsed_url = urlparse(url_img)
-            qs = parse_qs(parsed_url.query)
-            id = qs['id'][0]
-            print url_img
+        for post in posts:
+            url_img = post.attrs['file_url']
             if url_img not in url_imgs:
                 url_imgs.add(url_img)
+                id = post.attrs['id']
                 img = Image(id, url_img)
                 imgs.append(img)
-                pid += 1
-                if pid >= max_pid:
-                    break
-        if customWidget is not None and not customWidget.alive:
+            if len(imgs) >= max_pid:
+                break
+        if len(imgs) >= max_pid:
             break
-
-        pids = [int(pid_.replace('pid=', '')) for pid_ in re.findall('pid=[0-9]+', html)]
-        pids_larger = [pid_ for pid_ in pids if pid_ >= pid]
-        if pids_larger:
-            pid = min(pids_larger)
-        else:
+        
+        if customWidget is not None and not customWidget.alive:
             break
         
         if customWidget is not None:
-            customWidget.exec_queue.put((customWidget, u"customWidget.setTitle(u'{}  {} - {}')".format(tr_(u'읽는 중...'), title, pid)))
+            customWidget.exec_queue.put((customWidget, u"customWidget.setTitle(u'{}  {} - {}')".format(tr_(u'읽는 중...'), title, len(imgs))))
     return imgs
