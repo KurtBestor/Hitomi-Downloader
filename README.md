@@ -1,7 +1,6 @@
-# 설명서
+# Hitomi downloader Issues
 
-### 다운로더
+<img src="imgs/main_large.ico"/>
 
-* 주소 입력창
-* 작업
-
+**버그 제보 (Bug reports)**
+- [Link](https://github.com/KurtBestor/Hitomi-Downloader-issues/issues)
