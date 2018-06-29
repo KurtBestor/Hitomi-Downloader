@@ -1,4 +1,4 @@
-﻿# Hitomi downloader Issues
+# Hitomi downloader Issues
 
 <img src="imgs/main_large.ico"/>
 
