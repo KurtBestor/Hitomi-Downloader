@@ -1,6 +1,6 @@
-# Hitomi downloader Issues
+﻿# Hitomi downloader Issues
+[![GitHub release](https://img.shields.io/github/release/KurtBestor/Hitomi-Downloader-issues.svg)](https://github.com/KurtBestor/Hitomi-Downloader-issues/releases/latest)
 
 <img src="imgs/main_large.ico"/>
 
-**버그 제보 (Bug reports)**
-- [Link](https://github.com/KurtBestor/Hitomi-Downloader-issues/issues)
+- [Issues](https://github.com/KurtBestor/Hitomi-Downloader-issues/issues)

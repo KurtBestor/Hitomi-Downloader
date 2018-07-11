@@ -3,8 +3,7 @@ import downloader
 from bs4 import BeautifulSoup
 import re
 import os
-from utils import Downloader, LazyUrl, urljoin, parse_range
-from urlparse import urlparse, parse_qs
+from utils import Downloader, LazyUrl, urljoin, parse_range, query_url
 from fucking_encoding import clean_title
 from translator import tr_
 import urllib
@@ -17,8 +16,7 @@ LIMIT = 100
 
 def get_tags(url):
     url = clean_url(url)
-    parsed_url = urlparse(url)
-    qs = parse_qs(parsed_url.query)
+    qs = query_url(url)
     if 'page=favorites' in url:
         id = qs.get('id', ['N/A'])[0]
         id = u'fav_{}'.format(id)
@@ -35,10 +33,10 @@ class Downloader_gelbooru(Downloader):
     def init(self):
         self._id = None
         self.type = 'gelbooru'
-        self.customWidget.anime = False
+        self.single = False
         #self.user_agent = downloader.hdr['User-Agent']
         self.url = self.url.replace('gelbooru_', '')
-        if 'gelbooru.com' in self.url:
+        if 'gelbooru.com' in self.url.lower():
             self.url = self.url.replace('http://', 'https://')
         else:
             url = self.url
