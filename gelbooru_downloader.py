@@ -3,13 +3,12 @@ import downloader
 from bs4 import BeautifulSoup
 import re
 import os
-from utils import Downloader, LazyUrl, urljoin, parse_range, query_url
+from utils import Downloader, urljoin, parse_range, query_url
 from fucking_encoding import clean_title
 from translator import tr_
 import urllib
 import sys
 from time import sleep
-import constants
 from constants import clean_url
 LIMIT = 100
 
@@ -69,7 +68,7 @@ class Downloader_gelbooru(Downloader):
 
         sleep(.1)
         self.title = self.name
-    
+
 
 class Image(object):
     def __init__(self, id, url, local=False):
@@ -94,7 +93,7 @@ def setPage(url, page):
         url = re.sub('pid=[0-9]*', 'pid={}'.format(page), url)
     else:
         url += '&pid={}'.format(page)
-        
+
     return url
 
 
@@ -112,7 +111,7 @@ def get_imgs(url, title=None, customWidget=None):
     else:
         def print_(*values):
             sys.stdout.writelines(values + ('\n',))
-    
+
     # Range
     if customWidget is not None:
         range_pid = customWidget.range
@@ -122,7 +121,7 @@ def get_imgs(url, title=None, customWidget=None):
         max_pid = max(parse_range(range_pid, max=100000))
     else:
         max_pid = 2000
-        
+
     imgs = []
     url_imgs = set()
     for p in range(100):
@@ -145,10 +144,10 @@ def get_imgs(url, title=None, customWidget=None):
                 break
         if len(imgs) >= max_pid:
             break
-        
+
         if customWidget is not None and not customWidget.alive:
             break
-        
+
         if customWidget is not None:
-            customWidget.exec_queue.put((customWidget, u"customWidget.setTitle(u'{}  {} - {}')".format(tr_(u'읽는 중...'), title, len(imgs))))
+            customWidget.setTitle(u'{}  {} - {}'.format(tr_(u'읽는 중...'), title, len(imgs)))
     return imgs
