@@ -1,9 +1,8 @@
 #coding: utf-8
 import downloader
-from bs4 import BeautifulSoup
 import re
 import os
-from utils import Downloader, urljoin, parse_range, query_url
+from utils import Downloader, urljoin, parse_range, query_url, Soup
 from fucking_encoding import clean_title
 from translator import tr_
 import urllib
@@ -29,6 +28,9 @@ def get_tags(url):
 
 
 class Downloader_gelbooru(Downloader):
+    type = 'gelbooru'
+    URLS = ['gelbooru.com']
+    MAX_CORE = 32
     def init(self):
         self._id = None
         self.type = 'gelbooru'
@@ -68,6 +70,7 @@ class Downloader_gelbooru(Downloader):
 
         sleep(.1)
         self.title = self.name
+Downloader.register(Downloader_gelbooru)
 
 
 class Image(object):
@@ -104,6 +107,7 @@ def get_imgs(url, title=None, customWidget=None):
 
     if 'page=dapi' not in url.lower():
         tags = get_tags(url).replace(' ', '+')
+        tags = urllib.quote(tags)
         url = "https://gelbooru.com/index.php?page=dapi&s=post&q=index&tags={}&pid={}&limit={}".format(tags, 0, LIMIT)
 
     if customWidget is not None:
@@ -126,28 +130,27 @@ def get_imgs(url, title=None, customWidget=None):
     url_imgs = set()
     for p in range(100):
         url = setPage(url, p)
-        #print_(url)
+        print_(url)
         html = downloader.read_html(url)
 
-        soup = BeautifulSoup(html, 'html.parser')
+        soup = Soup(html)
         posts = soup.findAll('post')
         if not posts:
             break
         for post in posts:
             url_img = post.attrs['file_url']
-            if url_img not in url_imgs:
+            if url_img in url_imgs:
+                print 'already exists', url_img
+            else:
                 url_imgs.add(url_img)
                 id = post.attrs['id']
                 img = Image(id, url_img)
                 imgs.append(img)
-            if len(imgs) >= max_pid:
-                break
         if len(imgs) >= max_pid:
             break
 
-        if customWidget is not None and not customWidget.alive:
-            break
-
         if customWidget is not None:
+            if not customWidget.alive:
+                break
             customWidget.setTitle(u'{}  {} - {}'.format(tr_(u'읽는 중...'), title, len(imgs)))
     return imgs
