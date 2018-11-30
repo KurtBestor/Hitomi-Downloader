@@ -32,7 +32,6 @@
 | **ArtStation** | <https://artstation.com> |
 | **Niconico** | <http://nicovideo.jp> |
 | **Pinterest** | <https://pinterest.com> |
-| **ManaaSpace** | <https://manaaspace.net> |
 | **Sankaku Complex** | <https://chan.sankakucomplex.com><br><https://idol.sankakucomplex.com> |
 | **Soundcloud** | <https://soundcloud.com> |
 | **Naver Webtoon** | <https://comic.naver.com> |

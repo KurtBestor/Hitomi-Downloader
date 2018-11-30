@@ -6,12 +6,8 @@ daysUntilStale: 90
 daysUntilClose: 30
 # Issues or Pull Requests with these labels will never be considered stale
 exemptLabels:
-  - bug
-  - Announcement
   - help wanted
-  - To investigate
   - notice
-  - enhancement
 # Label to use when marking as stale
 staleLabel: stale
 # Comment to post when marking as stale. Set to `false` to disable
