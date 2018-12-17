@@ -1,4 +1,4 @@
-﻿<p align="center">
+<p align="center">
   <img src="imgs/main_large.ico" width="128px"/>
 </p>
 <h1 align="center">Hitomi Downloader</h1>
@@ -9,6 +9,9 @@
 - [Issues](https://github.com/KurtBestor/Hitomi-Downloader-issues/issues)
 - [Scripts](https://drive.google.com/drive/folders/1FP0YZp7QyGDyOQ1nwILRIVT3kd58NYxo)
 
+## Demo
+<img src="imgs/how_to_download.gif">
+
 ## Supported Sites
 | Site | URL |
 | :--: | -- |
@@ -16,8 +19,8 @@
 | **Hiyobi.me** | <https://hiyobi.me> |
 | **E-Hentai Galleries** | <https://e-hentai.org> |
 | **ExHentai Galleries** | <https://exhentai.org> |
+| **nhentai** | <https://nhentai.net> |
 | **YouTube** | <https://youtube.com> |
-| **Marumaru** | <https://marumaru.in> |
 | **Pixiv** | <https://pixiv.net> |
 | **Twitter** | <https://twitter.com> |
 | **Instagram** | <https://instagram.com> |
@@ -26,6 +29,7 @@
 | **Tvple** | <https://tvple.com> |
 | **Tumblr** | <https://tumblr.com> |
 | **Pornhub** | <https://pornhub.com> |
+| **XVideos** | <https://www.xvideos.com> |
 | **Bilibili** | <https://bilibili.com> |
 | **Gelbooru** | <https://gelbooru.com> |
 | **Flickr** | <https://flickr.com> |
@@ -34,4 +38,7 @@
 | **Pinterest** | <https://pinterest.com> |
 | **Sankaku Complex** | <https://chan.sankakucomplex.com><br><https://idol.sankakucomplex.com> |
 | **Soundcloud** | <https://soundcloud.com> |
+| **Naver Blog** | <https://blog.naver.com> |
 | **Naver Webtoon** | <https://comic.naver.com> |
+| **World Cosplay** | <https://worldcosplay.net> |
+| **Jmana** | <https://www.jmana2.com> |
