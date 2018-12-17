@@ -20,6 +20,8 @@
 | **E-Hentai Galleries** | <https://e-hentai.org> |
 | **ExHentai Galleries** | <https://exhentai.org> |
 | **nhentai** | <https://nhentai.net> |
+| **MangaShowMe** | <https://mangashow.me> |
+| **MyReadingManga** | <https://myreadingmanga.info> |
 | **YouTube** | <https://youtube.com> |
 | **Pixiv** | <https://pixiv.net> |
 | **Twitter** | <https://twitter.com> |
@@ -42,3 +44,4 @@
 | **Naver Webtoon** | <https://comic.naver.com> |
 | **World Cosplay** | <https://worldcosplay.net> |
 | **Jmana** | <https://www.jmana2.com> |
+| **Pawoo** | <https://pawoo.net> |
