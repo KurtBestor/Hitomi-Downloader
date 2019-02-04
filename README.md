@@ -12,7 +12,7 @@
 ## Demo
 <img src="imgs/how_to_download.gif">
 
-## Supported Sitesm
+## Supported Sites
 | Site | URL |
 | :--: | -- |
 | **Hitomi.la** | <https://hitomi.la> |

@@ -27,6 +27,7 @@ def get_tags(url):
     return id
 
 
+@Downloader.register
 class Downloader_gelbooru(Downloader):
     type = 'gelbooru'
     URLS = ['gelbooru.com']
@@ -70,7 +71,6 @@ class Downloader_gelbooru(Downloader):
 
         sleep(.5)
         self.title = self.name
-Downloader.register(Downloader_gelbooru)
 
 
 class Image(object):
