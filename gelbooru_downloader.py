@@ -2,7 +2,7 @@
 import downloader
 import re
 import os
-from utils import Downloader, urljoin, parse_range, query_url, Soup
+from utils import Downloader, urljoin, query_url, Soup, get_max_range
 from fucking_encoding import clean_title
 from translator import tr_
 import urllib
@@ -68,23 +68,17 @@ class Downloader_gelbooru(Downloader):
             self.urls.append(img.url)
             self.filenames[img.url] = img.filename
 
-        sleep(.1)
+        sleep(.5)
         self.title = self.name
 Downloader.register(Downloader_gelbooru)
 
 
 class Image(object):
-    def __init__(self, id, url, local=False):
+    def __init__(self, id, url):
         self.id = id
-        self.filename = None
-        if local:
-            self.filename = os.path.basename(url)
-            self.url = url
-            return
-
+        self.url = url
         ext = os.path.splitext(url)[1]
         self.filename = u'{}{}'.format(id, ext)
-        self.url = url
 
 
 def setPage(url, page):
@@ -107,7 +101,8 @@ def get_imgs(url, title=None, customWidget=None):
 
     if 'page=dapi' not in url.lower():
         tags = get_tags(url).replace(' ', '+')
-        tags = urllib.quote(tags)
+        print tags
+        tags = urllib.quote(tags, safe='/+')
         url = "https://gelbooru.com/index.php?page=dapi&s=post&q=index&tags={}&pid={}&limit={}".format(tags, 0, LIMIT)
 
     if customWidget is not None:
@@ -117,14 +112,7 @@ def get_imgs(url, title=None, customWidget=None):
             sys.stdout.writelines(values + ('\n',))
 
     # Range
-    if customWidget is not None:
-        range_pid = customWidget.range
-    else:
-        range_pid = None
-    if range_pid is not None:
-        max_pid = max(parse_range(range_pid, max=100000))
-    else:
-        max_pid = 2000
+    max_pid = get_max_range(customWidget, 2000)
 
     imgs = []
     url_imgs = set()

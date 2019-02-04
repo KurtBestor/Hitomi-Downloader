@@ -3,7 +3,7 @@
 </p>
 <h1 align="center">Hitomi Downloader</h1>
 
-[![GitHub release](https://img.shields.io/github/release/KurtBestor/Hitomi-Downloader-issues.svg)](https://github.com/KurtBestor/Hitomi-Downloader-issues/releases/latest) [![Codacy Badge](https://api.codacy.com/project/badge/Grade/9ed6fe6337034d1fadbf9c14c57836f6)](https://www.codacy.com?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=KurtBestor/hitomi_downloader&amp;utm_campaign=Badge_Grade)
+[![GitHub release](https://img.shields.io/github/release/KurtBestor/Hitomi-Downloader-issues.svg)](https://github.com/KurtBestor/Hitomi-Downloader-issues/releases/latest)
 
 - [Download](https://github.com/KurtBestor/Hitomi-Downloader-issues/releases/latest)
 - [Issues](https://github.com/KurtBestor/Hitomi-Downloader-issues/issues)
@@ -12,7 +12,7 @@
 ## Demo
 <img src="imgs/how_to_download.gif">
 
-## Supported Sites
+## Supported Sitesm
 | Site | URL |
 | :--: | -- |
 | **Hitomi.la** | <https://hitomi.la> |
@@ -45,3 +45,5 @@
 | **World Cosplay** | <https://worldcosplay.net> |
 | **Jmana** | <https://www.jmana2.com> |
 | **Pawoo** | <https://pawoo.net> |
+| **小説家になろう** | <https://syosetu.com> |
+| **MangaRock** | <https://mangarock.com> |
