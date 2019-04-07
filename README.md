@@ -7,7 +7,7 @@
 
 - [Download](https://github.com/KurtBestor/Hitomi-Downloader-issues/releases/latest)
 - [Issues](https://github.com/KurtBestor/Hitomi-Downloader-issues/issues)
-- [Scripts](https://drive.google.com/drive/folders/1FP0YZp7QyGDyOQ1nwILRIVT3kd58NYxo)
+- [Scripts](https://github.com/KurtBestor/Hitomi-Downloader-issues/wiki/Scripts)
 
 ## Demo
 <img src="imgs/how_to_download.gif">
@@ -20,7 +20,7 @@
 | **E-Hentai Galleries** | <https://e-hentai.org> |
 | **ExHentai Galleries** | <https://exhentai.org> |
 | **nhentai** | <https://nhentai.net> |
-| **MangaShowMe** | <https://mangashow.me> |
+| **Manamoa** | <https://manamoa.net> |
 | **MyReadingManga** | <https://myreadingmanga.info> |
 | **YouTube** | <https://youtube.com> |
 | **Pixiv** | <https://pixiv.net> |
@@ -47,3 +47,4 @@
 | **Pawoo** | <https://pawoo.net> |
 | **小説家になろう** | <https://syosetu.com> |
 | **MangaRock** | <https://mangarock.com> |
+| **Twtich** | <https://twitch.tv> |
