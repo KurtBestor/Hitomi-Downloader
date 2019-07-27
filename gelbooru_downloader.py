@@ -32,10 +32,8 @@ class Downloader_gelbooru(Downloader):
     type = 'gelbooru'
     URLS = ['gelbooru.com']
     MAX_CORE = 32
+    _id = None
     def init(self):
-        self._id = None
-        self.type = 'gelbooru'
-        self.single = False
         #self.user_agent = downloader.hdr['User-Agent']
         self.url = self.url.replace('gelbooru_', '')
         if 'gelbooru.com' in self.url.lower():
@@ -116,7 +114,7 @@ def get_imgs(url, title=None, customWidget=None):
 
     imgs = []
     url_imgs = set()
-    for p in range(100):
+    for p in range(500): #1017
         url = setPage(url, p)
         print_(url)
         html = downloader.read_html(url)

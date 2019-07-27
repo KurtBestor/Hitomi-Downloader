@@ -4,6 +4,8 @@
 <h1 align="center">Hitomi Downloader</h1>
 
 [![GitHub release](https://img.shields.io/github/release/KurtBestor/Hitomi-Downloader-issues.svg)](https://github.com/KurtBestor/Hitomi-Downloader-issues/releases/latest)
+[![GitHub downloads](https://img.shields.io/github/downloads/KurtBestor/Hitomi-Downloader-issues/latest/total.svg)](https://github.com/KurtBestor/Hitomi-Downloader-issues/releases/latest)
+[![GitHub downloads](https://img.shields.io/github/downloads/KurtBestor/Hitomi-Downloader-issues/total.svg)](https://github.com/KurtBestor/Hitomi-Downloader-issues/releases)
 
 - [Download](https://github.com/KurtBestor/Hitomi-Downloader-issues/releases/latest)
 - [Issues](https://github.com/KurtBestor/Hitomi-Downloader-issues/issues)
