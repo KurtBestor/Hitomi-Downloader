@@ -30,10 +30,10 @@
 | **Instagram** | <https://instagram.com> |
 | **DeviantArt** | <https://deviantart.com> |
 | **Vimeo** | <https://vimeo.com> |
-| **Tvple** | <https://tvple.com> |
 | **Tumblr** | <https://tumblr.com> |
 | **Pornhub** | <https://pornhub.com> |
-| **XVideos** | <https://www.xvideos.com> |
+| **XVideos** | <https://xvideos.com> |
+| **XHamster** | <https://xhamster.com> |
 | **Bilibili** | <https://bilibili.com> |
 | **Gelbooru** | <https://gelbooru.com> |
 | **Flickr** | <https://flickr.com> |
@@ -50,3 +50,4 @@
 | **小説家になろう** | <https://syosetu.com> |
 | **MangaRock** | <https://mangarock.com> |
 | **Twtich** | <https://twitch.tv> |
+| **iwara.tv** | <https://iwara.tv><br><https://ecchi.iwara.tv> |
