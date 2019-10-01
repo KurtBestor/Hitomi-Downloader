@@ -1,7 +1,9 @@
 <p align="center">
-  <img src="imgs/main_large.ico" width="128px"/>
+  <br>
+  <img src="imgs/card_crop.png" width="40%"/>
+  <br>
+  <br>
 </p>
-<h1 align="center">Hitomi Downloader</h1>
 
 [![GitHub release](https://img.shields.io/github/release/KurtBestor/Hitomi-Downloader-issues.svg)](https://github.com/KurtBestor/Hitomi-Downloader-issues/releases/latest)
 [![GitHub downloads](https://img.shields.io/github/downloads/KurtBestor/Hitomi-Downloader-issues/latest/total.svg)](https://github.com/KurtBestor/Hitomi-Downloader-issues/releases/latest)
