@@ -31,10 +31,9 @@ def get_tags(url):
 class Downloader_gelbooru(Downloader):
     type = 'gelbooru'
     URLS = ['gelbooru.com']
-    MAX_CORE = 32
     _id = None
+    
     def init(self):
-        #self.user_agent = downloader.hdr['User-Agent']
         self.url = self.url.replace('gelbooru_', '')
         if 'gelbooru.com' in self.url.lower():
             self.url = self.url.replace('http://', 'https://')
@@ -98,9 +97,9 @@ def get_imgs(url, title=None, customWidget=None):
         raise NotImplementedError('Not Implemented')
 
     if 'page=dapi' not in url.lower():
-        tags = get_tags(url).replace(' ', '+')
-        print tags
-        tags = urllib.quote(tags, safe='/+')
+        tags = get_tags(url)
+        tags = urllib.quote(tags, safe='/')
+        tags = tags.replace('%20', '+')
         url = "https://gelbooru.com/index.php?page=dapi&s=post&q=index&tags={}&pid={}&limit={}".format(tags, 0, LIMIT)
 
     if customWidget is not None:
