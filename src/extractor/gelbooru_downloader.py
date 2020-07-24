@@ -2,12 +2,15 @@
 import downloader
 import re
 import os
-from utils import Downloader, urljoin, query_url, Soup, get_max_range
+from utils import Downloader, urljoin, query_url, Soup, get_max_range, get_print
 from fucking_encoding import clean_title
 from translator import tr_
-import urllib
+try:
+    from urllib import quote # python2
+except:
+    from urllib.parse import quote # python3
 import sys
-from time import sleep
+from timee import sleep
 from constants import clean_url
 LIMIT = 100
 
@@ -42,7 +45,7 @@ class Downloader_gelbooru(Downloader):
             url = url.replace(' ', '+')
             while '++' in url:
                 url = url.replace('++', '+')
-            url = urllib.quote(url)
+            url = quote(url)
             url = url.replace('%2B', '+')
             self.url = u'https://gelbooru.com/index.php?page=post&s=list&tags={}'.format(url)
 
@@ -60,22 +63,20 @@ class Downloader_gelbooru(Downloader):
     def read(self):
         self.title = self.name
 
-        imgs = get_imgs(self.url, self.name, customWidget=self.customWidget)
+        imgs = get_imgs(self.url, self.name, cw=self.customWidget)
 
         for img in imgs:
             self.urls.append(img.url)
             self.filenames[img.url] = img.filename
 
-        sleep(.5)
         self.title = self.name
 
 
 class Image(object):
-    def __init__(self, id, url):
-        self.id = id
+    def __init__(self, id_, url):
         self.url = url
         ext = os.path.splitext(url)[1]
-        self.filename = u'{}{}'.format(id, ext)
+        self.filename = u'{}{}'.format(id_, ext)
 
 
 def setPage(url, page):
@@ -91,28 +92,24 @@ def setPage(url, page):
     return url
 
 
-def get_imgs(url, title=None, customWidget=None):
+def get_imgs(url, title=None, cw=None):
     url = clean_url(url)
     if 's=view' in url and 'page=favorites' not in url:
         raise NotImplementedError('Not Implemented')
 
     if 'page=dapi' not in url.lower():
         tags = get_tags(url)
-        tags = urllib.quote(tags, safe='/')
+        tags = quote(tags, safe='/')
         tags = tags.replace('%20', '+')
         url = "https://gelbooru.com/index.php?page=dapi&s=post&q=index&tags={}&pid={}&limit={}".format(tags, 0, LIMIT)
 
-    if customWidget is not None:
-        print_ = customWidget.print_
-    else:
-        def print_(*values):
-            sys.stdout.writelines(values + ('\n',))
+    print_ = get_print(cw)
 
     # Range
-    max_pid = get_max_range(customWidget, 2000)
+    max_pid = get_max_range(cw, 2000)
 
     imgs = []
-    url_imgs = set()
+    ids = set()
     for p in range(500): #1017
         url = setPage(url, p)
         print_(url)
@@ -123,19 +120,19 @@ def get_imgs(url, title=None, customWidget=None):
         if not posts:
             break
         for post in posts:
+            id_ = post.attrs['id']
+            if id_ in ids:
+                print('duplicate:', id_)
+                continue
+            ids.add(id_)
             url_img = post.attrs['file_url']
-            if url_img in url_imgs:
-                print 'already exists', url_img
-            else:
-                url_imgs.add(url_img)
-                id = post.attrs['id']
-                img = Image(id, url_img)
-                imgs.append(img)
+            img = Image(id_, url_img)
+            imgs.append(img)
         if len(imgs) >= max_pid:
             break
 
-        if customWidget is not None:
-            if not customWidget.alive:
+        if cw is not None:
+            if not cw.alive:
                 break
-            customWidget.setTitle(u'{}  {} - {}'.format(tr_(u'읽는 중...'), title, len(imgs)))
+            cw.setTitle(u'{}  {} - {}'.format(tr_(u'읽는 중...'), title, len(imgs)))
     return imgs

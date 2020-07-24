@@ -5,14 +5,14 @@
   <br>
 </p>
 
-[![GitHub release](https://img.shields.io/github/release/KurtBestor/Hitomi-Downloader-issues.svg?logo=github)](https://github.com/KurtBestor/Hitomi-Downloader-issues/releases/latest)
-[![GitHub downloads](https://img.shields.io/github/downloads/KurtBestor/Hitomi-Downloader-issues/latest/total.svg?logo=github)](https://github.com/KurtBestor/Hitomi-Downloader-issues/releases/latest)
-[![GitHub downloads](https://img.shields.io/github/downloads/KurtBestor/Hitomi-Downloader-issues/total.svg?logo=github)](https://github.com/KurtBestor/Hitomi-Downloader-issues/releases)
+[![GitHub release](https://img.shields.io/github/release/KurtBestor/Hitomi-Downloader.svg?logo=github)](https://github.com/KurtBestor/Hitomi-Downloader/releases/latest)
+[![GitHub downloads](https://img.shields.io/github/downloads/KurtBestor/Hitomi-Downloader/latest/total.svg?logo=github)](https://github.com/KurtBestor/Hitomi-Downloader/releases/latest)
+[![GitHub downloads](https://img.shields.io/github/downloads/KurtBestor/Hitomi-Downloader/total.svg?logo=github)](https://github.com/KurtBestor/Hitomi-Downloader/releases)
 
-- [Download](https://github.com/KurtBestor/Hitomi-Downloader-issues/releases/latest)
-- [Issues](https://github.com/KurtBestor/Hitomi-Downloader-issues/issues)
-- [Scripts](https://github.com/KurtBestor/Hitomi-Downloader-issues/wiki/Scripts)
-- [Chrome Extension](https://github.com/KurtBestor/Hitomi-Downloader-issues/wiki/Chrome-Extension)
+- [Download](https://github.com/KurtBestor/Hitomi-Downloader/releases/latest)
+- [Issues](https://github.com/KurtBestor/Hitomi-Downloader/issues)
+- [Scripts](https://github.com/KurtBestor/Hitomi-Downloader/wiki/Scripts)
+- [Chrome Extension](https://github.com/KurtBestor/Hitomi-Downloader/wiki/Chrome-Extension)
 
 ## Demo
 <img src="imgs/how_to_download.gif">
@@ -59,13 +59,13 @@
 | **Pinterest** | <https://pinterest.com> |
 | **Pixiv** | <https://pixiv.net> |
 | **pixivコミック** | <https://comic.pixiv.net> |
-| **Pornhub** | <https://pornhub.com> |
+| **Pornhub** | <https://pornhub.com><br><https://pornhubpremium.com> |
 | **Sankaku Complex** | <https://chan.sankakucomplex.com><br><https://idol.sankakucomplex.com> |
 | **Soundcloud** | <https://soundcloud.com> |
 | **小説家になろう** | <https://syosetu.com> |
 | **TOKYO Motion** | <https://tokyomotion.net> |
 | **Tumblr** | <https://tumblr.com> |
-| **Twtich** | <https://twitch.tv> |
+| **Twitch** | <https://twitch.tv> |
 | **Twitter** | <https://twitter.com> |
 | **Vimeo** | <https://vimeo.com> |
 | **V LIVE** | <https://vlive.tv> |
