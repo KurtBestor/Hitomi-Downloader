@@ -113,15 +113,6 @@ def solve_protection(url, session, cw=None):
     print_('Solve protection')
     r = clf2.solve(url, session=session, cw=cw)
     html = r['html'] # 1566
-    '''
-    session = clf2.Session(session)
-    r = session.get(url)
-    html = r.text
-    '''
-    if constants.admin:
-        with open('test_manamoa.html', 'w') as f:
-            f.write(html.encode('utf8'))
-    #html = read_html(page.url, session=session)
     return html
 
 

@@ -378,8 +378,11 @@ def get_imgs(user_id, type='user', n=None, api=None, tags=[], types={'illust', '
             if info.get('ecd') is not None:
                 params['end_date'] = info['ecd']
             print(params)
-            r = api.no_auth_requests_call('GET', '%s/v1/search/illust' % api.hosts, params=params, req_auth=True)
-            json_result = api.parse_result(r)
+            #r = api.no_auth_requests_call('GET', '%s/v1/search/illust' % api.hosts, params=params, req_auth=True)
+            #json_result = api.parse_result(r)
+            method, url = api.api.search_illust
+            r = api.requests_(method, url, params=params, auth=True)
+            json_result = api.parse_json(r)
         elif type == 'bookmark':
             print('max_id:', max_id)
             json_result = api.user_bookmarks_illust(user_id, filter=None, max_bookmark_id=max_id, req_auth=True)

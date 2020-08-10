@@ -10,7 +10,7 @@ from error_printer import print_error
 #from youtube_mp3 import get_mp3
 from timee import sleep
 import re
-from utils import urljoin, Downloader, Soup, try_n, get_print, filter_range, get_p2f, LazyUrl, query_url, compatstr, uuid
+from utils import urljoin, Downloader, Soup, try_n, get_print, filter_range, get_p2f, LazyUrl, query_url, compatstr, uuid, get_max_range
 import ffmpeg
 import sys
 import constants
@@ -44,7 +44,7 @@ class Video:
         self.max_abr = max_abr
         self.format = format
         self.cw = cw
-        self.url = LazyUrl(url, self.get, self, pp=self.pp)
+        self.url = LazyUrl(url, self.get, self, pp=self.pp, detect_local=False)
         self.exec_queue = cw.exec_queue if cw else None#
         
     def get(self, url, force=False):
@@ -155,7 +155,7 @@ class Video:
                         #print(foo)
                         print_(u'# stream_final {} {} {} {} {} {}fps'.format(stream, stream.format, stream.resolution, stream.subtype, stream.audio_codec, stream.fps))
                         stream_final = stream
-            ok = downloader.ok_url(stream_final.url, referer=url)
+            ok = downloader.ok_url(stream_final.url, referer=url) if isinstance(stream_final.url, str) else True
             if ok:
                 break
             else:
@@ -227,7 +227,10 @@ class Video:
         self.thumb = f
 
         #
-        self._url = self.stream.url
+        _url = self.stream.url
+        if callable(_url):
+            _url = _url()
+        self._url = _url
         title = yt.title
         #soup = Soup(yt.watch_html)
         #title =  soup.title.text.replace('- YouTube', '').strip()
@@ -419,14 +422,16 @@ def int_(x):
 @try_n(2, sleep=1)
 def get_videos(url, type='video', only_mp4=False, audio_included=False, max_res=None, max_abr=None, format='title', cw=None):
     info = {}
+
+    n = get_max_range(cw, 2000)
     
     if '/channel/' in url or '/user/' in url:
-        info = read_channel(url)
+        info = read_channel(url, n=n)
         info['title'] = u'[Channel] {}'.format(info['uploader'])
         if cw:
             info['urls'] = filter_range(info['urls'], cw.range)
     elif '/playlist' in url:
-        info = read_playlist(url)
+        info = read_playlist(url, n=n)
         info['title'] = u'[Playlist] {}'.format(info['title'])
         if cw:
             info['urls'] = filter_range(info['urls'], cw.range)
@@ -439,23 +444,23 @@ def get_videos(url, type='video', only_mp4=False, audio_included=False, max_res=
 
 
 
-def read_channel(url):
+def read_channel(url, n):
     options = {
             'extract_flat': True,
             }
     ydl = youtube_dl.YoutubeDL(options)
     info = ydl.extract_info(url, download=False)
 
-    info = read_playlist(info['url'])
+    info = read_playlist(info['url'], n=n)
                 
     return info
 
 
 @try_n(2)
-def read_playlist(url):
+def read_playlist(url, n):
     options = {
             'extract_flat': True,
-            'playlistend': 2000,
+            'playlistend': n,
             }
     ydl = youtube_dl.YoutubeDL(options)
     info = ydl.extract_info(url, download=False)
