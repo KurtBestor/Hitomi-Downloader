@@ -10,6 +10,10 @@ from fucking_encoding import clean_title
 from translator import tr_
 from timee import sleep
 import page_selector, phantomjs, clf2
+from hashlib import md5
+from datetime import datetime
+SALT = 'mAtW1X8SzGS880fsjEXlM73QpS1i4kUMBhyhdaYySk8nWz533nrEunaSplg63fzT'
+
 
 class Image(object):
 
@@ -136,8 +140,6 @@ def get_imgs(url, title, soup=None, session=None, cw=None):
     if session is None:
         session = Session()
         html = read_html(url, session=session)
-    sessions = [
-     session]
     pages = get_pages(soup, url)
     pages = page_selector.filter(pages, cw)
     imgs = []
@@ -150,49 +152,37 @@ def get_imgs(url, title, soup=None, session=None, cw=None):
             if not cw.alive:
                 return
             cw.setTitle((u'{} {} / {}  ({} / {})').format(tr_(u'\uc77d\ub294 \uc911...'), title, page.title, i + 1, len(pages)))
-        imgs += get_imgs_page(page, sessions)
+        imgs += get_imgs_page(page, session)
 
     return imgs
 
 
 @try_n(4)
-def get_imgs_page(page, sessions):
-    session = sessions[0]
-    html = downloader.read_html(page.url, session=session)
-    soup = Soup(html)
-    csrf = soup.find('meta', {'name': 'csrf-token'}).attrs['content']
+def get_imgs_page(page, session):
     id = re.find('/viewer/.+?/([0-9]+)', page.url)
-    session.headers.update({'X-CSRF-Token': csrf, 'X-Requested-With': 'XMLHttpRequest'})
-    viewer_api_url = soup.find('meta', {'name': 'viewer-api-url'}).attrs['content']
-    if not viewer_api_url:
-        print('viewer_api_url is empty')
-        token_api_url = soup.find('meta', {'name': 'token-api-url'}).attrs['content']
-        token_api_url = urljoin(page.url, token_api_url)
-        r = session.post(token_api_url, headers={'Referer': page.url})
-        data = json.loads(r.text)
-        error = data['error']
-        if error:
-            raise Exception(error)
-        token = data['data']['token']
-        viewer_api_url = ('/api/v1/viewer/stories/{}/{}.json').format(token, id)
-    viewer_api_url = urljoin(page.url, viewer_api_url)
-    print('viewer_api_url:', viewer_api_url)
-    print('csrf:', csrf)
-    data_raw = downloader.read_html(viewer_api_url, session=session, referer=page.url)
+    url_api = 'https://comic.pixiv.net/api/app/episodes/{}/read'.format(id)
+    local_time = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S+00:00')
+    headers = {
+        'X-Client-Time': local_time,
+        'X-Client-Hash': md5((local_time + SALT).encode('utf8')).hexdigest(),
+        'X-Requested-With': 'pixivcomic',
+        'referer': page.url,
+        }
+    r = session.get(url_api, headers=headers)
+    r.raise_for_status()
+    data_raw = r.text
     data = json.loads(data_raw)
-    pages = []
-    for content in data['data']['contents']:
-        pages += content.get('pages', [])
+    pages = data['data']['reading_episode']['pages']
 
     if not pages:
-        raise Exception('No pages in contents')
+        raise Exception('No pages')
+    
     imgs = []
-    for page_ in pages:
-        for p in page_.values():
-            img = p['data']['url']
-            img = img.replace('webp%3Ajpeg', 'jpeg')
-            img = Image(img, page, len(imgs))
-            imgs.append(img)
+    for p in pages:
+        img = p['url']
+        img = img.replace('webp%3Ajpeg', 'jpeg')
+        img = Image(img, page, len(imgs))
+        imgs.append(img)
 
     return imgs
 

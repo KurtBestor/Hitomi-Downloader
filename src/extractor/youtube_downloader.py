@@ -22,6 +22,7 @@ from random import randrange
 import utils
 from PyQt import QtCore, QtGui
 from translator import tr_
+from m3u8_tools import dash2stream
 
 
 def print_streams(streams, cw):
@@ -178,6 +179,9 @@ class Video:
         self.thumb_url = None
         self.subtitles = yt.subtitles
 
+        if type == 'audio' and 'DASH' in self.stream.format:
+            self.stream.setDashType('audio')
+
         # Audio
         if type=='video' and stream.audio_codec is None:
             print('audio required')
@@ -204,7 +208,11 @@ class Video:
                 raise Exception('No audio')
             print(best_audio)
             self.stream_audio = best_audio
+            if 'DASH' in self.stream_audio.format:
+                self.stream_audio.setDashType('audio')
             self.audio = best_audio.url
+            if callable(self.audio):
+                self.audio = self.audio()
 
         # Thumbnail
         for quality in ['sddefault', 'hqdefault', 'mqdefault', 'default']:
@@ -250,7 +258,10 @@ class Video:
 
     def pp(self, filename):
         cw = self.cw
-        with cw.convert(self):
+        if cw:
+            with cw.convert(self):
+                return self._pp(filename)
+        else:
             return self._pp(filename)
 
     def _pp(self, filename):
@@ -425,7 +436,7 @@ def get_videos(url, type='video', only_mp4=False, audio_included=False, max_res=
 
     n = get_max_range(cw, 2000)
     
-    if '/channel/' in url or '/user/' in url:
+    if '/channel/' in url or '/user/' in url or '/c/' in url:
         info = read_channel(url, n=n)
         info['title'] = u'[Channel] {}'.format(info['uploader'])
         if cw:
@@ -449,7 +460,7 @@ def read_channel(url, n):
             'extract_flat': True,
             }
     ydl = youtube_dl.YoutubeDL(options)
-    info = ydl.extract_info(url, download=False)
+    info = ydl.extract_info(url)
 
     info = read_playlist(info['url'], n=n)
                 
@@ -463,7 +474,7 @@ def read_playlist(url, n):
             'playlistend': n,
             }
     ydl = youtube_dl.YoutubeDL(options)
-    info = ydl.extract_info(url, download=False)
+    info = ydl.extract_info(url)
 
     es = info['entries']
     urls = []
