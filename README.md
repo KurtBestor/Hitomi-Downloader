@@ -60,7 +60,7 @@
 | **Pixiv** | <https://pixiv.net> |
 | **pixivコミック** | <https://comic.pixiv.net> |
 | **Pornhub** | <https://pornhub.com><br><https://pornhubpremium.com> |
-| **Sankaku Complex** | <https://chan.sankakucomplex.com><br><https://idol.sankakucomplex.com> |
+| **Sankaku Complex** | <https://www.sankakucomplex.com><br><https://chan.sankakucomplex.com><br><https://idol.sankakucomplex.com> |
 | **Soundcloud** | <https://soundcloud.com> |
 | **小説家になろう** | <https://syosetu.com> |
 | **TOKYO Motion** | <https://tokyomotion.net> |
@@ -74,4 +74,5 @@
 | **XHamster** | <https://xhamster.com> |
 | **XNXX** | <https://xnxx.com> |
 | **XVideos** | <https://xvideos.com> |
+| **Yande.re** | <https://yande.re> |
 | **YouTube** | <https://youtube.com> |
