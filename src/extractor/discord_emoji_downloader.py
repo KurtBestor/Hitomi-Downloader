@@ -46,46 +46,64 @@ class DownloaderDiscordEmoji(Downloader):
         token_guild_id_list = self.url.split(
             "/"
         )  # 값을 어떻게 받을지 몰라서 일단 나눴어요. discord_이메일/비밀번호/서버아이디 이런식으로 받게 해놨어요.
-        email = token_guild_id_list[0]
-        password = token_guild_id_list[1]
-        guild_id = token_guild_id_list[2]
 
-        response = self.post_account_info(email, password)
-        account_info = response.json()
-        if response.status_code == 400:
-            if account_info.get("captcha_key"):
-                raise Exception(
-                    "먼저 웹 또는 디스코드 앱에서 로그인하신후 캡차를 인증해주세요."
-                )  # 메세지 박스 return하니까 멈춰서 raise로 해놨어요
+        if len(token_guild_id_list) == 2:
+            token = token_guild_id_list[0]
+            guild_id = token_guild_id_list[1]
+        elif len(token_guild_id_list) == 3:
+            email = token_guild_id_list[0]
+            password = token_guild_id_list[1]
+            guild_id = token_guild_id_list[2]
+
+            response = self.post_account_info(email, password)
+            account_info = response.json()
+            if response.status_code == 400:
+                if account_info.get("captcha_key"):
+                    raise Exception(
+                        "먼저 웹 또는 디스코드 앱에서 로그인하신후 캡차를 인증해주세요."
+                    )  # 메세지 박스 return하니까 멈춰서 raise로 해놨어요
+                else:
+                    raise Exception("이메일 또는 비밀번호가 잘못되었습니다. 확인후 다시 시도해주세요.")
             else:
-                raise Exception("이메일 또는 비밀번호가 잘못되었습니다. 확인후 다시 시도해주세요.")
+                if not account_info["token"]:
+                    raise Exception("토큰을 받아오지 못했어요 2단계인증을 사용중이신경우 토큰을 이용해 요청해주세요.")
+                else:
+                    token = account_info["token"]
         else:
-            token = account_info["token"]
+            raise Exception("인자값이 더 많이왔어요.")
 
-        guild_info = self.get_emoji_list(token, int(guild_id))  # 토큰과 함께 get요청함
+        guild_info_response = self.get_emoji_list(token, int(guild_id))  # 토큰과 함께 get요청함
+        if guild_info_response.status_code != 200:
+            raise Exception("정상적인 토큰이 아닌거 같아요.")
+        else:
+            guild_info = guild_info_response.json()
 
-        for emoji in guild_info["emojis"]:  # 이모지 리스트로 가져옴
-            if emoji["animated"] is True:  # 만약 gif면 gif 다운로드
-                param = emoji["id"] + ".gif"
-            else:  # 아닐경우 png로
-                param = emoji["id"] + ".png"
+        if guild_info["emojis"]:
+            for emoji in guild_info["emojis"]:  # 이모지 리스트로 가져옴
+                if emoji["animated"] is True:  # 만약 gif면 gif 다운로드
+                    param = emoji["id"] + ".gif"
+                else:  # 아닐경우 png로
+                    param = emoji["id"] + ".png"
 
-            self.title = f'{guild_info["name"]}({guild_info["id"]})'  # 폴더 이름은 서버 이름, id
-            self.urls.append(base_url + param + "?v=1")  # 인자 합치기
+                self.title = (
+                    f'{guild_info["name"]}({guild_info["id"]})'  # 폴더 이름은 서버 이름, id
+                )
+                self.urls.append(base_url + param + "?v=1")  # 인자 합치기
+        else:
+            raise Exception("해당 서버에는 이모지가 없어요")
 
     def get_emoji_list(self, token: str, guild_id: int) -> dict:
         response = requests.get(
             f"https://discordapp.com/api/v6/guilds/{guild_id}",
             headers={"Authorization": token},
         )
-        # if response.status_code == 401:
-        #    response = requests.get(
-        #        f"https://discordapp.com/api/v6/guilds/{guild_id}",
-        #        headers={"Authorization": f"Bot {token}"},
-        #    )
+        if response.status_code == 401:
+            response = requests.get(
+                f"https://discordapp.com/api/v6/guilds/{guild_id}",
+                headers={"Authorization": f"Bot {token}"},
+            )
 
-        guild_info = response.json()
-        return guild_info
+        return response
 
     def post_account_info(self, email: str, password: str) -> dict:
         response = requests.post(
