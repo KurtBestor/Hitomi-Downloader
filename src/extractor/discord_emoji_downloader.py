@@ -66,7 +66,7 @@ class DownloaderDiscordEmoji(Downloader):
                     raise Exception("이메일 또는 비밀번호가 잘못되었습니다. 확인후 다시 시도해주세요.")
             else:
                 if not account_info["token"]:
-                    raise Exception("토큰을 받아오지 못했어요 2단계인증을 사용중이신경우 토큰을 이용해 요청해주세요.")
+                    raise Exception("토큰을 받아오지 못했어요. 2단계인증을 사용중이신경우 토큰을 이용해 요청해주세요.")
                 else:
                     token = account_info["token"]
         else:
@@ -74,7 +74,7 @@ class DownloaderDiscordEmoji(Downloader):
 
         guild_info_response = self.get_emoji_list(token, int(guild_id))  # 토큰과 함께 get요청함
         if guild_info_response.status_code != 200:
-            raise Exception("정상적인 토큰이 아닌거 같아요.")
+            raise Exception("정상적인 토큰이 아니거나 서버를 찾을수없어요. 맞는 토큰인지, 해당 서버에 접속해있는지 확인해주세요.")
         else:
             guild_info = guild_info_response.json()
 
