@@ -41,11 +41,9 @@ class DownloaderDiscordEmoji(Downloader):
         return self.url
 
     def read(self):
-        base_url = "https://cdn.discordapp.com/emojis/"
-
         token_guild_id_list = self.url.split(
             "/"
-        )  # 값을 어떻게 받을지 몰라서 일단 나눴어요. discord_이메일/비밀번호/서버아이디 이런식으로 받게 해놨어요.
+        )  # 값을 어떻게 받을지 몰라서 일단 나눴어요. discord_이메일/비밀번호/서버아이디 또는 discord_토큰/서버아이디 이런식으로 받게 해놨어요.
 
         if len(token_guild_id_list) == 2:
             token = token_guild_id_list[0]
@@ -73,12 +71,14 @@ class DownloaderDiscordEmoji(Downloader):
             raise Exception("인자값이 더 많이왔어요.")
 
         guild_info_response = self.get_emoji_list(token, int(guild_id))  # 토큰과 함께 get요청함
+
         if guild_info_response.status_code != 200:
             raise Exception("정상적인 토큰이 아니거나 서버를 찾을수없어요. 맞는 토큰인지, 해당 서버에 접속해있는지 확인해주세요.")
         else:
             guild_info = guild_info_response.json()
 
         if guild_info["emojis"]:
+            base_url = "https://cdn.discordapp.com/emojis/"
             for emoji in guild_info["emojis"]:  # 이모지 리스트로 가져옴
                 if emoji["animated"] is True:  # 만약 gif면 gif 다운로드
                     param = emoji["id"] + ".gif"
