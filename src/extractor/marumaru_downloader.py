@@ -44,8 +44,17 @@ class Downloader_MaruMaru(Downloader):
         soup = BeautifulSoup(response.text, "html.parser")
 
         self.title = soup.find("title").text
+
         soup_img_list = soup.find_all("img", class_="img-tag")
+        if not soup_img_list:
+            soup_img_list = soup.find("div", class_="view-img").find_all(
+                class_="img-tag"
+            )
+
         img_link_list = [img_link["src"] for img_link in soup_img_list]
 
         for img_link in img_link_list:
-            self.urls.append("https://marumaru.sale" + img_link)
+            if "https://marumaru.sale" in img_link:
+                self.urls.append(img_link)
+            else:
+                self.urls.append("https://marumaru.sale" + img_link)
