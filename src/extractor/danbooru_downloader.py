@@ -2,8 +2,7 @@
 import downloader
 import ree as re
 import os
-from utils import Downloader, get_max_range, Soup
-from fucking_encoding import clean_title
+from utils import Downloader, get_max_range, Soup, clean_title
 from translator import tr_
 try: # python2
     from urllib import quote
@@ -18,11 +17,9 @@ import sys
 class Downloader_danbooru(Downloader):
     type='danbooru'
     URLS = ['danbooru.donmai.us']
+    _name = None
     
     def init(self):
-        self._id = None
-        self.type = 'danbooru'
-        self.single = False
         self.url = self.url.replace('danbooru_', '')
         if 'donmai.us' in self.url:
             self.url = self.url.replace('http://', 'https://')
@@ -34,8 +31,8 @@ class Downloader_danbooru(Downloader):
             self.url = u'https://danbooru.donmai.us/?tags={}'.format(quote(url))
 
     @property
-    def id(self):
-        if self._id is None:
+    def name(self):
+        if self._name is None:
             parsed_url = urlparse(self.url)
             qs = parse_qs(parsed_url.query)
             if 'donmai.us/favorites' in self.url:
@@ -49,12 +46,8 @@ class Downloader_danbooru(Downloader):
                 id = u' '.join(tags)
             if not id:
                 id = u'N/A'
-            self._id = id
-        return clean_title(self._id)
-
-    @property
-    def name(self):
-        return self.id
+            self._name = id
+        return clean_title(self._name)
 
     def read(self):
         self.title = self.name

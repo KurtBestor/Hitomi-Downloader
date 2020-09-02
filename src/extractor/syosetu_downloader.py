@@ -1,9 +1,7 @@
 #coding:utf8
 import downloader
-from utils import Soup, urljoin, LazyUrl, try_n, Downloader, get_outdir, get_print
-import requests
-from fucking_encoding import clean_title
-import re
+from utils import Soup, urljoin, LazyUrl, try_n, Downloader, get_outdir, get_print, clean_title, Session
+import ree as re
 from io import BytesIO
 from timee import sleep
 import os
@@ -42,10 +40,10 @@ class Downloader_syosetu(Downloader):
 
     def init(self):
         self.url = self.url.replace('syosetu_', '')
-        self.url = (u'https://ncode.syosetu.com/{}/').format(self.id)
+        self.url = (u'https://ncode.syosetu.com/{}/').format(self.id_)
 
     @property
-    def id(self):
+    def id_(self):
         ids = re.findall('.com/([^/]+)', self.url)
         if ids:
             id = ids[0]
@@ -91,7 +89,7 @@ class Downloader_syosetu(Downloader):
                 a = subtitle.find('a')
                 subtitle = a.text.strip()
                 href = urljoin(self.url, a.attrs['href'])
-                if not re.search(('ncode.syosetu.com/{}/[0-9]+').format(self.id), href):
+                if not re.search(('ncode.syosetu.com/{}/[0-9]+').format(self.id_), href):
                     print_((u'skip: {}').format(href))
                     continue
                 text = Text(subtitle, update, href, session, False)
@@ -167,9 +165,7 @@ def get_text(url, subtitle, update, session):
 
 
 def get_session():
-    session = requests.Session()
-    session.headers.update(downloader.hdr)
-    session.headers['User-Agent'] = downloader.ua.random
+    session = Session()
     session.cookies.set(name='over18', value='yes', path='/', domain='.syosetu.com')
     return session
 

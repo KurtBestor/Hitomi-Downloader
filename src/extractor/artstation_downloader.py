@@ -1,11 +1,10 @@
 #coding:utf8
 from __future__ import division, print_function, unicode_literals
 import downloader, json, os
-from fucking_encoding import clean_title
 from error_printer import print_error
 from translator import tr_
 from timee import sleep
-from utils import Downloader, Soup, get_print, lazy, Session, try_n, LazyUrl
+from utils import Downloader, Soup, get_print, lazy, Session, try_n, LazyUrl, clean_title
 
 
 class Image(object):

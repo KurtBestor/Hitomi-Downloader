@@ -23,19 +23,20 @@ class Downloader_asmhentai(Downloader):
     MAX_CORE = 8
     
     def init(self):
-        self.url = self.url.replace('asmhentai_', '')
-        self.url = 'https://asmhentai.com/g/{}/'.format(self.id)
+        pass
 
-    @property
-    def id(self):
-        return get_id(self.url)
+    @classmethod
+    def fix_url(cls, url):
+        url = url.replace('asmhentai_', '')
+        id_ = get_id(url)
+        return 'https://asmhentai.com/g/{}/'.format(id_)
 
     def read(self):
         info, imgs = get_imgs(self.url)
 
         # 1225
         artist = join(info['artists'])
-        self.customWidget.artist = artist
+        self.artist = artist
         group = join(info['groups']) if info['groups'] else u'N／A'
         lang = info['language'][0] if info['language'] else u'N／A'
         series = info['parodies'][0] if info['parodies'] else u'N／A'

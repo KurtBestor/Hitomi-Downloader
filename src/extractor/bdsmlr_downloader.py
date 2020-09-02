@@ -1,13 +1,13 @@
 #coding:utf8
 import downloader
-from utils import Session, Soup, LazyUrl, Downloader, get_max_range, try_n, get_print
+from utils import Session, Soup, LazyUrl, Downloader, get_max_range, try_n, get_print, clean_title
 from datetime import datetime
 import ree as re
 import os
-from fucking_encoding import clean_title
 from translator import tr_
 from timee import sleep
 from error_printer import print_error
+import clf2
 
 
 @Downloader.register
@@ -21,10 +21,12 @@ class Downloader_bdsmlr(Downloader):
         if u'bdsmlr.com/post/' in self.url:
             return self.Invalid(tr_(u'개별 다운로드는 지원하지 않습니다: {}').format(self.url), fail=False)
         
-        self.url = ('https://{}.bdsmlr.com').format(self.id)
+        self.url = 'https://{}.bdsmlr.com'.format(self.id_)
+        self.session = Session()
+        clf2.solve(self.url, session=self.session,  cw=self.customWidget)
 
     @property
-    def id(self):
+    def id_(self):
         url = self.url
         if 'bdsmlr.com' in url:
             if 'www.bdsmlr.com' in url:
@@ -37,12 +39,12 @@ class Downloader_bdsmlr(Downloader):
     def read(self):
         cw = self.customWidget
         
-        info = get_imgs(self.id, cw=cw)
+        info = get_imgs(self.id_, session=self.session, cw=cw)
         
         for post in info['posts']:
             self.urls.append(post.url)
 
-        self.title = u'{} (bdsmlr_{})'.format(clean_title(info['username']), self.id)
+        self.title = u'{} (bdsmlr_{})'.format(clean_title(info['username']), self.id_)
 
         
 class Post(object):
@@ -74,10 +76,9 @@ def foo(url, soup, info, reblog=False):
     
 
 @try_n(2)
-def get_imgs(user_id, cw=None):
+def get_imgs(user_id, session, cw=None):
     print_ = get_print(cw)
     url = 'https://{}.bdsmlr.com/'.format(user_id)
-    session = Session()
     info = {'c': 0, 'posts': [], 'ids': set()}
 
     html = downloader.read_html(url, session=session)

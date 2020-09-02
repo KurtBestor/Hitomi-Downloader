@@ -4,9 +4,8 @@
 # Embedded file name: afreeca_downloader.pyo
 # Compiled at: 2019-10-07 03:48:35
 import downloader
-from utils import Soup, Downloader, get_outdir, Session, LazyUrl, compatstr, try_n
-import re
-from fucking_encoding import clean_title
+from utils import Soup, Downloader, get_outdir, Session, LazyUrl, try_n, format_filename, clean_title
+import ree as re
 from timee import sleep
 import os
 from io import BytesIO
@@ -15,13 +14,11 @@ from m3u8_tools import playlist2stream, M3u8_stream
 
 class Video(object):
 
-    def __init__(self, stream, referer, id, title, url_thumb, format='title'):
+    def __init__(self, stream, referer, id, title, url_thumb):
         self.url = LazyUrl(referer, lambda x: stream, self)
         self.id = id
-        format = format.replace('title', '###title').replace('id', '###id')
-        title = format.replace('###title', title).replace('###id', (u'{}').format(self.id))
         self.title = title
-        self.filename = u'{}.mp4'.format(clean_title(title))
+        self.filename = format_filename(title, id, '.mp4')
         self.url_thumb = url_thumb
         self.thumb = BytesIO()
         downloader.download(url_thumb, buffer=self.thumb)
@@ -36,14 +33,9 @@ class Downloader_afreeca(Downloader):
     def init(self):
         self.url = self.url.replace('afreeca_', '')
 
-    @property
-    def id(self):
-        return self.url
-
     def read(self):
-        format = compatstr(self.ui_setting.youtubeFormat.currentText()).lower().strip()
         session = Session()
-        video = get_video(self.url, session, format)
+        video = get_video(self.url, session)
         self.urls.append(video.url)
 
         self.setIcon(video.thumb)
@@ -63,7 +55,7 @@ def _get_stream(url_m3u8):
 
 
 @try_n(2)
-def get_video(url, session, format='title'):
+def get_video(url, session):
     while url.strip().endswith('/'):
         url = url[:-1]
 
@@ -91,5 +83,5 @@ def get_video(url, session, format='title'):
         streams[0] += stream
     stream = streams[0]
     id = url.split('/')[(-1)].split('?')[0].split('#')[0]
-    video = Video(stream, url, id, title, url_thumb, format)
+    video = Video(stream, url, id, title, url_thumb)
     return video

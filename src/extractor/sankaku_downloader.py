@@ -6,15 +6,13 @@
 #http://white.sankakucomplex.com/
 #https://www.sankakucomplex.com/
 import downloader
-import re
+import ree as re
 import os
-from utils import Downloader, LazyUrl, urljoin, query_url, get_max_range, get_print, Soup, lazy, Session
-from fucking_encoding import clean_title
+from utils import Downloader, LazyUrl, urljoin, query_url, get_max_range, get_print, Soup, lazy, Session, clean_title
 from translator import tr_
 import urllib
 import sys
 from timee import sleep
-from constants import html_escape
 import constants
 from sankaku_login import login
 from error_printer import print_error

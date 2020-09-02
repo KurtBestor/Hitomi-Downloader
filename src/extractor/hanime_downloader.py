@@ -1,8 +1,7 @@
 import downloader
-from utils import Session, Downloader, get_outdir, try_n, Soup, compatstr
+from utils import Session, Downloader, get_outdir, try_n, Soup, format_filename, clean_title
 import ree as re, json
 from io import BytesIO as IO
-from fucking_encoding import clean_title
 import os
 from timee import time
 import m3u8, ffmpeg
@@ -13,17 +12,15 @@ key = b'0123456701234567'
 
 class Video(object):
 
-    def __init__(self, info, stream, format):
+    def __init__(self, info, stream):
         self.info = info
         self.id = info['id']
-        self.title = clean_title(info['name'])
+        self.title = info['name']
         self.brand = info['brand']
         self.url = stream['url']
         self.url_thumb = info['poster_url']
         self.thumb = IO()
         downloader.download(self.url_thumb, buffer=self.thumb)
-        format = format.replace('title', '###title').replace('id', '###id')
-        title = format.replace('###title', self.title).replace('###id', (u'{}').format(self.id))
         ext = os.path.splitext(self.url.split('?')[0].split('#')[0])[1]
         if ext.lower() == '.m3u8':
             print('read m3u8:', self.url)
@@ -33,7 +30,7 @@ class Video(object):
             size = downloader.get_size(self.url)
             if size <= 0:
                 raise Exception('Size is 0')
-        self.filename = clean_title(u'[{}] {}{}'.format(self.brand, title, ext))
+        self.filename = format_filename('[{}] {}'.format(self.brand, self.title), self.id, ext)
 
     def __repr__(self):
         return ('Video({})').format(self.id)
@@ -49,15 +46,9 @@ class Downloader_hanime(Downloader):
         if self.url.startswith('hanime_'):
             self.url = self.url.replace('hanime_', '', 1)
 
-    @property
-    def id(self):
-        return self.url
-
     def read(self):
         cw = self.customWidget
-        ui_setting = self.ui_setting
-        format = compatstr(ui_setting.youtubeFormat.currentText()).lower().strip()
-        video, session = get_video(self.url, format)
+        video, session = get_video(self.url)
         self.video = video
         
         self.urls.append(video.url)
@@ -68,7 +59,7 @@ class Downloader_hanime(Downloader):
 
 
 @try_n(8)
-def get_video(url, format='title', session=None):
+def get_video(url, session=None):
     if session is None:
         session = Session()
         session.headers['User-Agent'] = downloader.hdr['User-Agent']
@@ -118,7 +109,7 @@ def get_video(url, format='title', session=None):
         print(stream['extension'], stream['width'], stream['filesize_mbs'], stream['url'])
 
     stream = streams_good[0]
-    return Video(info, stream, format), session
+    return Video(info, stream), session
 
 
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes

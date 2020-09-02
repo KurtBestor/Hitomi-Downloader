@@ -1,6 +1,5 @@
 import downloader
-from utils import Soup, urljoin, LazyUrl, Downloader, try_n
-from fucking_encoding import clean_title
+from utils import Soup, urljoin, LazyUrl, Downloader, try_n, clean_title
 from timee import sleep
 import os
 import ree as re
@@ -16,10 +15,6 @@ class Downloader_asiansister(Downloader):
         self.url = self.url.replace('asiansister_', '')
         html = downloader.read_html(self.url)
         self.soup = Soup(html)
-
-    @property
-    def id(self):
-        return self.url
 
     @property
     def name(self):

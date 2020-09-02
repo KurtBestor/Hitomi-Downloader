@@ -15,21 +15,21 @@ class Downloader_nhentai(Downloader):
     
     def init(self):
         self.url = self.url.replace('nhentai_', '')
-        self.url = 'https://nhentai.net/g/{}/'.format(self.id)
+        self.url = 'https://nhentai.net/g/{}/'.format(self.id_)
 
     @property
-    def id(self):
+    def id_(self):
         try:
             return int(self.url)
         except:
             return int(re.find('/g/([0-9]+)', self.url))
 
     def read(self):
-        info, imgs = get_imgs(self.id)
+        info, imgs = get_imgs(self.id_)
 
         # 1225
         artist = join(info.artists)
-        self.customWidget.artist = artist if info.artists else None
+        self.artist = artist if info.artists else None
         group = join(info.groups) if info.groups else 'N／A'
         lang = info.lang if info.lang else 'N／A'
         series = info.seriess[0] if info.seriess else 'N／A'

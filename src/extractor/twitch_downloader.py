@@ -5,8 +5,7 @@
 # Embedded file name: twitch_downloader.pyo
 # Compiled at: 2019-10-07 03:52:59
 import youtube_dl, downloader, re
-from utils import Downloader, get_outdir, Soup, LazyUrl, try_n, compatstr
-from fucking_encoding import clean_title
+from utils import Downloader, get_outdir, Soup, LazyUrl, try_n, compatstr, format_filename, get_ext, clean_title
 from timee import sleep
 from error_printer import print_error
 import os
@@ -20,8 +19,6 @@ from m3u8_tools import M3u8_stream
 class Downloader_twitch(Downloader):
     type = 'twitch'
     URLS = ['twitch.tv']
-    #lock = True
-    #detect_removed = False
     single = True
 
     def init(self):
@@ -35,48 +32,46 @@ class Downloader_twitch(Downloader):
             url = (u'https://www.twitch.tv/videos/{}').format(url.replace('twitch_', ''))
             self.url = url
 
-    @property
-    def id(self):
-        return self.url
+    @classmethod
+    def fix_url(cls, url):
+        return url.split('?')[0]
 
     def read(self):
         cw = self.customWidget
-        format = compatstr(self.ui_setting.youtubeFormat.currentText()).lower().strip()
-        info, video = get_video(self.url, format)
-        title = info['title']
+        video = Video(self.url)
+        video.url()
         self.urls.append(video.url)
 
-        thumb = BytesIO()
-        downloader.download(info['thumbnail'], buffer=thumb)
-        self.setIcon(thumb)
-        self.title = title
+        self.setIcon(video.thumb)
+        self.title = video.title
 
 
 class Video(object):
+    _url = None
 
-    def __init__(self, video, url, filename):
-        self.url = LazyUrl(url, lambda _: video, self)
-        self.filename = filename
+    def __init__(self, url):
+        self.url = LazyUrl(url, self.get, self)
 
+    @try_n(4)
+    def get(self, url):
+        if self._url:
+            return self._url
+        options = {}
+        ydl = youtube_dl.YoutubeDL(options)
+        info = ydl.extract_info(url)
+        video_best = info['formats'][(-1)]
+        video = video_best['url']
+        print(video)
+        ext = get_ext(video)
+        self.title = info['title']
+        id = info['display_id']
 
-@try_n(4)
-def get_video(url, format='title'):
-    options = {}
-    ydl = youtube_dl.YoutubeDL(options)
-    info = ydl.extract_info(url)
-    video_best = info['formats'][(-1)]
-    video = video_best['url']
-    print(video)
-    ext = os.path.splitext(video.split('?')[0])[1].lower()[1:]
-    title = info['title']
-    id = info['display_id']
-    format = format.replace('title', '###title*').replace('id', '###id*')
-    title = format.replace('###title*', title).replace('###id*', (u'{}').format(id))
-    title = clean_title(title, allow_dot=True)
-
-    if ext == 'm3u8':
-        video = M3u8_stream(video, n_thread=4)
-        video = Video(video, url, u'{}.{}'.format(title, 'mp4'))
-    else:
-        video = Video(video, url, u'{}.{}'.format(title, ext))
-    return info, video
+        if ext.lower() == '.m3u8':
+            video = M3u8_stream(video, n_thread=4)
+            ext = '.mp4'
+        self.filename = format_filename(self.title, id, ext)
+        self.url_thumb = info['thumbnail']
+        self.thumb = BytesIO()
+        downloader.download(self.url_thumb, buffer=self.thumb)
+        self._url = video
+        return self._url

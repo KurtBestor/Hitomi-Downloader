@@ -2,8 +2,7 @@
 import downloader
 import os
 from m3u8_tools import M3u8_stream
-from utils import Soup, Downloader, LazyUrl, get_print, try_n
-from fucking_encoding import clean_title
+from utils import Soup, Downloader, LazyUrl, get_print, try_n, clean_title
 from io import BytesIO
 import constants
 from error_printer import print_error
@@ -24,10 +23,6 @@ class Downloader_avgle(Downloader):
             link = 'https://github.com/KurtBestor/Hitomi-Downloader/wiki/Chrome-Extension'
             webbrowser.open(link)
             return self.Invalid('No data; See: {}'.format(link))
-
-    @property
-    def id(self):
-        return self.url
 
     def read(self):
         cw = self.customWidget

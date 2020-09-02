@@ -1,9 +1,8 @@
 #coding: utf-8
 import downloader
-import re
+import ree as re
 import os
-from utils import Downloader, urljoin, query_url, Soup, get_max_range, get_print
-from fucking_encoding import clean_title
+from utils import Downloader, urljoin, query_url, Soup, get_max_range, get_print, LazyUrl, get_ext, clean_title
 from translator import tr_
 try:
     from urllib import quote # python2
@@ -12,7 +11,6 @@ except:
 import sys
 from timee import sleep
 from constants import clean_url
-LIMIT = 100
 
 
 def get_tags(url):
@@ -34,7 +32,8 @@ def get_tags(url):
 class Downloader_gelbooru(Downloader):
     type = 'gelbooru'
     URLS = ['gelbooru.com']
-    _id = None
+    MAX_CORE = 8
+    _name = None
     
     def init(self):
         self.url = self.url.replace('gelbooru_', '')
@@ -50,15 +49,11 @@ class Downloader_gelbooru(Downloader):
             self.url = u'https://gelbooru.com/index.php?page=post&s=list&tags={}'.format(url)
 
     @property
-    def id(self):
-        if self._id is None:
-            tags = get_tags(self.url)
-            self._id = tags
-        return self._id
-
-    @property
     def name(self):
-        return clean_title(self.id)
+        if self._name is None:
+            tags = get_tags(self.url)
+            self._name = tags
+        return clean_title(self._name)
 
     def read(self):
         self.title = self.name
@@ -67,16 +62,42 @@ class Downloader_gelbooru(Downloader):
 
         for img in imgs:
             self.urls.append(img.url)
-            self.filenames[img.url] = img.filename
 
         self.title = self.name
 
 
+@LazyUrl.register
+class LazyUrl_gelbooru(LazyUrl):
+    type = 'gelbooru'
+    def dump(self):
+        return {
+            'id': self.image.id_,
+            'url': self.image._url,
+            }
+    @classmethod
+    def load(cls, data):
+        img = Image(data['id'], data['url'])
+        return img.url
+
+    
 class Image(object):
     def __init__(self, id_, url):
-        self.url = url
-        ext = os.path.splitext(url)[1]
-        self.filename = u'{}{}'.format(id_, ext)
+        self.id_ = id_
+        self._url = url
+        self.url = LazyUrl_gelbooru(url, self.get, self)
+
+    def get(self, url):
+        html = downloader.read_html(url)
+        soup = Soup(html)
+        for li in soup.findAll('li'):
+            if li.text.strip() == 'Original image':
+                break
+        else:
+            raise Exception('no Original image')
+        url = li.find('a')['href']
+        ext = get_ext(url)
+        self.filename = u'{}{}'.format(self.id_, ext)
+        return url
 
 
 def setPage(url, page):
@@ -89,6 +110,9 @@ def setPage(url, page):
     else:
         url += '&pid={}'.format(page)
 
+    if page == 0:
+        url = url.replace('&pid=0', '')
+
     return url
 
 
@@ -97,11 +121,10 @@ def get_imgs(url, title=None, cw=None):
     if 's=view' in url and 'page=favorites' not in url:
         raise NotImplementedError('Not Implemented')
 
-    if 'page=dapi' not in url.lower():
-        tags = get_tags(url)
-        tags = quote(tags, safe='/')
-        tags = tags.replace('%20', '+')
-        url = "https://gelbooru.com/index.php?page=dapi&s=post&q=index&tags={}&pid={}&limit={}".format(tags, 0, LIMIT)
+    tags = get_tags(url)
+    tags = quote(tags, safe='/')
+    tags = tags.replace('%20', '+')
+    url = 'https://gelbooru.com/index.php?page=post&s=list&tags={}'.format(tags)
 
     print_ = get_print(cw)
 
@@ -110,24 +133,34 @@ def get_imgs(url, title=None, cw=None):
 
     imgs = []
     ids = set()
+    count_no_imgs = 0
     for p in range(500): #1017
-        url = setPage(url, p)
+        url = setPage(url, len(ids))
         print_(url)
         html = downloader.read_html(url)
 
         soup = Soup(html)
-        posts = soup.findAll('post')
-        if not posts:
-            break
+        posts = soup.findAll('div', class_='thumbnail-preview')
+        imgs_new = []
         for post in posts:
-            id_ = post.attrs['id']
+            id_ = int(re.find('[0-9]+', post.find('a')['id'], err='no id'))
             if id_ in ids:
                 print('duplicate:', id_)
                 continue
             ids.add(id_)
-            url_img = post.attrs['file_url']
+            url_img = urljoin(url, post.find('a')['href'])
             img = Image(id_, url_img)
-            imgs.append(img)
+            imgs_new.append(img)
+        if imgs_new:
+            imgs += imgs_new
+            count_no_imgs = 0
+        else:
+            print('no imgs')
+            count_no_imgs += 1
+            if count_no_imgs > 1:
+                print('break')
+                break
+            
         if len(imgs) >= max_pid:
             break
 
@@ -135,4 +168,8 @@ def get_imgs(url, title=None, cw=None):
             if not cw.alive:
                 break
             cw.setTitle(u'{}  {} - {}'.format(tr_(u'읽는 중...'), title, len(imgs)))
+
+    if not imgs:
+        raise Exception('no imgs')
+            
     return imgs

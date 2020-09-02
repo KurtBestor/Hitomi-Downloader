@@ -1,10 +1,9 @@
 import downloader
-from utils import Soup, cut_pair, urljoin, Downloader, LazyUrl, compatstr
+from utils import Soup, cut_pair, urljoin, Downloader, LazyUrl, format_filename, clean_title
 import ree as re
 import m3u8
 from m3u8_tools import M3u8_stream, playlist2stream
 from timee import sleep
-from fucking_encoding import clean_title
 import os
 from io import BytesIO as IO
 
@@ -12,15 +11,12 @@ from io import BytesIO as IO
 
 class Video(object):
 
-    def __init__(self, url, url_page, title, url_thumb, format='title'):
+    def __init__(self, url, url_page, title, url_thumb):
         self._url = url
         self.url = LazyUrl(url_page, self.get, self)
         self.id = get_id(url_page)
-        ext = '.mp4'
-        self.title = title = clean_title(title)
-        format = format.replace('title', '###title').replace('id', '###id')
-        title = format.replace('###title', title).replace('###id', (u'{}').format(self.id))
-        self.filename = (u'{}{}').format(title, ext)
+        self.title = title
+        self.filename = format_filename(title, self.id, '.mp4')
         f = IO()
         self.url_thumb = url_thumb
         downloader.download(url_thumb, buffer=f)
@@ -43,19 +39,14 @@ class Downloader_xnxx(Downloader):
     def init(self):
         self.url = self.url.replace('xnxx_', '')
 
-    @property
-    def id(self):
-        return get_id(self.url)
-
     def read(self):
-        format = compatstr(self.ui_setting.youtubeFormat.currentText()).lower().strip()
-        video = get_video(self.url, format)
+        video = get_video(self.url)
         self.urls.append(video.url)
         self.setIcon(video.thumb)
         self.title = video.title
         
 
-def get_video(url, format='title'):
+def get_video(url):
     html = downloader.read_html(url)
     soup = Soup(html)
 
@@ -73,7 +64,7 @@ def get_video(url, format='title'):
 
     url_thumb = soup.find('meta', {'property': 'og:image'}).attrs['content'].strip()
     
-    video = Video(video, url, title, url_thumb, format)
+    video = Video(video, url, title, url_thumb)
     return video
 
 

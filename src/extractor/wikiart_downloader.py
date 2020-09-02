@@ -1,11 +1,10 @@
 #coding:utf8
 import downloader
 import json
-from utils import LazyUrl, Downloader, Soup, get_print
+from utils import LazyUrl, Downloader, Soup, get_print, clean_title
 import os
 from timee import sleep
 from translator import tr_
-from fucking_encoding import clean_title
 
 
 
@@ -27,21 +26,19 @@ class Downloader_wikiart(Downloader):
     def init(self):
         self.url = self.url.replace('wikiart_', '')
         
-        self.url = u'https://www.wikiart.org/en/{}'.format(self.id)
+        self.url = u'https://www.wikiart.org/en/{}'.format(self.id_)
         html = downloader.read_html(self.url)
         self.soup = Soup(html)
 
     @property
-    def id(self):
-        id = get_id(self.url)
-        return id
+    def id_(self):
+        return get_id(self.url)
 
     def read(self):
         cw = self.customWidget
 
-        artist = get_artist(self.id, self.soup)
-        if cw:
-            cw.artist = artist
+        artist = get_artist(self.id_, self.soup)
+        self.artist = artist
 
         for img in get_imgs(self.url, artist, cw=cw):
             self.urls.append(img.url)

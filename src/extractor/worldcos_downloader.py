@@ -1,11 +1,10 @@
 #coding:utf8
 import downloader
 import ree as re
-from utils import Soup, Downloader
+from utils import Soup, Downloader, clean_title, lazy
 import json
 import os
 from translator import tr_
-from fucking_encoding import clean_title
 from timee import sleep
 
 
@@ -21,7 +20,6 @@ class Image(object):
 class Downloader_worldcos(Downloader):
     type = 'worldcos'
     URLS = ['worldcosplay.net']
-    _name = None
     
     def init(self):
         self.url = self.url.replace('worldcos_', '')
@@ -31,18 +29,9 @@ class Downloader_worldcos(Downloader):
             self.url = u'https://worldcosplay.net/member/{}'.format(self.url)
         self.url = self.url.replace('m.', '')
 
-    @property
-    def id(self):
-        ids = re.findall('/member/([^/]+)', self.url)
-        if not ids:
-            return self.Invalid(u'[worldcos] Can not find member name: {}'.format(self.url))
-        return ids[0]
-
-    @property
+    @lazy
     def name(self):
-        if self._name is None:
-            self._name = get_name(self.url)
-        return clean_title(self._name)
+        return clean_title(get_name(self.url))
 
     def read(self):
         self.title = self.name

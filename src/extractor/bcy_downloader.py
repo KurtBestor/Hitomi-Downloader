@@ -1,10 +1,9 @@
 #coding:utf8
 from __future__ import print_function
 import downloader
-from utils import Soup, cut_pair, LazyUrl, Downloader, get_print, get_max_range, try_n
+from utils import Soup, cut_pair, LazyUrl, Downloader, get_print, get_max_range, try_n, clean_title
 import json
 import ree as re
-from fucking_encoding import clean_title
 import os
 from translator import tr_
 
@@ -19,10 +18,6 @@ class Downloader_bcy(Downloader):
         self.url = self.url.replace('bcy_', '')
         self.html = downloader.read_html(self.url)
         self.info = get_info(self.url, self.html)
-
-    @property
-    def id(self):
-        return self.url
 
     @property
     def name(self):

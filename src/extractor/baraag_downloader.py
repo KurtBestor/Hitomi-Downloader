@@ -1,10 +1,14 @@
 #coding:utf8
 import downloader
-from utils import Soup, Downloader, lazy
+from utils import Soup, Downloader, lazy, clean_title
 import ree as re
-from fucking_encoding import clean_title
 from translator import tr_
 from mastodon import get_imgs
+
+
+
+def get_id(url):
+    return re.find('baraag.net/([^/]+)', url.lower())
 
 
 @Downloader.register
@@ -13,13 +17,17 @@ class Downloader_baraag(Downloader):
     URLS = ['baraag.net']
     
     def init(self):
-        self.url = self.url.replace('baraag_', '')
-        self.url = u'https://baraag.net/{}'.format(self.id)
         self.referer = self.url
-        
-    @property
+
+    @classmethod
+    def fix_url(cls, url):
+        url = url.replace('baraag_', '')
+        id_ = get_id(url) or url
+        return 'https://baraag.net/{}'.format(id_)
+
+    @lazy
     def id(self):
-        return re.find('baraag.net/([^/]+)', self.url.lower(), default=self.url)
+        return get_id(self.url)
 
     @lazy
     def soup(self):

@@ -25,7 +25,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
-
+from utils import Downloader, clean_title
 import requests
 
 
@@ -34,14 +34,10 @@ class DownloaderDiscordEmoji(Downloader):
     type = "discord"
 
     def init(self):
-        self.url = self.url.replace("discord_", "")
-
-    @property
-    def id(self):
-        return self.url
+        pass
 
     def read(self):
-        token_guild_id_list = self.url.split(
+        token_guild_id_list = self.url.replace("discord_", "", 1).split(
             "/"
         )  # 값을 어떻게 받을지 몰라서 일단 나눴어요. discord_이메일/비밀번호/서버아이디 또는 discord_토큰/서버아이디 이런식으로 받게 해놨어요.
 
@@ -57,23 +53,23 @@ class DownloaderDiscordEmoji(Downloader):
             account_info = response.json()
             if response.status_code == 400:
                 if account_info.get("captcha_key"):
-                    raise Exception(
+                    return self.Invalid(
                         "먼저 웹 또는 디스코드 앱에서 로그인하신후 캡차를 인증해주세요."
                     )  # 메세지 박스 return하니까 멈춰서 raise로 해놨어요
                 else:
-                    raise Exception("이메일 또는 비밀번호가 잘못되었습니다. 확인후 다시 시도해주세요.")
+                    return self.Invalid("이메일 또는 비밀번호가 잘못되었습니다. 확인후 다시 시도해주세요.")
             else:
                 if not account_info["token"]:
-                    raise Exception("토큰을 받아오지 못했어요. 2단계인증을 사용중이신경우 토큰을 이용해 요청해주세요.")
+                    return self.Invalid("토큰을 받아오지 못했어요. 2단계인증을 사용중이신경우 토큰을 이용해 요청해주세요.")
                 else:
                     token = account_info["token"]
         else:
-            raise Exception("인자값이 더 많이왔어요.")
+            return self.Invalid("인자값이 더 많이왔어요.")
 
         guild_info_response = self.get_emoji_list(token, int(guild_id))  # 토큰과 함께 get요청함
 
         if guild_info_response.status_code != 200:
-            raise Exception("정상적인 토큰이 아니거나 서버를 찾을수없어요. 맞는 토큰인지, 해당 서버에 접속해있는지 확인해주세요.")
+            return self.Invalid("정상적인 토큰이 아니거나 서버를 찾을수없어요. 맞는 토큰인지, 해당 서버에 접속해있는지 확인해주세요.")
         else:
             guild_info = guild_info_response.json()
 
@@ -85,12 +81,12 @@ class DownloaderDiscordEmoji(Downloader):
                 else:  # 아닐경우 png로
                     param = emoji["id"] + ".png"
 
-                self.title = (
+                self.title = clean_title(
                     f'{guild_info["name"]}({guild_info["id"]})'  # 폴더 이름은 서버 이름, id
                 )
                 self.urls.append(base_url + param + "?v=1")  # 인자 합치기
         else:
-            raise Exception("해당 서버에는 이모지가 없어요")
+            return self.Invalid("해당 서버에는 이모지가 없어요")
 
     def get_emoji_list(self, token: str, guild_id: int) -> dict:
         response = requests.get(

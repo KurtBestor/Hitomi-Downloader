@@ -3,14 +3,13 @@ from youtube_dl_test import YouTube
 import youtube_dl
 import downloader
 import downloader_v3
-from fucking_encoding import clean_title
 from io import BytesIO
 from constants import empty_thumbnail, isdeleted
 from error_printer import print_error
 #from youtube_mp3 import get_mp3
 from timee import sleep
 import re
-from utils import urljoin, Downloader, Soup, try_n, get_print, filter_range, get_p2f, LazyUrl, query_url, compatstr, uuid, get_max_range
+from utils import urljoin, Downloader, Soup, try_n, get_print, filter_range, get_p2f, LazyUrl, query_url, compatstr, uuid, get_max_range, format_filename, clean_title, get_resolution, get_abr
 import ffmpeg
 import sys
 import constants
@@ -29,21 +28,20 @@ def print_streams(streams, cw):
     print_ = get_print(cw)
             
     for stream in streams:
-        format = stream.format
-        print_(u'[{}][{}fps][{}] {} {} ─ {}'.format(stream.resolution, stream.fps, stream.abr, stream.subtype, stream.audio_codec, format))
+        print_(u'[{}][{}fps][{}] {} [{} / {}] ─ {}'.format(stream.resolution, stream.fps, stream.abr, stream.subtype, stream.video_codec, stream.audio_codec, stream.format))
     print_('')
 
 
-class Video:
+class Video(object):
     _url = None
+    vcodec = None
     
-    def __init__(self, url, type='video', only_mp4=False, audio_included=False, max_res=None, max_abr=None, format='title', cw=None):
+    def __init__(self, url, type='video', only_mp4=False, audio_included=False, max_res=None, max_abr=None, cw=None):
         self.type = type
         self.only_mp4 = only_mp4
         self.audio_included = audio_included
         self.max_res = max_res
         self.max_abr = max_abr
-        self.format = format
         self.cw = cw
         self.url = LazyUrl(url, self.get, self, pp=self.pp, detect_local=False)
         self.exec_queue = cw.exec_queue if cw else None#
@@ -57,7 +55,6 @@ class Video:
         audio_included = self.audio_included
         max_res = self.max_res
         max_abr = self.max_abr
-        format = self.format
         cw = self.cw
         print_ = get_print(cw)
 
@@ -70,11 +67,12 @@ class Video:
                 yt = YouTube(url)
                 break
             except Exception as e:
+                e_ = e
                 s = print_error(e)[-1]
                 print_('### youtube retry...\n{}'.format(s))
                 sleep(try_/2.)
         else:
-            raise
+            raise e_
 
         streams = yt.streams.all()
         print_streams(streams, cw)
@@ -108,16 +106,6 @@ class Video:
                     streams.append(stream)
             print_('')
         elif type == 'audio':
-            '''
-            class Stream:
-                pass
-            stream = Stream()
-            stream.audio_codec = 'mp3'
-            stream.url = get_mp3(yt.video_id)
-            stream.subtype = 'mp3'
-            stream.resolution = None
-            return [Video(yt, stream, format)]
-            '''
             streams[:] = [stream for stream in streams if stream.abr]
             # Maximum abr
             abrs = [int_(stream.abr.replace('kbps', '')) for stream in streams]
@@ -156,6 +144,7 @@ class Video:
                         #print(foo)
                         print_(u'# stream_final {} {} {} {} {} {}fps'.format(stream, stream.format, stream.resolution, stream.subtype, stream.audio_codec, stream.fps))
                         stream_final = stream
+            
             ok = downloader.ok_url(stream_final.url, referer=url) if isinstance(stream_final.url, str) else True
             if ok:
                 break
@@ -168,6 +157,9 @@ class Video:
             raise Exception('No videos')
 
         stream = stream_final
+
+##        if stream.video_codec and stream_final.video_codec.lower().startswith('av'):
+##            self.vcodec = 'h264'
         
         self.yt = yt
         self.id = yt.video_id
@@ -244,9 +236,7 @@ class Video:
         #title =  soup.title.text.replace('- YouTube', '').strip()
         self.title = title
         ext = u'.' + self.stream.subtype
-        format = format.replace('title', '###title*').replace('id', '###id*')
-        title = format.replace('###title*', title).replace('###id*', u'{}'.format(self.id))
-        self.filename = clean_title(u'{}{}'.format(title, ext))
+        self.filename = format_filename(title, self.id, ext)
 
         print_(u'Resolution: {}'.format(stream.resolution))
         print_(u'Codec: {} / {}'.format(stream.video_codec, stream.audio_codec))
@@ -285,7 +275,7 @@ class Video:
                     downloader_v3.download(self.audio, chunk=1024*1024, n_threads=2, outdir=os.path.dirname(path), fileName=os.path.basename(path), customWidget=cw, overwrite=True)
                 else:
                     downloader.download(self.audio, outdir=os.path.dirname(path), fileName=os.path.basename(path), customWidget=cw, overwrite=True)
-                ext, out = ffmpeg.merge(filename, path, cw=cw)
+                ext, out = ffmpeg.merge(filename, path, cw=cw, vcodec=self.vcodec)
                 #print(out)
                 name, ext_old = os.path.splitext(filename)
                 if ext_old.lower() != ext.lower():
@@ -302,8 +292,7 @@ class Video:
         elif self.type == 'audio' and ext != '.mp3': # convert non-mp3 audio -> mp3
             name, ext_old = os.path.splitext(filename)
             filename_new = u'{}.mp3'.format(name)
-            abr_text = compatstr(ui_setting.youtubeCombo_abr.currentText())
-            abr = int(abr_text.replace('k',''))
+            abr = get_abr()
             ffmpeg.convert(filename, filename_new, '-shortest -preset ultrafast -b:a {}k'.format(abr), cw=cw)
 
         if self.type == 'audio' and ui_setting.albumArt.isChecked():
@@ -359,10 +348,6 @@ class Downloader_youtube(Downloader):
         else:
             self.yt_type = 'audio'
             self.customWidget.setMusic(True)
-            
-    @property
-    def id(self):
-        return self.url
 
     @classmethod
     def fix_url(cls, url): # 2033
@@ -375,15 +360,12 @@ class Downloader_youtube(Downloader):
         ui_setting = self.ui_setting
         cw = self.customWidget
         print_ = get_print(cw)
-        format = compatstr(ui_setting.youtubeFormat.currentText()).lower().strip()
         if self.yt_type == 'video':
-            res_text = compatstr(ui_setting.youtubeCombo_res.currentText())
-            res = {'720p':720,'1080p':1080,'2K':1440,'4K':2160,'8K':4320}[res_text]
-            info = get_videos(self.url, type=self.yt_type, max_res=res, only_mp4=False, audio_included=not True, format=format, cw=cw)
+            res = get_resolution()
+            info = get_videos(self.url, type=self.yt_type, max_res=res, only_mp4=False, audio_included=not True, cw=cw)
         else:
-            abr_text = compatstr(ui_setting.youtubeCombo_abr.currentText())
-            abr = int(abr_text.replace('k',''))
-            info = get_videos(self.url, type=self.yt_type, max_abr=abr, format=format, cw=cw)
+            abr = get_abr()
+            info = get_videos(self.url, type=self.yt_type, max_abr=abr, cw=cw)
         videos = info['videos']
 
         cw.enableSegment(overwrite=True)
@@ -417,7 +399,7 @@ class Downloader_youtube(Downloader):
                     self.exec_queue.put(([s, {'youtube':cw.format}], 'downButton(cw[0], format_selector=cw[1])'))
 
         self.urls.append(video.url)
-        cw.artist = video.username
+        self.artist = video.username
         self.setIcon(video.thumb)
         
         self.title = video.title
@@ -431,7 +413,7 @@ def int_(x):
 
         
 @try_n(2, sleep=1)
-def get_videos(url, type='video', only_mp4=False, audio_included=False, max_res=None, max_abr=None, format='title', cw=None):
+def get_videos(url, type='video', only_mp4=False, audio_included=False, max_res=None, max_abr=None, cw=None):
     info = {}
 
     n = get_max_range(cw, 2000)
@@ -449,7 +431,7 @@ def get_videos(url, type='video', only_mp4=False, audio_included=False, max_res=
     else:
         info['urls'] = [url]
 
-    info['videos'] = [Video(url, type, only_mp4, audio_included, max_res, max_abr, format, cw) for url in info['urls']]
+    info['videos'] = [Video(url, type, only_mp4, audio_included, max_res, max_abr, cw) for url in info['urls']]
 
     return info
 

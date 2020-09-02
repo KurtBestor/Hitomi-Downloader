@@ -4,9 +4,8 @@
 # Embedded file name: bili_downloader2.pyo
 # Compiled at: 2019-10-07 03:49:44
 import downloader
-from utils import Soup, LazyUrl, Downloader, query_url, get_outdir, get_print, compatstr, cut_pair
+from utils import Soup, LazyUrl, Downloader, query_url, get_outdir, get_print, cut_pair, format_filename, clean_title, get_resolution
 import hashlib, json
-from fucking_encoding import clean_title
 import os
 from io import BytesIO
 import ffmpeg
@@ -73,15 +72,13 @@ class Downloader_bili(Downloader):
         self.url = self.url.replace('m.bilibili', 'bilibili')
 
     @property
-    def id(self):
+    def id_(self):
         mobj = re.match(_VALID_URL, self.url)
         video_id = mobj.group('id')
         anime_id = mobj.group('anime_id')
         return video_id
 
     def read(self):
-        ui_setting = self.ui_setting
-        format = compatstr(ui_setting.youtubeFormat.currentText()).lower().strip()
         page = get_page(self.url)
         videos, info = get_videos(self.url, self.customWidget)
         if not videos:
@@ -95,8 +92,7 @@ class Downloader_bili(Downloader):
         title = info['title']
         if page is not None:
             title += (u'_p{}').format(page)
-        format = format.replace('title', '###title').replace('id', '###id')
-        title = format.replace('###title', title).replace('###id', (u'{}').format(self.id))
+        title = format_filename(title, self.id_, '.mp4')[:-4]
         n = int(math.ceil(8.0 / len(videos)))
         self.customWidget.print_(('n_threads: {}').format(n))
         self.customWidget.enableSegment(n_threads=n)
@@ -150,17 +146,13 @@ def float_or_none(s, default=None):
         return default
 
 
-def get_resolution(quality):
+def get_resolution_(quality):
     return RESOLS[quality]
 
 
 def get_videos(url, cw=None, depth=0):
     print_ = get_print(cw)
-    if utils.ui_setting:
-        res_text = compatstr(utils.ui_setting.youtubeCombo_res.currentText())
-        res = {'720p':720, '1080p':1080, '2K':1440, '4K':2160, '8K':4320}[res_text]
-    else:
-        res = 720
+    res = get_resolution()
     
     mobj = re.match(_VALID_URL, url)
     video_id = mobj.group('id')
@@ -204,7 +196,7 @@ def get_videos(url, cw=None, depth=0):
             if msg:
                 raise Exception(msg)
         quality = video_info['quality']
-        resolution = get_resolution(quality)
+        resolution = get_resolution_(quality)
         s = (u'resolution: {}').format(resolution)
         print_(s)
 

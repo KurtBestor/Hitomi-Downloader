@@ -1,54 +1,75 @@
 from bs4 import BeautifulSoup
 from urllib.request import urlopen
 from urllib.parse import unquote
-from utils import Downloader
-from fucking_encoding import clean_title
+from utils import Downloader, urljoin, clean_title
+from translator import tr_
+import ree as re
+import os
 
 
 @Downloader.register
 class Downloader_yandere(Downloader):
     type = 'yande.re'
     URLS = ['yande.re']
+    MAX_CORE = 4
 
     def init(self):
-        if 'page' in self.url:
-            self.url= "https://yande.re/post?" + self.url.split("&")[-1]
+        pass
 
-    @property
-    def id(self):
-        return self.url
+    @classmethod
+    def fix_url(cls, url):
+        url = re.sub(r'\?page=[0-9]+&', '?', url)
+        url = re.sub(r'&page=[0-9]+', '', url)
+        return url
 
     def read(self):
+        cw = self.customWidget
+
+        title = self.get_title(self.url)
+
+        ids = set()
+        url = self.url
         while True:
-            html = urlopen(self.url)
+            html = urlopen(url)
             soup = BeautifulSoup(html, "html.parser")
             tmp = soup.find_all(attrs={'class':'directlink'}, href=True)
             for image_html in tmp:
                 image_url = image_html['href']
+                id_ = self.get_id(image_url)
+                if id_ in ids:
+                    self.print_('duplicate: {}'.format(id_))
+                    continue
+                ids.add(id_)
                 self.urls.append(image_url)
                 self.filenames[image_url] = self.get_filename(image_url)
 
-            self.title = self.get_title(self.url)
+            if not cw.alive:
+                break
+            cw.setTitle('{}  {} - {}'.format(tr_('읽는 중...'), title, len(self.urls)))
 
             next_page = soup.find('a', attrs={'rel':'next'}, href=True)
             if not next_page:
                 break
             else:
-                self.url = u"https://yande.re" +next_page['href']
+                url = urljoin(self.url, next_page['href'])
+
+        self.title = title
 
     def get_id(self, url:str) -> str:
-        id_begin = url.find("yande.re%20") + 11
-        id_end = url[id_begin:].find("%20")
-        return url[id_begin:][:id_end]
+        id_ = url.split('yande.re%20')[1].split('%20')[0]
+        return int(id_)
 
     def get_filename(self, url:str) -> str:
         url_unquote = unquote(url)
         id_tags_extension = url_unquote.split("yande.re")[-1].split(" ")[1:]
-        return "_".join(id_tags_extension)
+        filename = "_".join(id_tags_extension)
+        name, ext = os.path.splitext(filename)
+        name = str(self.get_id(url))#
+        return clean_title(name, n=-len(ext)) + ext
 
     def get_title(self, url:str) -> str:
         if "tags=" not in url:
-            return '[N/A]' + url.split('yande.re/')[-1]
+            raise NotImplementedError('no tags')
 
         url_tags = url.split("tags=")[-1].split('+')
 

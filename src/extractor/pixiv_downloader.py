@@ -6,8 +6,7 @@ import downloader
 from random import shuffle, random
 from timee import sleep
 from error_printer import print_error
-from fucking_encoding import clean_title
-from utils import Downloader, query_url, get_max_range, clean_url, get_outdir, get_print, compatstr
+from utils import Downloader, query_url, get_max_range, clean_url, get_outdir, get_print, compatstr, clean_title
 from translator import tr_
 import os
 import ffmpeg
@@ -43,6 +42,7 @@ class Downloader_pixiv(Downloader):
     type = 'pixiv'
     MAX_CORE = 16
     info = None
+    _id = None
 
     def init(self):
         asyncio.set_event_loop(asyncio.new_event_loop())###
@@ -132,42 +132,13 @@ class Downloader_pixiv(Downloader):
     @property
     def id(self):
         if self._id is None:
-            url = self.url
-            if 'search.php' in url or '/tags/' in url:
-                if 'word=' in url:
-                    word = re.find('[?&]word=([^&]*)', url)
-                else:
-                    word = url.split('/tags/')[1].split('/')[0]
-                word = unquote(word).replace(' ', '+')
-                return 'pixiv_search_' + word
-            if 'pixiv.me' in url:
-                html = downloader.read_html(url)
-                if 'member.php?id=' in html:
-                    id = int(html.split('member.php?id=')[1].split('"')[0])
-                elif re.find('/users/([0-9]+)', html):
-                    id = re.find('/users/([0-9]+)', html)
-                else:
-                    raise Exception('User not found')
-                return u'pixiv_{}'.format(id)
-            if 'member_illust.php?id=' in url or 'member.php?id=' in url or '/users/' in url:
-                header = u'pixiv_'
-                id = re.find('[?&]id=([0-9]+)', url) or re.find('/users/([0-9]+)', url)
-            elif 'illust_id=' in url:
-                header = u'pixiv_illust_'
-                id = re.find('[?&]illust_id=([0-9]+)', url)
-            elif '/artworks/' in url:
-                header = u'pixiv_illust_'
-                id = re.find('/artworks/([0-9]+)', url)
-            elif 'bookmark.php' in url or '/bookmarks/' in url:
-                header = u'pixiv_bmk_'
-                id = re.find('[?&]id=([0-9]+)', url) or re.find('([0-9]+)/bookmarks/', url)
-                if id is None:
-                    id = api.user_id
-                    self.url = 'https://www.pixiv.net/bookmark.php?id={}'.format(id)
-            else:
-                raise Exception(u'????: {}'.format(url))
-            self._id = header + id
+            id = get_id(self.url, d=self)
+            self._id = id
         return self._id
+
+    @classmethod
+    def key_id(cls, url): #2302
+        return get_id(url, False)
 
     def read(self):
         type = self.pixiv_type
@@ -208,7 +179,7 @@ class Downloader_pixiv(Downloader):
                     id = self.id.replace('_bmk', '').replace('pixiv_', '').replace('search_', '')
                     print('name', id)
                     name = get_name(id, self.api, cw=cw)
-                    cw.artist = name
+                    self.artist = name
                 title = u'{} ({})'.format(name, self.id)
                 print_(title)
                 dir = os.path.join(get_outdir('pixiv'), clean_title(title))
@@ -428,6 +399,49 @@ def get_imgs(user_id, type='user', n=None, api=None, tags=[], types={'illust', '
         raise Exception('no imgs')
     return imgs[:n]
 
+
+def get_id(url, dynamic=True, d=None):
+    for header in headers.values():
+        if url.startswith(header):
+            return url
+    if 'search.php' in url or '/tags/' in url:
+        if 'word=' in url:
+            word = re.find('[?&]word=([^&]*)', url)
+        else:
+            word = url.split('/tags/')[1].split('/')[0]
+        word = unquote(word).replace(' ', '+')
+        return 'pixiv_search_' + word
+    if 'pixiv.me' in url:
+        if not dynamic:
+            raise Exception('not dynamic')
+        html = downloader.read_html(url)
+        if 'member.php?id=' in html:
+            id = int(html.split('member.php?id=')[1].split('"')[0])
+        elif re.find('/users/([0-9]+)', html):
+            id = re.find('/users/([0-9]+)', html)
+        else:
+            raise Exception('User not found')
+        return u'pixiv_{}'.format(id)
+    if 'member_illust.php?id=' in url or 'member.php?id=' in url or '/users/' in url:
+        header = u'pixiv_'
+        id = re.find('[?&]id=([0-9]+)', url) or re.find('/users/([0-9]+)', url)
+    elif 'illust_id=' in url:
+        header = u'pixiv_illust_'
+        id = re.find('[?&]illust_id=([0-9]+)', url)
+    elif '/artworks/' in url:
+        header = u'pixiv_illust_'
+        id = re.find('/artworks/([0-9]+)', url)
+    elif 'bookmark.php' in url or '/bookmarks/' in url:
+        header = u'pixiv_bmk_'
+        id = re.find('[?&]id=([0-9]+)', url) or re.find('([0-9]+)/bookmarks/', url)
+        if id is None:
+            id = api.user_id
+            if d:
+                d.url = 'https://www.pixiv.net/bookmark.php?id={}'.format(id)
+    else:
+        raise Exception(u'????: {}'.format(url))
+    return '{}{}'.format(header, id)
+    
 
 def get_imgs_from_illust(illust, api=None, types={'illust', 'manga', 'ugoira'}, format=None, format_name=None, dir='', print_=None, cw=None):
     print_ = get_print(cw)

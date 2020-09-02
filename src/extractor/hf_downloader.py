@@ -1,11 +1,10 @@
 #coding:utf8
 import downloader
-from utils import Soup, urljoin, Session, LazyUrl, Downloader, lazy, try_n
+from utils import Soup, urljoin, Session, LazyUrl, Downloader, lazy, try_n, clean_title
 import ree as re
 import os
 from translator import tr_
 from timee import sleep
-from fucking_encoding import clean_title
 URL_ENTER = 'https://www.hentai-foundry.com/site/index?enterAgree=1&size=1550'
 URL_FILTER = 'https://www.hentai-foundry.com/site/filters'
 
@@ -42,37 +41,37 @@ class Image(object):
         self.url = LazyUrl(url, f, self)
 
 
+def get_username(url):
+    if 'user/' in url:
+        username = url.split('user/')[1].split('?')[0].split('/')[0]
+    else:
+        username = url.replace('hf_', '')
+    return username
+
+
 @Downloader.register
 class Downloader_hf(Downloader):
     type = 'hf'
     URLS = ['hentai-foundry.com']
     MAX_CORE = 16
     def init(self):
-        self.url = 'https://www.hentai-foundry.com/user/{}'.format(self.id)
         self.session = enter()
 
-    @property
-    def id(self):
-        if 'user/' in self.url:
-            username = self.url.split('user/')[1].split('?')[0].split('/')[0]
-        else:
-            username = self.url.replace('hf_', '')
-        return username
-
-    @lazy
-    def name(self):
-        return self.id
-
+    @classmethod
+    def fix_url(cls, url):
+        username = get_username(url)
+        return 'https://www.hentai-foundry.com/user/{}'.format(username)
 
     def read(self):
-        self.title = self.name
+        username = get_username(self.url)
+        self.title = username
 
-        imgs = get_imgs(self.id, self.title, self.session, cw=self.customWidget)
+        imgs = get_imgs(username, self.title, self.session, cw=self.customWidget)
 
         for img in imgs:
             self.urls.append(img.url)
 
-        self.title = self.name
+        self.title = username
 
 
 @try_n(2)

@@ -4,12 +4,11 @@
 # Embedded file name: pixiv_comic_downloader.pyo
 # Compiled at: 2019-10-03 10:20:37
 import downloader, requests
-from utils import Soup, urljoin, Session, LazyUrl, Downloader, try_n, get_imgs_already
+from utils import Soup, urljoin, Session, LazyUrl, Downloader, try_n, get_imgs_already, clean_title, get_ext
 import ree as re, json, os
-from fucking_encoding import clean_title
 from translator import tr_
 from timee import sleep
-import page_selector, phantomjs, clf2
+import page_selector, clf2
 from hashlib import md5
 from datetime import datetime
 SALT = 'mAtW1X8SzGS880fsjEXlM73QpS1i4kUMBhyhdaYySk8nWz533nrEunaSplg63fzT'
@@ -18,13 +17,10 @@ SALT = 'mAtW1X8SzGS880fsjEXlM73QpS1i4kUMBhyhdaYySk8nWz533nrEunaSplg63fzT'
 class Image(object):
 
     def __init__(self, url, page, p):
-        ext = os.path.splitext(url.split('?')[0])[1]
-        self.filename = (u'{}/{:04}{}').format(page.title, p, ext)
+        ext = get_ext(url)
+        self.filename = '{}/{:04}{}'.format(page.title, p, ext)
 
-        def f(_):
-            return url
-
-        self.url = LazyUrl(page.url, f, self)
+        self.url = LazyUrl(page.url, lambda _: url, self)
 
 
 class Page(object):
@@ -49,10 +45,6 @@ class Downloader_pixiv_comic(Downloader):
             self.customWidget.print_(('fix url: {}').format(self.url))
 
     @property
-    def id(self):
-        return self.url
-
-    @property
     def soup(self):
         if self._soup is None:
             self.session = Session()
@@ -65,7 +57,7 @@ class Downloader_pixiv_comic(Downloader):
         title = soup.find('meta', {'property': 'og:title'}).attrs['content']
         artist = get_artist(soup)
         if artist:
-            self.customWidget.artist = artist
+            self.artist = artist
         else:
             artist = 'N/A'
         self.dirFormat = self.dirFormat.replace('0:id', '').replace('id', '').replace('()', '').replace('[]', '').strip()

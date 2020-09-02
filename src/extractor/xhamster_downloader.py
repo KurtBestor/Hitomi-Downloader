@@ -1,6 +1,5 @@
 import downloader, ree as re
-from utils import Downloader, get_outdir, Soup, get_p2f, LazyUrl, get_print, cut_pair, get_ext, compatstr, try_n
-from fucking_encoding import clean_title
+from utils import Downloader, get_outdir, Soup, get_p2f, LazyUrl, get_print, cut_pair, get_ext, try_n, format_filename, clean_title
 from timee import sleep
 from error_printer import print_error
 import os
@@ -21,12 +20,10 @@ class Downloader_xhamster(Downloader):
 
     def init(self):
         self.url = self.url.replace('xhamster_', '')
-        if not re.search('xhamster[0-9]*\\.', self.url):
-            self.url = (u'https://xhamster.com/videos/{}').format(self.url)
-
-    @property
-    def id(self):
-        return self.url
+        if re.search(r'xhamsterlive[0-9]*\.', self.url):
+            raise Exception('xHamsterLive')
+        if not re.search(r'xhamster[0-9]*\.', self.url):
+            self.url = 'https://xhamster.com/videos/{}'.format(self.url)
 
     @classmethod
     def fix_url(cls, url):
@@ -36,8 +33,6 @@ class Downloader_xhamster(Downloader):
 
     def read(self):
         cw = self.customWidget
-        ui_setting = self.ui_setting
-        format = compatstr(ui_setting.youtubeFormat.currentText()).lower().strip()
         cw.enableSegment(1024*1024//2)
         thumb = BytesIO()
         
@@ -48,7 +43,7 @@ class Downloader_xhamster(Downloader):
             if p2f:
                 self.single = False
                 self.title = clean_title(info['title'])
-                videos = [Video(url, format) for url in info['urls']]
+                videos = [Video(url) for url in urls]
                 self.urls = [video.url for video in videos]
                 video = videos[0]
                 video.url()
@@ -71,7 +66,7 @@ class Downloader_xhamster(Downloader):
             return
         else:
             urls = []
-        video = Video(self.url, format)
+        video = Video(self.url)
         video.url()
         self.urls.append(video.url)
 
@@ -83,10 +78,9 @@ class Downloader_xhamster(Downloader):
 class Video(object):
     _url = None
 
-    def __init__(self, url, format):
+    def __init__(self, url):
         url = downloader.real_url(url)
         self.url = LazyUrl(url, self.get, self)
-        self.format = format
 
     @try_n(2)
     def get(self, url):
@@ -94,15 +88,13 @@ class Video(object):
             return self._url
         self.info = get_info(url)
 
-        title = self.info['title']
+        self.title = self.info['title']
         id = self.info['id']
         
-        format = self.format.replace('title', '###title*').replace('id', '###id*')
-        self.title = format.replace('###title*', title).replace('###id*', (u'{}').format(id))
         video_best = self.info['formats'][(-1)]
         self._url = video_best['url']
-        ext = os.path.splitext(self._url.split('?')[0])[1]
-        self.filename = u'{}{}'.format(clean_title(self.title, n=-len(ext)), ext)
+        ext = get_ext(self._url)
+        self.filename = format_filename(self.title, id, ext)
         return self._url
 
 

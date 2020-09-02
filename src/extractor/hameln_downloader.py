@@ -2,8 +2,7 @@
 from __future__ import division, print_function, unicode_literals
 import downloader
 import os
-from utils import Soup, urljoin, get_text, LazyUrl, try_n, Downloader, lazy
-from fucking_encoding import clean_title
+from utils import Soup, urljoin, get_text, LazyUrl, try_n, Downloader, lazy, clean_title
 import ree as re
 from io import BytesIO
 from timee import sleep
@@ -20,11 +19,9 @@ class Downloader_hameln(Downloader):
 
     def init(self):
         self.url = self.url.replace('hameln_', '')
-        self.url = ('https://syosetu.org/novel/{}/').format(self.id)
-
-    @property
-    def id(self):
-        return re.find('/novel/([^/]+)', self.url) or self.url
+        id_ = re.find('/novel/([^/]+)', self.url)
+        if id_ is not None:
+            self.url = 'https://syosetu.org/novel/{}/'.format(id_)
 
     @lazy
     def soup(self):

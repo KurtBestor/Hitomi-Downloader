@@ -2,8 +2,7 @@ from __future__ import division, print_function, unicode_literals
 import downloader
 import youtube_dl
 from m3u8_tools import M3u8_stream
-from utils import LazyUrl, get_ext, Downloader, compatstr
-from fucking_encoding import clean_title
+from utils import LazyUrl, get_ext, Downloader, format_filename, clean_title
 from io import BytesIO
 
 
@@ -16,15 +15,8 @@ class Downloader_youku(Downloader):
     def init(self):
         self.url = self.url.replace('youku_', '', 1)
 
-    @property
-    def id(self):
-        return self.url
-
     def read(self):
-        ui_setting = self.ui_setting
-        format = compatstr(ui_setting.youtubeFormat.currentText()).lower().strip()
-
-        video = Video(self.url, format)
+        video = Video(self.url)
         video.url()# get thumb
 
         self.urls.append(video.url)
@@ -36,9 +28,8 @@ class Downloader_youku(Downloader):
 class Video(object):
     _url = None
     
-    def __init__(self, url, format='title (id)'):
+    def __init__(self, url):
         self.url = LazyUrl(url, self.get, self)
-        self.format = format
 
     def get(self, url):
         if self._url:
@@ -64,10 +55,8 @@ class Video(object):
             url_video = M3u8_stream(url_video, referer=url)
 
         # title & filename
-        format = self.format.replace('title', '###title').replace('id', '###id')
-        self.title = format.replace('###title', info['title']).replace('###id', u'{}'.format(info['id']))
-        ext = '.mp4'
-        self.filename = clean_title(self.title, n=-len(ext)) + ext
+        self.title = info['title']
+        self.filename = format_filename(self.title, info['id'], '.mp4')
 
         self._url = url_video
         

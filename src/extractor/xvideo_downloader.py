@@ -4,9 +4,8 @@
 # Embedded file name: xvideo_downloader.pyo
 # Compiled at: 2019-10-12 16:51:28
 import downloader
-from utils import Downloader, Soup, LazyUrl, urljoin, compatstr
+from utils import Downloader, Soup, LazyUrl, urljoin, format_filename, clean_title
 import os
-from fucking_encoding import clean_title
 from timee import sleep, clock
 from io import BytesIO as IO
 from constants import try_n
@@ -23,15 +22,12 @@ def get_id(url):
 
 class Video(object):
 
-    def __init__(self, url, url_page, id, title, url_thumb, format='title'):
+    def __init__(self, url, url_page, id, title, url_thumb):
         self._url = url
         self.url = LazyUrl(url_page, self.get, self)
         self.id = id
-        ext = '.mp4'
-        self.title = title = clean_title(title)
-        format = format.replace('title', '###title').replace('id', '###id')
-        title = format.replace('###title', title).replace('###id', (u'{}').format(id))
-        self.filename = (u'{}{}').format(title, ext)
+        self.title = title
+        self.filename = format_filename(title, id, '.mp4')
         f = IO()
         self.url_thumb = url_thumb
         downloader.download(url_thumb, buffer=f)
@@ -59,20 +55,15 @@ class Downloader_xvideo(Downloader):
         else:
             self.url = ('https://www.xvideos.com/{}').format(self.url)
 
-    @property
-    def id(self):
-        return get_id(self.url)
-
     def read(self):
-        format = compatstr(self.ui_setting.youtubeFormat.currentText()).lower().strip()
-        video = get_video(self.url, format)
+        video = get_video(self.url)
         self.urls.append(video.url)
         self.setIcon(video.thumb)
         self.title = video.title
         
 
 @try_n(4)
-def get_video(url_page, format):
+def get_video(url_page):
     id = get_id(url_page)
     html = downloader.read_html(url_page)
     soup = Soup(html, unescape=True)
@@ -84,6 +75,6 @@ def get_video(url_page, format):
     if ext.lower() == '.m3u8':
         url = playlist2stream(url, n_thread=5)
     url_thumb = soup.find('meta', {'property': 'og:image'}).attrs['content']
-    video = Video(url, url_page, id, name, url_thumb, format)
+    video = Video(url, url_page, id, name, url_thumb)
     return video
 

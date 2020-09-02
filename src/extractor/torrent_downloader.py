@@ -3,8 +3,7 @@
 # Decompiled from: Python 2.7.16 (v2.7.16:413a49145e, Mar  4 2019, 01:30:55) [MSC v.1500 32 bit (Intel)]
 # Embedded file name: torrent_downloader.pyo
 # Compiled at: 2019-10-16 05:43:55
-from utils import Downloader, speed_text
-from fucking_encoding import clean_title
+from utils import Downloader, speed_text, clean_title
 import constants, os, downloader
 from size import Size
 try:
@@ -31,10 +30,6 @@ class Downloader_torrent(Downloader):
             import torrent
         if self.url.startswith('torrent_'):
             self.url = self.url.replace('torrent_', '', 1)
-
-    @property
-    def id(self):
-        return self.url
 
     @property
     def name(self):
@@ -84,7 +79,6 @@ class Downloader_torrent(Downloader):
             self.exec_queue.run(lambda : cw.setSpeed(''))
         if cw.pause_lock and cw.pbar.value() < cw.pbar.maximum():
             cw.pause_data = {'type': self.type, 'url': self.url, 
-               'id': self.id, 
                'filesize': self._filesize_prev}
             cw.paused = True
             cw.pause_lock = False
