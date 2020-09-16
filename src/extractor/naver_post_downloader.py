@@ -27,24 +27,37 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-import requests
 import clf2
-
 from utils import Session, Downloader, Soup
 
 
 @Downloader.register
 class DownloaderNaverPost(Downloader):
-    type = ""  # 타입
-    URLS = ""  # url 형식
+    type = "post"  # 타입
 
     def init(self):
         pass
 
+    def id(self):
+        pass
+
     def read(self):
-        self.urls.append("https://www.gstatic.com/webp/gallery/2.jpg")
-        self.urls.append("https://www.gstatic.com/webp/gallery/3.jpg")
         self.title = "test"
+        url = self.url.replace("post_", "")
+        html = get_soup(url)
+        img_urls = get_img_links(html)
+        self.title = "aa"
+        for img_url in img_urls:
+            self.urls.append(h)
+
+
+def get_img_links(soup):
+    imgs_element = soup.find_all(
+        "img", id=lambda value: value and value.startswith("SEDOC"), src=True
+    )
+
+    img_links = [img_element["src"] for img_element in imgs_element]
+    return img_links
 
 
 def get_posts(url):
@@ -53,6 +66,6 @@ def get_posts(url):
 
 def get_soup(url):
     session = Session()
-    res = clf2.solve(url, session=Session)
+    res = clf2.solve(url, session=session)
     soup = Soup(res["html"])
     return soup
