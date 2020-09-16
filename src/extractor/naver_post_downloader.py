@@ -48,7 +48,7 @@ class DownloaderNaverPost(Downloader):
         img_urls = get_img_links(html)
         self.title = "aa"
         for img_url in img_urls:
-            self.urls.append(h)
+            self.urls.append(img_url)
 
 
 def get_img_links(soup):
