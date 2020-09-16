@@ -51,19 +51,20 @@ class DownloaderNaverPost(Downloader):
             self.urls.append(img_url)
 
 
-def get_img_links(soup):
+def get_img_links(soup) -> list:
     imgs_element = soup.find_all(
         "img", id=lambda value: value and value.startswith("SEDOC"), src=True
-    )
+    )  # src와 SEDOC으로 시작하는거만 가져옴
 
-    img_links = [img_element["src"] for img_element in imgs_element]
+    img_links = [img_element["src"] for img_element in imgs_element]  # 링크 뽑아오기
     return img_links
 
 
-def get_posts(url):
-    pass
+def get_posts(url) -> list:
+    pass  # TODO: 포스트 링크들 가져오기
 
 
+# https://github.com/KurtBestor/Hitomi-Downloader/blob/master/src/extractor/manatoki_downloader.py#L84
 def get_soup(url):
     session = Session()
     res = clf2.solve(url, session=session)
