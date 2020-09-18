@@ -26,7 +26,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
-import json
+from distutils.util import strtobool
 from typing import Generator
 from urllib.parse import urlparse
 
@@ -41,7 +41,7 @@ class DownloaderNaverPost(Downloader):
 
     def init(self):
         self.url = self.url.replace("naver_post_", "")
-        self.parsed_url = urlparse(self.url)
+        self.parsed_url = urlparse(self.url)  # url 나눔
         self.soup = get_soup(self.url)
 
     def id(self):
@@ -55,6 +55,11 @@ class DownloaderNaverPost(Downloader):
         if self.parsed_url.path.startswith("/viewer"):
             self.title = self.name
             data_linkdatas = get_img_data_linkdatas(self.soup)
+        else:
+            return self.Invailed
+
+        for img_link in generator_img_src(data_linkdatas):
+            self.urls.append(img_link)
 
 
 # https://github.com/KurtBestor/Hitomi-Downloader/blob/master/src/extractor/manatoki_downloader.py#L84 참고
@@ -71,12 +76,13 @@ def get_img_data_linkdatas(soup) -> list:
     return [a_element["data-linkdata"] for a_element in a_elements]  # 링크 데이터 리스트
 
 
-def generator_img_src_list(linkdatas: list) -> Generator:
+def generator_img_src(linkdatas: list) -> Generator:
     for linkdata in linkdatas:
-        img_json = json.load(linkdata)  # a문제
+        if not strtobool(linkdata["linkUse"]):  # 링크 없는것만
+            yield linkdata["src"]  # 제네레이터
 
 
 def get_title(soup):
     title = soup.find("h3", class_="se_textarea")  # 포스트제목
     author = soup.find("span", class_="se_author")  # 작성자
-    return clean_title(f"{title.text} ({author.text})")  # 무난하게 븉임
+    return clean_title(f"{title.text} ({author.text})")  # 무난하게 붙임
