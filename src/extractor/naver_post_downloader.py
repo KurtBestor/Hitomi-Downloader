@@ -56,7 +56,7 @@ class DownloaderNaverPost(Downloader):
             self.title = self.name
             data_linkdatas = get_img_data_linkdatas(self.soup)
         else:
-            return self.Invailed
+            return self.Invalid("유효하지 않은 링크")
 
         for img_link in generator_img_src(data_linkdatas):
             self.urls.append(img_link)
