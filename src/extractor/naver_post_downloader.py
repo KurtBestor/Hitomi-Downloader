@@ -31,8 +31,6 @@ import json
 from typing import Generator
 from urllib.parse import urlparse, parse_qs
 
-import requests
-
 import clf2
 from utils import Session, Downloader, Soup, clean_title
 
@@ -86,8 +84,11 @@ def get_img_data_linkdatas(soup: Soup) -> list:
 def img_src_generator(linkdatas: list) -> Generator:
     for linkdata in linkdatas:
         data = json.loads(linkdata)
-        if not strtobool(data["linkUse"]):  # 링크 없는것만
+        if data.get("linkUse") is None:
             yield data["src"]  # 제네레이터
+        else:
+            if not strtobool(data["linkUse"]):
+                yield data["src"]
 
 
 class UrlGenerator:
@@ -149,4 +150,4 @@ class Title:
     def get_title(self) -> clean_title:
         title = self.soup.find("h3", class_="se_textarea")  # 포스트 제목
         author = self.soup.find("span", class_="se_author")  # 작성자
-        return clean_title(f"{title.text} ({author.text})")  # 무난하게 붙임
+        return clean_title(f"{title.text.replace(' ', '')} ({author.text})")  # 무난하게 붙임
