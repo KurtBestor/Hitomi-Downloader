@@ -99,14 +99,23 @@ def get_series_total_post(soup: Soup):
     total_post_element = series_info.find_all("a")[0]
     return total_post_element.find("em").text  # 총몇개인지만 리턴
 
-def get_profile_title(soup:Soup):
-    profile_name = soup.find('p', class="nick_name").find('span', class_="name") # 프로필 닉네임
-    return clean_title(profile_name.text) # 닉네임으로만
+
+def get_profile_title(soup: Soup):
+    profile_name = soup.find("p", class_="nick_name").find(
+        "span", class_="name"
+    )  # 프로필 닉네임
+    return clean_title(profile_name.text)  # 닉네임으로만
+
 
 def get_series_title(soup: Soup) -> clean_title:
-    series_name = soup.find("h2", class_="tit_series").find('span', class="ell") # 시리즈 제목
-    author = soup.find("div", class_="series_author_wrap").find('strong', class_="ell1") # 작성자
-    return clean_title(f"{series_name.text} ({author.text})") # 무난하게 붙임
+    series_name = soup.find("h2", class_="tit_series").find(
+        "span", class_="ell"
+    )  # 시리즈 제목
+    author = soup.find("div", class_="series_author_wrap").find(
+        "strong", class_="ell1"
+    )  # 작성자
+    return clean_title(f"{series_name.text} ({author.text})")  # 무난하게 붙임
+
 
 def get_title(soup: Soup) -> clean_title:
     title = soup.find("h3", class_="se_textarea")  # 포스트 제목
