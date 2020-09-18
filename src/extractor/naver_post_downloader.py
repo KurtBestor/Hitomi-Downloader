@@ -28,7 +28,7 @@ SOFTWARE.
 """
 from distutils.util import strtobool
 from typing import Generator
-from urllib.parse import urlparse
+from urllib.parse import ParseResult, urlparse
 
 import clf2
 from utils import Session, Downloader, Soup, clean_title
@@ -55,6 +55,10 @@ class DownloaderNaverPost(Downloader):
         if self.parsed_url.path.startswith("/viewer"):
             self.title = self.name
             data_linkdatas = get_img_data_linkdatas(self.soup)
+        elif self.parsed_url.path.startswith("/my.nhn"):
+            total = get_total_post(self.soup)
+        elif self.parsed_url.path.startswith("/my/series"):
+            total = get_series_total_post(self.soup)
         else:
             return self.Invalid("유효하지 않은 링크")
 
@@ -71,7 +75,7 @@ def get_soup(url: str):
 
 
 # HTML5 data-* 속성이 사용됨.
-def get_img_data_linkdatas(soup) -> list:
+def get_img_data_linkdatas(soup: Soup) -> list:
     a_elements = soup.find_all("a", {"data-linktype": "img"})  # 링크 타입이 img인것만 전부 찾음
     return [a_element["data-linkdata"] for a_element in a_elements]  # 링크 데이터 리스트
 
@@ -82,7 +86,29 @@ def generator_img_src(linkdatas: list) -> Generator:
             yield linkdata["src"]  # 제네레이터
 
 
-def get_title(soup):
-    title = soup.find("h3", class_="se_textarea")  # 포스트제목
+# 0: 팔로워 1: 팔로잉 2: 포스트 3: 좋아요한글
+def get_total_post(soup: Soup):
+    profile_info = soup.find("div", class_="expert_num_info")  # 프로필 정보
+    total_post_element = profile_info.find_all("li", class_="inner")[2]
+    return total_post_element.find("span", class_="num").text  # 총몇개인지만 리턴
+
+
+# 0: 포스트 1: 팔로워
+def get_series_total_post(soup: Soup):
+    series_info = soup.find("div", class_="series_follow_area")  # 시리즈 정보
+    total_post_element = series_info.find_all("a")[0]
+    return total_post_element.find("em").text  # 총몇개인지만 리턴
+
+def get_profile_title(soup:Soup):
+    profile_name = soup.find('p', class="nick_name").find('span', class_="name") # 프로필 닉네임
+    return clean_title(profile_name.text) # 닉네임으로만
+
+def get_series_title(soup: Soup) -> clean_title:
+    series_name = soup.find("h2", class_="tit_series").find('span', class="ell") # 시리즈 제목
+    author = soup.find("div", class_="series_author_wrap").find('strong', class_="ell1") # 작성자
+    return clean_title(f"{series_name.text} ({author.text})") # 무난하게 붙임
+
+def get_title(soup: Soup) -> clean_title:
+    title = soup.find("h3", class_="se_textarea")  # 포스트 제목
     author = soup.find("span", class_="se_author")  # 작성자
     return clean_title(f"{title.text} ({author.text})")  # 무난하게 붙임
