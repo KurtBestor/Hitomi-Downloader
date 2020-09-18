@@ -27,6 +27,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 from distutils.util import strtobool
+import json
 from typing import Generator
 from urllib.parse import urlparse, parse_qs
 
@@ -84,8 +85,9 @@ def get_img_data_linkdatas(soup: Soup) -> list:
 
 def img_src_generator(linkdatas: list) -> Generator:
     for linkdata in linkdatas:
-        if not strtobool(linkdata["linkUse"]):  # 링크 없는것만
-            yield linkdata["src"]  # 제네레이터
+        data = json.loads(linkdata)
+        if not strtobool(data["linkUse"]):  # 링크 없는것만
+            yield data["src"]  # 제네레이터
 
 
 class UrlGenerator:
