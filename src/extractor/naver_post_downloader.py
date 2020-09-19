@@ -31,7 +31,7 @@ import json
 import re
 
 from distutils.util import strtobool
-from typing import Generator
+from typing import Generator, List
 from urllib.parse import ParseResult, urlparse, parse_qs
 
 import requests
@@ -66,14 +66,17 @@ class DownloaderNaverPost(Downloader):
         pass
 
     def read(self):
-        self.title = self.client.title
-        posts = self.client.posts
+        if self.client.single:
+            self.title = self.client.title
+            posts = self.client.posts
+        else:
+            raise NotImplementedError
 
         for img_link in img_src_generator(posts):
             self.urls.append(img_link)
 
 
-# https://github.com/KurtBestor/Hitomi-Downloader/blob/master/src/extractor/manatoki_downloader.py#L106
+# https://github.com/KurtBestor/Hitomi-Downloader/blob/master/src/extractor/manatoki_downloader.py#L106 참고
 @page_selector.register("naver_post")
 def f(url):
     client = Client(urlparse(url), get_soup(url))
@@ -235,7 +238,7 @@ class PostPage:
         yield page[::-1]
 
 
-# 귀찮아서 프로퍼티 떡칠 여기사 제네레이터들 전부 리스트로 만들어줄거에요
+# 귀찮아서 프로퍼티 떡칠 여기서 제네레이터들 전부 리스트로 만들어줄거에요
 class PageClient:
     def __init__(self, parsed_url: ParseResult, total):
         self.parsed_url = parsed_url
@@ -270,16 +273,19 @@ class Client(PageClient, Title, Total):
         if parsed_url.path.startswith("/viewer"):
             self.title = self.get_title()
             self.posts = get_img_data_linkdatas(self.soup)
+            self.single = True
 
         elif parsed_url.path.startswith("/my.nhn"):
             PageClient.__init__(self, parsed_url, self.get_total_post())
             self.title = self.get_profile_title()
             self.posts = self.all_post()
+            self.single = False
 
         elif parsed_url.path.startswith("/my/series"):
             PageClient.__init__(self, parsed_url, self.get_series_total_post())
             self.title = self.get_series_title()
             self.posts = self.all_series_post()
+            self.single = False
 
         else:
             raise Exception("유효하지 않습니다.")
