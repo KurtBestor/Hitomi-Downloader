@@ -78,10 +78,11 @@ class DownloaderNaverPost(Downloader):
 
         elif self.parsed_url.path.startswith("/my.nhn"):
             self.title = self.name.get_profile_title()
-            d = self.posts.all_post()
+            page = self.posts.all_post()
 
         elif self.parsed_url.path.startswith("/my/series"):
             self.title = self.name.get_series_title()
+            page = self.posts.all_series_post()
 
         else:
             return self.Invalid("유효하지 않은 링크")
@@ -218,8 +219,7 @@ class PostPage:
 
         page = [
             Page(title.text.replace(" ", ""), link_element["href"])
-            for link_element in link_elements
-            for title in titles
+            for link_element, title in zip(link_elements, titles)
         ]
 
         yield page[::-1]
@@ -233,8 +233,7 @@ class PostPage:
 
         page = [
             Page(title.text.replace(" ", ""), link_element["href"])
-            for link_element in link_elements
-            for title in titles
+            for link_element, title in zip(link_elements, titles)
         ]
 
         yield page[::-1]
