@@ -26,13 +26,24 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
-from distutils.util import strtobool
+import codecs
 import json
+import re
+
+from distutils.util import strtobool
 from typing import Generator
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import ParseResult, urlparse, parse_qs
+
+import requests
 
 import clf2
 from utils import Session, Downloader, Soup, clean_title
+
+
+class Page(object):
+    def __init__(self, title, url):
+        self.title = clean_title(title)
+        self.url = url
 
 
 @Downloader.register
@@ -45,20 +56,32 @@ class DownloaderNaverPost(Downloader):
         self.parsed_url = urlparse(self.url)  # url 나눔
         self.soup = get_soup(self.url)
 
+    @property
+    def total(self):
+        return Total(self.soup)
+
+    @property
+    def name(self):
+        return Title(self.soup)
+
+    @property
+    def posts(self):
+        return Client(self.parsed_url, self.total)
+
     def id(self):
         pass
 
     def read(self):
-        title = Title(self.soup)
         if self.parsed_url.path.startswith("/viewer"):
-            self.title = title.get_title()
+            self.title = self.name.get_title()
             data_linkdatas = get_img_data_linkdatas(self.soup)
 
         elif self.parsed_url.path.startswith("/my.nhn"):
-            self.title = title.get_profile_title()
+            self.title = self.name.get_profile_title()
+            d = self.posts.all_post()
 
         elif self.parsed_url.path.startswith("/my/series"):
-            self.title = title.get_series_title()
+            self.title = self.name.get_series_title()
 
         else:
             return self.Invalid("유효하지 않은 링크")
@@ -71,8 +94,15 @@ class DownloaderNaverPost(Downloader):
 def get_soup(url: str):
     session = Session()
     res = clf2.solve(url, session=session)
-    soup = Soup(res["html"])
-    return soup
+    return Soup(res["html"])
+
+
+def page_soup(url: str):
+    get_html_regex = re.compile(r"\"html\"\:(.+)(\n|\s)\}")
+    response = requests.get(url)
+    like_html = get_html_regex.search(response.text)[1]
+    html = decode_escapes(like_html).replace(r"\/", "/")
+    return Soup(html)
 
 
 # HTML5 data-* 속성이 사용됨.
@@ -91,24 +121,48 @@ def img_src_generator(linkdatas: list) -> Generator:
                 yield data["src"]
 
 
-class UrlGenerator:
-    def __init__(self, parsed_url, total_count):
-        self.parsed_url = parsed_url
-        self.total_count = total_count
+# https://stackoverflow.com/a/24519338 참고
+def decode_escapes(like_html: str) -> str:
+    escape_sequence_regex = re.compile(
+        r"""
+        ( \\U........      # 8-digit hex escapes
+        | \\u....          # 4-digit hex escapes
+        | \\x..            # 2-digit hex escapes
+        | \\[0-7]{1,3}     # Octal escapes
+        | \\N\{[^}]+\}     # Unicode characters by name
+        | \\[\\'"abfnrtv]  # Single-character escapes
+        )""",
+        re.UNICODE | re.VERBOSE,
+    )
 
-    def all_series_post_url_generator(self):
-        query = parse_qs(self.parsed_url.query)
-        for i in range(self.total_count):
-            new_url_query = f"?memberNo={query['memberNo'][0]}&seriesNo={query['seriesNo'][0]}&fromNo={i + 1}&totalCount={self.total_count}"  # 쿼리를 만듭시다
-            url = f"https://{self.parsed_url.netloc}/my/series/detail/more.nhn{new_url_query}"
-            yield url
+    return escape_sequence_regex.sub(
+        lambda match: codecs.decode(match.group(0), "unicode-escape"), like_html
+    )
 
-    def all_post_query_url_generator(self):
-        query = parse_qs(self.parsed_url.query)
-        for i in range(self.total_count):
-            new_url_query = f"?{query['memberNo'][0]}&fromNo={i + 1}&totalCount={self.total_count}"  # 쿼리를 만듭시다
-            url = f"https://{self.parsed_url.netloc}/async{self.parsed_url.path}{new_url_query}"
-            yield url
+
+class Title:
+    def __init__(self, soup: Soup):
+        self.soup = soup
+
+    def get_profile_title(self) -> clean_title:
+        profile_name = self.soup.find("p", class_="nick_name").find(
+            "span", class_="name"
+        )  # 프로필 닉네임
+        return clean_title(profile_name.text)  # 닉네임으로만
+
+    def get_series_title(self) -> clean_title:
+        series_name = self.soup.find("h2", class_="tit_series").find(
+            "span", class_="ell"
+        )  # 시리즈 제목
+        author = self.soup.find("div", class_="series_author_wrap").find(
+            "strong", class_="ell1"
+        )  # 작성자
+        return clean_title(f"{series_name.text} ({author.text})")  # 무난하게 붙임
+
+    def get_title(self) -> clean_title:
+        title = self.soup.find("h3", class_="se_textarea")  # 포스트 제목
+        author = self.soup.find("span", class_="se_author")  # 작성자
+        return clean_title(f"{title.text.replace(' ', '')} ({author.text})")  # 무난하게 붙임
 
 
 class Total:
@@ -128,26 +182,93 @@ class Total:
         return total_post_element.find("em").text  # 총몇개인지만 리턴
 
 
-class Title:
-    def __init__(self, soup: Soup):
+class UrlGenerator:
+    def __init__(self, parsed_url: ParseResult, total_count: int):
+        self.parsed_url = parsed_url
+        self.count = (
+            round(int(total_count) / 20) + 1
+            if not (int(total_count) / 20).is_integer()
+            else int(total_count) / 20
+        )
+
+    def all_post_url_generator(self):
+        query = parse_qs(self.parsed_url.query)
+        for i in range(self.count):
+            new_url_query = (
+                f"?memberNo={query['memberNo'][0]}&fromNo={i + 1}"  # 쿼리를 만듭시다
+            )
+            url = f"https://{self.parsed_url.netloc}/async{self.parsed_url.path}{new_url_query}"
+            yield url
+
+    def all_series_url_generator(self):
+        query = parse_qs(self.parsed_url.query)
+        for i in range(self.count):
+            new_url_query = f"?memberNo={query['memberNo'][0]}&seriesNo={query['seriesNo'][0]}&fromNo={i + 1}"  # 쿼리를 만듭시다
+            url = f"https://{self.parsed_url.netloc}/my/series/detail/more.nhn{new_url_query}"
+            yield url
+
+
+class PostPage:
+    def __init__(self, soup: page_soup):
         self.soup = soup
 
-    def get_profile_title(self):
-        profile_name = self.soup.find("p", class_="nick_name").find(
-            "span", class_="name"
-        )  # 프로필 닉네임
-        return clean_title(profile_name.text)  # 닉네임으로만
+    def all_post_page_generator(self):
+        titles = self.soup.find_all("strong", class_="tit_feed ell")
+        link_elements = self.soup.find_all("a", class_="link_end", href=True)
 
-    def get_series_title(self) -> clean_title:
-        series_name = self.soup.find("h2", class_="tit_series").find(
-            "span", class_="ell"
-        )  # 시리즈 제목
-        author = self.soup.find("div", class_="series_author_wrap").find(
-            "strong", class_="ell1"
-        )  # 작성자
-        return clean_title(f"{series_name.text} ({author.text})")  # 무난하게 붙임
+        page = [
+            Page(title.text.replace(" ", ""), link_element["href"])
+            for link_element in link_elements
+            for title in titles
+        ]
 
-    def get_title(self) -> clean_title:
-        title = self.soup.find("h3", class_="se_textarea")  # 포스트 제목
-        author = self.soup.find("span", class_="se_author")  # 작성자
-        return clean_title(f"{title.text.replace(' ', '')} ({author.text})")  # 무난하게 붙임
+        yield page[::-1]
+
+    def all_series_page_generator(self):
+        titles = [
+            element.find("span")
+            for element in self.soup.find_all("div", class_="spot_post_name")
+        ]
+        link_elements = self.soup.find_all("a", class_="spot_post_area", href=True)
+
+        page = [
+            Page(title.text.replace(" ", ""), link_element["href"])
+            for link_element in link_elements
+            for title in titles
+        ]
+
+        yield page[::-1]
+
+
+class Client:
+    def __init__(self, parsed_url: ParseResult, total: Total):
+        self.parsed_url = parsed_url
+        self.total = total
+
+    @property
+    def all_post_url_list(self):
+        ug = UrlGenerator(self.parsed_url, self.total.get_total_post())
+        return list(ug.all_post_url_generator())
+
+    @property
+    def all_series_post_url_list(self):
+        ug = UrlGenerator(self.parsed_url, self.total.get_series_total_post())
+        return list(ug.all_series_url_generator())
+
+    @property
+    def page_soup_list(self):
+        return [page_soup(url) for url in self.all_post_url_list]
+
+    @property
+    def series_post_soup_list(self):
+        return [page_soup(url) for url in self.all_series_post_url_list]
+
+    def all_post(self):
+        for soup in self.page_soup_list:
+            page = PostPage(soup)
+            return list(page.all_post_page_generator())
+
+    def all_series_post(self):
+        for soup in self.page_soup_list:
+            page = PostPage(soup)
+            return list(page.all_series_page_generator())
