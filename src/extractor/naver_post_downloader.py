@@ -37,6 +37,8 @@ from urllib.parse import ParseResult, urlparse, parse_qs
 import requests
 
 import clf2
+import page_selector
+
 from utils import Session, Downloader, Soup, clean_title
 
 
@@ -57,38 +59,27 @@ class DownloaderNaverPost(Downloader):
         self.soup = get_soup(self.url)
 
     @property
-    def total(self):
-        return Total(self.soup)
-
-    @property
-    def name(self):
-        return Title(self.soup)
-
-    @property
-    def posts(self):
-        return Client(self.parsed_url, self.total)
+    def client(self):
+        return Client(self.parsed_url, self.soup)
 
     def id(self):
         pass
 
     def read(self):
-        if self.parsed_url.path.startswith("/viewer"):
-            self.title = self.name.get_title()
-            data_linkdatas = get_img_data_linkdatas(self.soup)
+        self.title = self.client.title
+        posts = self.client.posts
 
-        elif self.parsed_url.path.startswith("/my.nhn"):
-            self.title = self.name.get_profile_title()
-            page = self.posts.all_post()
-
-        elif self.parsed_url.path.startswith("/my/series"):
-            self.title = self.name.get_series_title()
-            page = self.posts.all_series_post()
-
-        else:
-            return self.Invalid("유효하지 않은 링크")
-
-        for img_link in img_src_generator(data_linkdatas):
+        for img_link in img_src_generator(posts):
             self.urls.append(img_link)
+
+
+# https://github.com/KurtBestor/Hitomi-Downloader/blob/master/src/extractor/manatoki_downloader.py#L106
+@page_selector.register("naver_post")
+def f(url):
+    client = Client(urlparse(url), get_soup(url))
+    return [
+        page for page_list in client.posts for page in page_list
+    ]  # 2차원 리스트 -> 1차원 리스트
 
 
 # https://github.com/KurtBestor/Hitomi-Downloader/blob/master/src/extractor/manatoki_downloader.py#L84 참고
@@ -98,6 +89,7 @@ def get_soup(url: str):
     return Soup(res["html"])
 
 
+# 페이지 파싱에서 사용되는 파서
 def page_soup(url: str):
     get_html_regex = re.compile(r"\"html\"\:(.+)(\n|\s)\}")
     response = requests.get(url)
@@ -141,6 +133,7 @@ def decode_escapes(like_html: str) -> str:
     )
 
 
+# 제목
 class Title:
     def __init__(self, soup: Soup):
         self.soup = soup
@@ -166,6 +159,7 @@ class Title:
         return clean_title(f"{title.text.replace(' ', '')} ({author.text})")  # 무난하게 붙임
 
 
+# 총 포스트 수
 class Total:
     def __init__(self, soup: Soup):
         self.soup = soup
@@ -183,6 +177,7 @@ class Total:
         return total_post_element.find("em").text  # 총몇개인지만 리턴
 
 
+# 왜 제네레이터로 만들었냐고 물어보면 그냥 수정할때나 다른곳에서도 편하게쓸려고 해놓음
 class UrlGenerator:
     def __init__(self, parsed_url: ParseResult, total_count: int):
         self.parsed_url = parsed_url
@@ -209,6 +204,7 @@ class UrlGenerator:
             yield url
 
 
+# 여기서 페이지 리스트 만듬
 class PostPage:
     def __init__(self, soup: page_soup):
         self.soup = soup
@@ -239,28 +235,20 @@ class PostPage:
         yield page[::-1]
 
 
-class Client:
-    def __init__(self, parsed_url: ParseResult, total: Total):
+# 귀찮아서 프로퍼티 떡칠 여기사 제네레이터들 전부 리스트로 만들어줄거에요
+class PageClient:
+    def __init__(self, parsed_url: ParseResult, total):
         self.parsed_url = parsed_url
         self.total = total
 
     @property
-    def all_post_url_list(self):
-        ug = UrlGenerator(self.parsed_url, self.total.get_total_post())
+    def all_url_list(self):
+        ug = UrlGenerator(self.parsed_url, self.total)
         return list(ug.all_post_url_generator())
 
     @property
-    def all_series_post_url_list(self):
-        ug = UrlGenerator(self.parsed_url, self.total.get_series_total_post())
-        return list(ug.all_series_url_generator())
-
-    @property
     def page_soup_list(self):
-        return [page_soup(url) for url in self.all_post_url_list]
-
-    @property
-    def series_post_soup_list(self):
-        return [page_soup(url) for url in self.all_series_post_url_list]
+        return [page_soup(url) for url in self.all_url_list]
 
     def all_post(self):
         for soup in self.page_soup_list:
@@ -271,3 +259,27 @@ class Client:
         for soup in self.page_soup_list:
             page = PostPage(soup)
             return list(page.all_series_page_generator())
+
+
+# 필요한 클래스 전부 상속후 편하게 쓸수있게 만듬
+class Client(PageClient, Title, Total):
+    def __init__(self, parsed_url: ParseResult, soup: Soup):
+        Title.__init__(self, soup)
+        Total.__init__(self, soup)
+
+        if parsed_url.path.startswith("/viewer"):
+            self.title = self.get_title()
+            self.posts = get_img_data_linkdatas(self.soup)
+
+        elif parsed_url.path.startswith("/my.nhn"):
+            PageClient.__init__(self, parsed_url, self.get_total_post())
+            self.title = self.get_profile_title()
+            self.posts = self.all_post()
+
+        elif parsed_url.path.startswith("/my/series"):
+            PageClient.__init__(self, parsed_url, self.get_series_total_post())
+            self.title = self.get_series_title()
+            self.posts = self.all_series_post()
+
+        else:
+            raise Exception("유효하지 않습니다.")
