@@ -31,7 +31,7 @@ import json
 import re
 
 from distutils.util import strtobool
-from typing import Generator, List
+from typing import Generator
 from urllib.parse import ParseResult, urlparse, parse_qs
 
 import requests
@@ -40,7 +40,6 @@ import clf2
 import page_selector
 
 from utils import Session, Downloader, Soup, clean_title
-
 
 class Page(object):
     def __init__(self, title, url):
