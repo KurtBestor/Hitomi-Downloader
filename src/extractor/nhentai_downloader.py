@@ -12,6 +12,7 @@ class Downloader_nhentai(Downloader):
     type = 'nhentai'
     URLS = ['nhentai.net']
     MAX_CORE = 16
+    display_name = 'nhentai'
     
     def init(self):
         self.url = self.url.replace('nhentai_', '')

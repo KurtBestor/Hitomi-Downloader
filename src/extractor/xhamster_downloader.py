@@ -17,6 +17,7 @@ class Downloader_xhamster(Downloader):
      'regex:xhamster[0-9]*\\.[a-z0-9]+/photos/gallery/',
      ]
     single = True
+    display_name = 'xHamster'
 
     def init(self):
         self.url = self.url.replace('xhamster_', '')

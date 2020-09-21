@@ -64,6 +64,7 @@ class Downloader_bili(Downloader):
     URLS = ['bilibili.com', 'bilibili.tv']
     lock = True
     detect_removed = False
+    display_name = 'bilibili'
 
     def init(self):
         self.url = fix_url(self.url, self.customWidget)

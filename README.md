@@ -36,14 +36,14 @@
 | **Facebook** | <https://facebook.com> |
 | **Flickr** | <https://flickr.com> |
 | **Gelbooru** | <https://gelbooru.com> |
-| **Hanime.tv** | <https://hanime.tv> |
+| **hanime.tv** | <https://hanime.tv> |
 | **Hentai Foundry** | <https://hentai-foundry.com> |
 | **Hitomi.la** | <https://hitomi.la> |
 | **Hiyobi.me** | <https://hiyobi.me> |
 | **Imgur** | <https://imgur.com> |
 | **Instagram** | <https://instagram.com> |
 | **爱淘美图** | <http://www.itmtu.com> |
-| **iwara.tv** | <https://iwara.tv><br><https://ecchi.iwara.tv> |
+| **Iwara** | <https://iwara.tv><br><https://ecchi.iwara.tv> |
 | **Jmana** | <https://jmana.net> |
 | **カクヨム** | <https://kakuyomu.jp> |
 | **LHScan** | <https://loveheaven.net> |
@@ -51,6 +51,7 @@
 | **Manamoa** | <https://manamoa.net> |
 | **MyReadingManga** | <https://myreadingmanga.info> |
 | **Naver Blog** | <https://blog.naver.com> |
+| **Naver Post** | <https://post.naver.com> |
 | **Naver Webtoon** | <https://comic.naver.com> |
 | **nhentai** | <https://nhentai.net> |
 | **Niconico** | <http://nicovideo.jp> |
@@ -71,7 +72,7 @@
 | **V LIVE** | <https://vlive.tv> |
 | **Weibo** | <https://weibo.com> |
 | **World Cosplay** | <https://worldcosplay.net> |
-| **XHamster** | <https://xhamster.com> |
+| **xHamster** | <https://xhamster.com> |
 | **XNXX** | <https://xnxx.com> |
 | **XVideos** | <https://xvideos.com> |
 | **Yande.re** | <https://yande.re> |

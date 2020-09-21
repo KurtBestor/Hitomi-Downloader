@@ -14,6 +14,7 @@ class Downloader_youporn(Downloader):
     type = 'youporn'
     single = True
     URLS = ['youporn.com']
+    display_name = 'YouPorn'
     
     def init(self):
         if self.url.startswith('youporn_'):

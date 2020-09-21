@@ -20,6 +20,7 @@ class Image(object):
 class Downloader_worldcos(Downloader):
     type = 'worldcos'
     URLS = ['worldcosplay.net']
+    display_name = 'World Cosplay'
     
     def init(self):
         self.url = self.url.replace('worldcos_', '')

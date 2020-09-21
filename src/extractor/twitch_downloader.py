@@ -1,18 +1,11 @@
-#coding:utf8
-# uncompyle6 version 3.5.0
-# Python bytecode 2.7 (62211)
-# Decompiled from: Python 2.7.16 (v2.7.16:413a49145e, Mar  4 2019, 01:30:55) [MSC v.1500 32 bit (Intel)]
-# Embedded file name: twitch_downloader.pyo
-# Compiled at: 2019-10-07 03:52:59
-import youtube_dl, downloader, re
-from utils import Downloader, get_outdir, Soup, LazyUrl, try_n, compatstr, format_filename, get_ext, clean_title
-from timee import sleep
-from error_printer import print_error
-import os
-from translator import tr_
-import shutil, ffmpeg, json
+#coding: utf8
+import downloader
+import youtube_dl
+from utils import Downloader, get_outdir, Soup, LazyUrl, try_n, compatstr, format_filename, get_ext, clean_title, Session, cut_pair, json_loads, get_print
 from io import BytesIO
 from m3u8_tools import M3u8_stream
+import ree as re
+from translator import tr_
 
 
 @Downloader.register
@@ -23,28 +16,101 @@ class Downloader_twitch(Downloader):
 
     def init(self):
         url = self.url
-        customWidget = self.customWidget
         if 'twitch.tv' in url:
             if not url.startswith('http://') and not url.startswith('https://'):
-                url = u'https://' + url
+                url = 'https://' + url
             self.url = url
         else:
-            url = (u'https://www.twitch.tv/videos/{}').format(url.replace('twitch_', ''))
+            url = 'https://www.twitch.tv/videos/{}'.format(url.replace('twitch_', ''))
             self.url = url
 
     @classmethod
     def fix_url(cls, url):
-        return url.split('?')[0]
+        if re.search(r'/(videos|clips)\?filter=', url):
+            return url.strip('/')
+        return url.split('?')[0].strip('/')
 
     def read(self):
         cw = self.customWidget
-        video = Video(self.url)
-        video.url()
-        self.urls.append(video.url)
+        if '/directory/' in self.url.lower():
+            return self.Invalid('[twitch] Directory is unsupported: {}'.format(self.url))
+            
+        if self.url.count('/') == 3:
+            if 'www.twitch.tv' in self.url or '//twitch.tv' in self.url:
+                filter = 'videos'
+            else:
+                filter = None
+        elif self.url.count('/') == 4:
+            filter = re.find(r'filter=([0-9a-zA-Z_]+)', self.url) or re.find(r'[0-9a-zA-Z_]+', self.url.split('/')[-1])
+            if filter is not None and filter.isdigit():
+                filter = None
+        else:
+            filter = None
+            
+        if filter is None:
+            video = Video(self.url)
+            video.url()
+            self.urls.append(video.url)
+            self.title = video.title
+        elif filter == 'clips':
+            info = get_videos(self.url, cw=cw)
+            video = self.process_playlist('[Clip] {}'.format(info['name']), info['videos'])
+        else:
+            raise NotImplementedError(filter)
 
         self.setIcon(video.thumb)
-        self.title = video.title
+            
 
+@try_n(2)
+def get_videos(url, cw=None):
+    print_ = get_print(cw)
+    info = {}
+    user_id = re.find(r'twitch.tv/([^/?]+)', url, err='no user_id')
+    print(user_id)
+    session = Session()
+    r = session.get(url)
+    s = cut_pair(re.find(r'headers *: *({.*)', r.text, err='no headers'))
+    print(s)
+    headers = json_loads(s)
+
+    payload = [
+        {
+            'operationName': 'ClipsCards__User',
+            'variables': {
+                'login': user_id,
+                'limit': 20,
+                'criteria': {'filter': 'ALL_TIME'}},
+            'extensions': {'persistedQuery': {'version': 1, 'sha256Hash': 'b73ad2bfaecfd30a9e6c28fada15bd97032c83ec77a0440766a56fe0bd632777'}},
+            }
+        ]
+    videos = []
+    cursor = None
+    cursor_new = None
+    while True:
+        if cursor:
+            payload[0]['variables']['cursor'] = cursor
+        r = session.post('https://gql.twitch.tv/gql', json=payload, headers=headers)
+        #print(r)
+        data = r.json()
+        for edge in data[0]['data']['user']['clips']['edges']:
+            url_video = edge['node']['url']
+            info['name'] = edge['node']['broadcaster']['displayName']
+            video = Video(url_video)
+            video.id = int(edge['node']['id'])
+            videos.append(video)
+            cursor_new = edge['cursor']
+        print_('videos: {} / cursor: {}'.format(len(videos), cursor))
+        if cursor == cursor_new:
+            print_('same cursor')
+            break
+        if cursor_new is None:
+            break
+        cursor = cursor_new
+    if not videos:
+        raise Exception('no videos')
+    info['videos'] = sorted(videos, key=lambda video: video.id, reverse=True)
+    return info
+    
 
 class Video(object):
     _url = None
@@ -56,12 +122,11 @@ class Video(object):
     def get(self, url):
         if self._url:
             return self._url
-        options = {}
-        ydl = youtube_dl.YoutubeDL(options)
+        ydl = youtube_dl.YoutubeDL()
         info = ydl.extract_info(url)
-        video_best = info['formats'][(-1)]
+        video_best = info['formats'][-1]
         video = video_best['url']
-        print(video)
+        
         ext = get_ext(video)
         self.title = info['title']
         id = info['display_id']

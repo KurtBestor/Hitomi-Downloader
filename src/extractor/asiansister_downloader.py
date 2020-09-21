@@ -9,6 +9,7 @@ import ree as re
 class Downloader_asiansister(Downloader):
     type = 'asiansister'
     URLS = ['asiansister.com']
+    display_name = 'AsianSister'
 
     @try_n(4)
     def init(self):

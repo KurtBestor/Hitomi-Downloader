@@ -37,6 +37,7 @@ class Downloader_syosetu(Downloader):
     URLS = ['syosetu.com']
     MAX_CORE = 2
     detect_removed = False
+    display_name = '小説家になろう'
 
     def init(self):
         self.url = self.url.replace('syosetu_', '')

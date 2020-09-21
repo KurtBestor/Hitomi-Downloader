@@ -35,6 +35,7 @@ class Downloader_xnxx(Downloader):
     type = 'xnxx'
     URLS = ['xnxx.com']
     single = True
+    display_name = 'XNXX'
 
     def init(self):
         self.url = self.url.replace('xnxx_', '')

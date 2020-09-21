@@ -35,6 +35,7 @@ class Downloader_pixiv_comic(Downloader):
     type = 'pixiv_comic'
     URLS = ['comic.pixiv.net/works', 'comic.pixiv.net/viewer/']
     _soup = None
+    display_name = 'pixivコミック'
 
     def init(self):
         self.url = self.url.replace('pixiv_comic_', '')

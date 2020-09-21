@@ -222,8 +222,6 @@ class Video(object):
                 break
             except Exception as e:
                 print(print_error(e)[-1])
-        #else:
-        #    raise e
         self.thumb = f
 
         #
@@ -331,6 +329,7 @@ class Downloader_youtube(Downloader):
     yt_type = None
     URLS = ['youtube.co', 'youtu.be']
     lock = True
+    display_name = 'YouTube'
     
     def init(self):
         ui_setting = self.ui_setting

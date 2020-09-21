@@ -13,6 +13,7 @@ class Downloader_bcy(Downloader):
     type = 'bcy'
     URLS = ['bcy.net/item/detail/', 'bcy.net/u/']
     MAX_CORE = 8
+    display_name = '半次元'
     
     def init(self):
         self.url = self.url.replace('bcy_', '')

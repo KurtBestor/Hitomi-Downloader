@@ -22,6 +22,7 @@ class Image(object):
 class Downloader_wikiart(Downloader):
     type = 'wikiart'
     URLS = ['wikiart.org']
+    display_name = 'WikiArt'
 
     def init(self):
         self.url = self.url.replace('wikiart_', '')

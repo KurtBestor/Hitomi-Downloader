@@ -46,6 +46,7 @@ class Downloader_xvideo(Downloader):
     type = 'xvideo'
     URLS = ['regex:xvideos[0-9]*\\.com', 'regex:xvideos[0-9]*\\.in']
     single = True
+    display_name = 'XVideos'
 
     def init(self):
         self.url = self.url.replace('xvideo_', '')

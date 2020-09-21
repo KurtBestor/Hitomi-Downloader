@@ -61,9 +61,6 @@ class DownloaderNaverPost(Downloader):
     def client(self):
         return Client(self.parsed_url, self.soup)
 
-    def id(self):
-        pass
-
     def read(self):
         if self.client.single:
             self.title = self.client.title
@@ -86,8 +83,7 @@ def f(url):
 
 # https://github.com/KurtBestor/Hitomi-Downloader/blob/master/src/extractor/manatoki_downloader.py#L84 참고
 def get_soup(url: str):
-    session = Session()
-    res = clf2.solve(url, session=session)
+    res = clf2.solve(url)
     return Soup(res["html"])
 
 
@@ -186,7 +182,7 @@ class UrlGenerator:
         self.count = (
             round(int(total_count) / 20) + 1
             if not (int(total_count) / 20).is_integer()
-            else int(total_count) / 20
+            else round(int(total_count) / 20)
         )
 
     def all_post_url_generator(self):

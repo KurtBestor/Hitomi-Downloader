@@ -21,6 +21,7 @@ class Downloader_asmhentai(Downloader):
     type = 'asmhentai'
     URLS = ['asmhentai.com']
     MAX_CORE = 8
+    display_name = 'AsmHentai'
     
     def init(self):
         pass

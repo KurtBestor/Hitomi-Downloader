@@ -11,7 +11,6 @@ class Image(object):
 
     def __init__(self, post_url, date, url, page):
         self.post_url = post_url
-        self.date = date
         self.url = LazyUrl(post_url, lambda _: url, self)
         self.page = page
         name = post_url.split('/')[(-1)]
@@ -26,6 +25,7 @@ class Image(object):
 class Downloader_artstation(Downloader):
     type = 'artstation'
     URLS = ['artstation.com']
+    display_name = 'ArtStation'
 
     def init(self):
         self.url_main = 'https://www.artstation.com/{}'.format(self.id.replace('artstation_', '').replace('／', '/'))
@@ -193,7 +193,7 @@ def get_imgs_page(id_art, session, date=None, cw=None):
                 soup = Soup(html)
                 url = soup.find('video').find('source').attrs['src']
             except Exception as e:
-                print(e)
+                pass
             if not url:
                 try:
                     url = soup.find('link', {'rel': 'canonical'}).attrs['href']

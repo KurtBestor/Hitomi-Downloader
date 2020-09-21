@@ -41,6 +41,7 @@ class Downloader_hanime(Downloader):
     type = 'hanime'
     URLS = ['hanime.tv/hentai-videos/', 'hanime.tv/videos/']
     single = True
+    display_name = 'hanime.tv'
 
     def init(self):
         if self.url.startswith('hanime_'):

@@ -29,6 +29,7 @@ class Downloader_afreeca(Downloader):
     type = 'afreeca'
     URLS = ['afreecatv.com']
     single = True
+    display_name = 'AfreecaTV'
 
     def init(self):
         self.url = self.url.replace('afreeca_', '')

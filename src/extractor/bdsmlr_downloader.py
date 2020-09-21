@@ -14,6 +14,7 @@ import clf2
 class Downloader_bdsmlr(Downloader):
     type = 'bdsmlr'
     URLS = ['bdsmlr.com']
+    display_name = 'BDSMlr'
 
     def init(self):
         self.url = self.url.replace('bdsmlr_', '')

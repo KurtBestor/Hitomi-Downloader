@@ -6,13 +6,14 @@ import downloader
 from random import shuffle, random
 from timee import sleep
 from error_printer import print_error
-from utils import Downloader, query_url, get_max_range, clean_url, get_outdir, get_print, compatstr, clean_title
+from utils import Downloader, query_url, get_max_range, clean_url, get_outdir, get_print, compatstr, clean_title, LazyUrl
 from translator import tr_
 import os
 import ffmpeg
 import constants
 import ree as re
 import asyncio
+from datetime import datetime, datetime
 try:
     from urllib import unquote # python2
 except ImportError:
@@ -43,6 +44,7 @@ class Downloader_pixiv(Downloader):
     MAX_CORE = 16
     info = None
     _id = None
+    keep_date = True
 
     def init(self):
         asyncio.set_event_loop(asyncio.new_event_loop())###
@@ -125,9 +127,6 @@ class Downloader_pixiv(Downloader):
             self.print_(print_error(e)[0])
             self.Invalid(tr_('로그인 실패: {}{}\n[옵션 - 설정 - 픽시브 설정 - 로그인] 에서 설정해주세요.').format(header, url))
             return 'stop'
-
-        self.referer = 'https://app-api.pixiv.net/'
-        #self.header = dict(self.api.token)
 
     @property
     def id(self):
@@ -213,7 +212,6 @@ class Downloader_pixiv(Downloader):
         self.imgs = imgs
         for img in imgs:
             self.urls.append(img.url)
-            self.filenames[img.url] = img.filename
 
         self.title = clean_title(title) # 1390
 
@@ -232,10 +230,10 @@ class Downloader_pixiv(Downloader):
 
             imgs_ugoira = []
             for img in self.imgs:
-                if img.url not in cw.urls:
-                    continue
+##                if img.url not in cw.urls:
+##                    continue
                 if img.type == 'ugoira':
-                    if os.path.splitext(img.url)[1].lower() == '.zip':
+                    if os.path.splitext(img.url())[1].lower() == '.zip':
                         imgs_ugoira.append(img)
 
             for j, img in enumerate(imgs_ugoira):
@@ -257,15 +255,23 @@ class Downloader_pixiv(Downloader):
                 try:
                     self.removeDirList.append((filename, False))
                     cw.dones.add(out)
-                    i = cw.urls.index(img.url)
-                    cw.imgs[i] = out
+                    i = self.imgs.index(img)
+                    cw.setNameAt(i, out)
                     if i == 0:
-                        cw.firstImg = out
                         cw.setIcon(out)
                 except Exception as e:
                     return self.Invalid(e=e)
 
             self.exec_queue.put((cw, u'customWidget.pbar.setFormat("[%v/%m]")'))
+
+
+def get_time(illust):
+    ds = illust.create_date
+    ds, z = ds[:-6], ds[-6:]
+    dt = int(z[:3]) * 3600 + int(z[4:]) * 60
+    time = datetime.strptime(ds.replace('  ', ' '), '%Y-%m-%dT%H:%M:%S')
+    time = (time-datetime(1970,1,1)).total_seconds()
+    return time - dt
 
 
 class Img(object):
@@ -276,11 +282,11 @@ class Img(object):
         self.type = illust.type
         self.title = illust.title
         self.artist = illust.user.name
-        self.url = url
+        self.url = LazyUrl('https://app-api.pixiv.net/', lambda _: url, self)
         ps = re.findall('_p([0-9]+)', url)
         p = ps[(-1)] if ps else 0
         self.p = p
-        self.ext = os.path.splitext(self.url.split('?')[0].split('#')[0])[1]
+        self.ext = os.path.splitext(url.split('?')[0].split('#')[0])[1]
         if self.type == 'ugoira':
             self.ugoira_data = ugoira_data
         if format_name:
@@ -289,9 +295,7 @@ class Img(object):
             self.filename = clean_title(name.strip(), allow_dot=True, n=-len(self.ext)) + self.ext
         else:
             self.filename = os.path.basename(url.split('?')[0].split('#')[0])
-
-    def __repr__(self):
-        return ('Img({})').format(self.url)
+        self.utime = get_time(illust)
 
 
 def get_imgs(user_id, type='user', n=None, api=None, tags=[], types={'illust', 'manga', 'ugoira'}, format=None, format_name=None, dir='', cw=None, title=None, info=None):

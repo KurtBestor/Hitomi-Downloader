@@ -1,5 +1,5 @@
 import downloader
-from utils import Soup, try_n, Downloader, urljoin, get_print, Session, clean_url, clean_title, get_outdir, size_folder, LazyUrl, get_ext, ID_DIR
+from utils import Soup, try_n, Downloader, urljoin, get_print, Session, clean_url, clean_title, LazyUrl, get_ext, fix_title, lazy, get_imgs_already
 import os
 from translator import tr_
 import page_selector
@@ -7,8 +7,7 @@ import utils
 from time import sleep
 import clf2
 import ree as re
-SKIP = True
-ID_DIR.register('manatoki', ID_DIR.after_bracket)
+from ratelimit import limits, sleep_and_retry
 
 
 class Image(object):
@@ -24,39 +23,68 @@ class Page(object):
     def __init__(self, title, url):
         self.title = clean_title(title)
         self.url = url
+        self.id = int(re.find('/(comic|webtoon)/([0-9]+)', url, err='no id')[1])
 
 
 @Downloader.register
 class Downloader_manatoki(Downloader):
     type = 'manatoki'
     URLS = [r'regex:(mana|new)toki[0-9]*\.(com|net)']
-    MAX_CORE = 8
-    
+    MAX_CORE = 4
+
+    @try_n(2)
     def init(self):
         self.url = self.url.replace('manatoki_', '')
+        
         self.session, self.soup, url = get_soup(self.url)
         self.url = self.fix_url(url)
 
+        # 2377
+        list = self.soup.find(attrs={'data-original-title': '목록'})
+        if list:
+            url = urljoin(self.url, list.parent['href'])
+            nav = self.soup.find('div', class_='toon-nav')
+            select = nav.find('select', {'name': 'wr_id'})
+            for i, op in enumerate(select.findAll('option')[::-1]):
+                if 'selected' in op.attrs:
+                    break
+            else:
+                raise Exception('no selected option')
+            self.session, self.soup, url = get_soup(url)
+            self.url = self.fix_url(url)
+            
+            for i, page in enumerate(get_pages(self.url, self.soup)):
+                if page.id == int(op['value']):
+                    break
+            else:
+                raise Exception('can not find page')
+            self.customWidget.range_p = [i]
+
+        self.name
+
     @classmethod
     def fix_url(cls, url):
+        # 2377
+        m = re.find(r'/board.php\?bo_table=([0-9a-zA-Z_]+)&wr_id=([0-9]+)', url)
+        if m:
+            return urljoin(url, '/{}/{}'.format(*m))
         return url.split('?')[0]
 
     @classmethod
     def key_id(cls, url):
         return '/'.join(url.split('/')[3:5])
 
-    @property
+    @lazy
     def name(self):
-        return get_title(self.soup)
+        artist = get_artist(self.soup)
+        title = self.soup.find('meta', {'name':'subject'})['content'].strip()
+        return fix_title(self, title, artist)
 
     def read(self):
-        list = self.soup.find('ul', class_='list-body')
-        if list is None:
-            return self.Invalid(tr_('목록 주소를 입력해주세요: {}').format(self.url))
         self.title = tr_('읽는 중... {}').format(self.name)
         self.artist = get_artist(self.soup)
 
-        imgs = get_imgs(self.url, self.soup, self.session, self.customWidget)
+        imgs = get_imgs(self.url, self.name, self.soup, self.session, self.customWidget)
         
         for img in imgs:
             if isinstance(img, Image):
@@ -67,12 +95,6 @@ class Downloader_manatoki(Downloader):
         self.title = self.name
 
 
-def get_title(soup):
-    artist = get_artist(soup)
-    title = soup.find('meta', {'name':'subject'})['content'].strip()
-    title = '[{}] {}'.format(artist, title)
-    return clean_title(title)
-
 
 def get_artist(soup):
     view = soup.find('div', class_='view-title')
@@ -81,8 +103,11 @@ def get_artist(soup):
     return artist
 
 
-def get_soup(url):
-    session = Session()
+@sleep_and_retry
+@limits(1, 10)
+def get_soup(url, session=None):
+    if session is None:
+        session = Session()
     res = clf2.solve(url, session=session)
     soup = Soup(res['html'])
     
@@ -100,6 +125,8 @@ def get_pages(url, soup):
         href = urljoin(url, href)
         page = Page(title, href)
         pages.append(page)
+    if not pages:
+        raise Exception('no pages')
     return pages[::-1]
 
 
@@ -113,28 +140,23 @@ def f(url):
     return pages
 
 
-def get_imgs(url, soup=None, session=None, cw=None):
+def get_imgs(url, title, soup=None, session=None, cw=None):
     print_ = get_print(cw)
     
     if soup is None or session is None:
-        session, soup = get_soup(url)
+        session, soup, url = get_soup(url, session)
 
     pages = get_pages(url, soup)
     pages = page_selector.filter(pages, cw)
 
-    title = get_title(soup)
     imgs = []
     for i, page in enumerate(pages):
-        dir = os.path.join(get_outdir('manatoki'), title, page.title)
-        print('test dir:', dir)
-        if SKIP and size_folder(dir) > 0:
-            print_('Skip: {}'.format(page.title))
-            for p, img in enumerate(sorted(os.listdir(dir))):
-                img = os.path.join(dir, img)
-                imgs.append(img)
+        imgs_already = get_imgs_already('manatoki', title, page, cw)
+        if imgs_already:
+            imgs += imgs_already
             continue
         
-        imgs_ = get_imgs_page(page, url, session, cw)
+        imgs_ = get_imgs_page(page, title, url, session, cw)
         imgs += imgs_
 
         s = '{} {} / {}  ({} / {})'.format(tr_('읽는 중...'), title, page.title, i+1, len(pages))
@@ -150,14 +172,19 @@ def get_imgs(url, soup=None, session=None, cw=None):
 
 
 @try_n(4)
-def get_imgs_page(page, referer, session, cw):
+def get_imgs_page(page, title, referer, session, cw):
+    print_ = get_print(cw)
     #sleep(2)
     #html = downloader.read_html(page.url, referer, session=session)
     #soup = Soup(html)
 
     # 2183
-    res = clf2.solve(page.url, session=session)
-    soup = Soup(res['html'])
+    session, soup, page.url = get_soup(page.url, session)
+
+    title_page = clean_title(soup.find('span', class_='page-desc').text.strip())
+    if page.title != title_page:
+        print_('{} -> {}'.format(page.title, title_page))
+        page.title = title_page
     
     views = soup.findAll('div', class_='view-content')
     
@@ -166,6 +193,8 @@ def get_imgs_page(page, referer, session, cw):
         if view is None:
             continue
         for img in view.findAll('img'):
+            if 'none' in img.get('style', '').lower():
+                continue
             img = img.attrs.get('data-original') or img.attrs.get('content')
             if not img:
                 continue
@@ -177,7 +206,7 @@ def get_imgs_page(page, referer, session, cw):
             img = Image(img, page, len(imgs))
             imgs.append(img)
 
-    if not imgs:
-        raise Exception('no imgs')
+##    if not imgs:
+##        raise Exception('no imgs')
 
     return imgs

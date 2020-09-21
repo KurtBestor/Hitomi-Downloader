@@ -24,6 +24,7 @@ class Downloader_sankaku(Downloader):
     type = 'sankaku'
     URLS = ['chan.sankakucomplex.com', 'idol.sankakucomplex.com', 'www.sankakucomplex.com']
     MAX_CORE = 2
+    display_name = 'Sankaku Complex'
     
     def init(self):
         self.url = self.url.replace('sankaku_', '')
