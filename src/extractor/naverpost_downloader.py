@@ -49,7 +49,7 @@ class Page(object):
 
 @Downloader.register
 class DownloaderNaverPost(Downloader):
-    type = "naver_post"  # 타입
+    type = "naverpost"  # 타입
     URLS = ["m.post.naver.com", "post.naver.com"]
 
     def init(self):
@@ -76,7 +76,7 @@ class DownloaderNaverPost(Downloader):
 
 
 # https://github.com/KurtBestor/Hitomi-Downloader/blob/master/src/extractor/manatoki_downloader.py#L106 참고
-@page_selector.register("naver_post")
+@page_selector.register("naverpost")
 def f(url):
     client = Client(urlparse(url), get_soup(url))
     return [
