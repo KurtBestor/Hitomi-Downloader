@@ -6,6 +6,7 @@
 from utils import Downloader, speed_text, clean_title
 import constants, os, downloader
 from size import Size
+import options
 try:
     import torrent
 except Exception as e:
@@ -65,7 +66,8 @@ class Downloader_torrent(Downloader):
         cw.setColor('downloading')
         self.exec_queue.run(lambda : cw.pbar.setMaximum(MAX_PBAR))
         self.exec_queue.run(lambda : cw.pbar.setFormat('%p%'))
-        self.exec_queue.put((cw, 'customWidget.iconLabel.setPixmap(QtGui.QPixmap())'))
+        if not options.get('lazy'):
+            self.exec_queue.put((cw, 'customWidget.iconLabel.setPixmap(QtGui.QPixmap())'))
         cw.downloader_pausable = True
         self.update_tools_buttons()
         if cw.paused:

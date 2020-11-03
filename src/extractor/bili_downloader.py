@@ -14,6 +14,7 @@ import math
 import ree as re
 import utils
 from collections import OrderedDict
+import options
 _VALID_URL = 'https?://(?:www\\.|bangumi\\.|)bilibili\\.(?:tv|com)/(?:video/av|anime/(?P<anime_id>\\d+)/play#)(?P<id>\\d+)'
 _APP_KEY = 'iVGUTjsxvpLeuDCf'
 _BILIBILI_KEY = 'aHRmhWMLkdeMuILqORnYZocwMBpMEOdt'
@@ -110,8 +111,9 @@ class Downloader_bili(Downloader):
             cw.setNameAt(0, out)
             del cw.imgs[1:]
             cw.dones.add(os.path.realpath(out))
-            cw.pageIcon.hide()
-            cw.after_label.setText('')
+            if not options.get('lazy'):
+                cw.pageIcon.hide()
+                cw.after_label.setText('')
             cw.dir = outdir
 
 

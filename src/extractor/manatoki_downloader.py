@@ -109,7 +109,7 @@ def get_soup(url, session=None):
     if session is None:
         session = Session()
     res = clf2.solve(url, session=session)
-    soup = Soup(res['html'])
+    soup = Soup(res['html'], apply_css=True)
     
     return session, soup, res['url']
 
@@ -121,7 +121,7 @@ def get_pages(url, soup):
         for span in item.a.findAll('span'):
             span.decompose()
         title = item.a.text.strip()
-        href = item.a.attrs['href']
+        href = item.a['href']
         href = urljoin(url, href)
         page = Page(title, href)
         pages.append(page)
@@ -186,27 +186,44 @@ def get_imgs_page(page, title, referer, session, cw):
         print_('{} -> {}'.format(page.title, title_page))
         page.title = title_page
     
-    views = soup.findAll('div', class_='view-content')
+    views = soup.findAll('div', class_='view-content')\
+            + soup.findAll('div', class_='view-padding')
+    if not views:
+        raise Exception('no views')
+
+    hash = re.find(r'''data_attribute *: *['"](.+?)['"]''', soup.html)
+    print_('hash: {}'.format(hash))
+    if hash is None:
+        raise Exception('no hash')
     
     imgs = []
     for view in views:
         if view is None:
             continue
         for img in view.findAll('img'):
-            if 'none' in img.get('style', '').lower():
+            if not isVisible(img):
                 continue
-            img = img.attrs.get('data-original') or img.attrs.get('content')
-            if not img:
+            src = img.get('data-{}'.format(hash))
+            src = src or img.get('content') # https://manatoki77.net/comic/5266935
+            if not src:
                 continue
-            img = urljoin(page.url, img)
+            img = urljoin(page.url, src)
             if '/img/cang' in img:
                 continue
             if '/img/blank.gif' in img:
                 continue
-            img = Image(img, page, len(imgs))
+            img = Image(img, page, len(imgs))   
             imgs.append(img)
 
 ##    if not imgs:
 ##        raise Exception('no imgs')
 
     return imgs
+
+
+def isVisible(tag):
+    while tag:
+        if re.search('display: *none', tag.get('style', ''), re.IGNORECASE):
+            return False
+        tag = tag.parent
+    return True

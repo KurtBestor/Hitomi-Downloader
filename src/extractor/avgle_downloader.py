@@ -19,7 +19,7 @@ class Downloader_avgle(Downloader):
 
     def init(self):
         self.url = self.url.replace('avgle_', '', 1)
-        if not self.customWidget.data:
+        if not self.customWidget.data_:
             link = 'https://github.com/KurtBestor/Hitomi-Downloader/wiki/Chrome-Extension'
             webbrowser.open(link)
             return self.Invalid('No data; See: {}'.format(link))
@@ -45,7 +45,7 @@ def get_video(url, cw=None):
     html = downloader.read_html(url)
     soup = Soup(html)
 
-    data = cw.data
+    data = cw.data_
     if not isinstance(data, bytes):
         data = data.encode('utf8')
     s = base64.b64decode(data).decode('utf8')

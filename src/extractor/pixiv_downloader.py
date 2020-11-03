@@ -13,7 +13,7 @@ import ffmpeg
 import constants
 import ree as re
 import asyncio
-from datetime import datetime, datetime
+from datetime import datetime
 try:
     from urllib import unquote # python2
 except ImportError:
@@ -45,6 +45,7 @@ class Downloader_pixiv(Downloader):
     info = None
     _id = None
     keep_date = True
+    atts = ['_format', '_format_name', 'imgs']
 
     def init(self):
         asyncio.set_event_loop(asyncio.new_event_loop())###
@@ -139,6 +140,14 @@ class Downloader_pixiv(Downloader):
     def key_id(cls, url): #2302
         return get_id(url, False)
 
+    def get_types(self):
+        return set() # legacy; #2653
+        types = set()
+        for t in query_url(self.url).get('type', []):
+            t = t.lower()
+            types.add(t)
+        return types
+
     def read(self):
         type = self.pixiv_type
         cw = self.customWidget
@@ -150,10 +159,9 @@ class Downloader_pixiv(Downloader):
         
         self._format = [None, 'gif', 'webp', 'png'][ui_setting.ugoira_convert.currentIndex()]
         self._format_name = compatstr(ui_setting.pixivFormat.currentText())
-        types = [ t.lower() for t in query_url(self.url).get('type', []) ]
+        types = self.get_types()
         if types:
-            s = (u', ').join(sorted(types))
-            types = set(types)
+            s = ', '.join(sorted(types))
         else:
             s = 'all'
             types = None
@@ -209,7 +217,13 @@ class Downloader_pixiv(Downloader):
             msg = (u'PixivError: {}').format(e.message)
             return self.Invalid(msg)
 
-        self.imgs = imgs
+        self.imgs = []
+        for img in imgs:
+            d = {'type': img.type, 'url': img.url()}
+            if img.type == 'ugoira':
+                d['filename'] = img.filename
+                d['frames'] = img.ugoira_data.frames
+            self.imgs.append(d)
         for img in imgs:
             self.urls.append(img.url)
 
@@ -232,19 +246,19 @@ class Downloader_pixiv(Downloader):
             for img in self.imgs:
 ##                if img.url not in cw.urls:
 ##                    continue
-                if img.type == 'ugoira':
-                    if os.path.splitext(img.url())[1].lower() == '.zip':
+                if img['type'] == 'ugoira':
+                    if os.path.splitext(img['url'])[1].lower() == '.zip':
                         imgs_ugoira.append(img)
 
             for j, img in enumerate(imgs_ugoira):
                 if not cw.valid or not cw.alive:
                     return
                 self.exec_queue.put((cw, (u'customWidget.pbar.setFormat(u"[%v/%m]  {} [{}/{}]")').format(tr_(u'움짤 변환...'), j, len(imgs_ugoira))))
-                filename = os.path.join(self.dir, img.filename)
+                filename = os.path.join(self.dir, img['filename'])
                 out = os.path.splitext(filename)[0] + '.' + format
                 cw.print_((u'convert ugoira: {} --> {}').format(filename, out))
                 try:
-                    duration = [ frame.delay for frame in img.ugoira_data.frames ]
+                    duration = [ frame.delay for frame in img['frames'] ]
                     self.print_((u'Duration: {}').format(duration))
                     ffmpeg.gif(filename, out, duration=duration, dither=dither, quality=quality, cw=cw)
                 except Exception as e:
@@ -408,6 +422,10 @@ def get_id(url, dynamic=True, d=None):
     for header in headers.values():
         if url.startswith(header):
             return url
+    if dynamic:
+        api = pixiv_auth.get_api()
+    else:
+        api = None
     if 'search.php' in url or '/tags/' in url:
         if 'word=' in url:
             word = re.find('[?&]word=([^&]*)', url)
@@ -448,6 +466,7 @@ def get_id(url, dynamic=True, d=None):
     
 
 def get_imgs_from_illust(illust, api=None, types={'illust', 'manga', 'ugoira'}, format=None, format_name=None, dir='', print_=None, cw=None):
+    print('get_imgs_from_illust', api, types, format, format_name, dir)
     print_ = get_print(cw)
     if api is None:
         api = pixiv_auth.get_api()

@@ -1,13 +1,11 @@
 import downloader
 from utils import Session, Downloader, get_outdir, try_n, Soup, format_filename, clean_title
 import ree as re, json
-from io import BytesIO as IO
+from io import BytesIO
 import os
 from timee import time
-import m3u8, ffmpeg
 from m3u8_tools import M3u8_stream
 from random import randrange
-key = b'0123456701234567'
 
 
 class Video(object):
@@ -19,13 +17,13 @@ class Video(object):
         self.brand = info['brand']
         self.url = stream['url']
         self.url_thumb = info['poster_url']
-        self.thumb = IO()
+        self.thumb = BytesIO()
         downloader.download(self.url_thumb, buffer=self.thumb)
         ext = os.path.splitext(self.url.split('?')[0].split('#')[0])[1]
         if ext.lower() == '.m3u8':
             print('read m3u8:', self.url)
             ext = '.mp4'
-            self.url = M3u8_stream(self.url, deco=decrypt, n_thread=4)
+            self.url = M3u8_stream(self.url, n_thread=4)
         else:
             size = downloader.get_size(self.url)
             if size <= 0:
@@ -113,18 +111,4 @@ def get_video(url, session=None):
     return Video(info, stream), session
 
 
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.hazmat.backends import default_backend
-backend = default_backend()
-def decrypt(s):
-    iv = key
-    cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=backend)
-    r = -len(s) % 16
-    if r:
-        s += b'\x00' * r
-    dec = cipher.decryptor()
-    s_dec = dec.update(s) + dec.finalize()
-    if r:
-        s_dec = s_dec[:-r]
-    return s_dec
 

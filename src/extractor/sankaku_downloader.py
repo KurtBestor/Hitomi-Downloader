@@ -285,7 +285,9 @@ def get_imgs(url, title=None, customWidget=None, d=None, types=['img', 'gif', 'v
             url_img = article.a.attrs['href']
             if not url_img.startswith('http'):
                 url_img = urljoin('https://{}.sankakucomplex.com'.format(type), url_img)
-            id = re.findall('show/([0-9]+)', url_img)[0]
+            id = re.find('show/([0-9]+)', url_img)
+            if id is None: # sankaku plus
+                continue
             if id in local_ids:
                 #print('skip', id)
                 local = True

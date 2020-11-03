@@ -6,7 +6,7 @@
 import downloader
 from utils import Soup, Downloader, get_outdir, Session, LazyUrl, try_n, format_filename, clean_title
 import ree as re
-from timee import sleep
+from timee import sleep, time
 import os
 from io import BytesIO
 import shutil
@@ -64,6 +64,7 @@ def get_video(url, session):
     soup = Soup(html)
     url_thumb = soup.find('meta', {'property': 'og:image'}).attrs['content']
     params = re.findall('VodParameter *= *[\'"]([^\'"]+)[\'"]', html)[0]
+    params += '&adultView=ADULT_VIEW&_={}'.format(int(time()*1000))
     url_xml = 'http://afbbs.afreecatv.com:8080/api/video/get_video_info.php?' + params
     print(url_xml)
     html = downloader.read_html(url_xml, session=session, referer=url)
