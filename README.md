@@ -1,6 +1,6 @@
 <p align="center">
   <br>
-  <img src="imgs/card_crop.png" width="40%"/>
+  <img src="imgs/card_crop.png" width="50%"/>
   <br>
   <br>
 </p>
@@ -42,7 +42,6 @@
 | **Hiyobi.me** | <https://hiyobi.me> |
 | **Imgur** | <https://imgur.com> |
 | **Instagram** | <https://instagram.com> |
-| **爱淘美图** | <http://www.itmtu.com> |
 | **Iwara** | <https://iwara.tv><br><https://ecchi.iwara.tv> |
 | **Jmana** | <https://jmana.net> |
 | **カクヨム** | <https://kakuyomu.jp> |
@@ -61,6 +60,7 @@
 | **Pixiv** | <https://pixiv.net> |
 | **pixivコミック** | <https://comic.pixiv.net> |
 | **Pornhub** | <https://pornhub.com><br><https://pornhubpremium.com> |
+| **Rule34.xxx** | <https://rule34.xxx> |
 | **Sankaku Complex** | <https://www.sankakucomplex.com><br><https://chan.sankakucomplex.com><br><https://idol.sankakucomplex.com> |
 | **Soundcloud** | <https://soundcloud.com> |
 | **小説家になろう** | <https://syosetu.com> |
