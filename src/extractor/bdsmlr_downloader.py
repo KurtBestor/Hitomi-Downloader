@@ -95,19 +95,22 @@ def get_imgs(user_id, session, cw=None):
     
     token = soup.find('meta', {'name': 'csrf-token'}).attrs['content']
     print_(u'token: {}'.format(token))
-    foo(url, soup, info)
 
     max_pid = get_max_range(cw)#, 2000)
 
     n = len(info['ids'])
     for p in range(1000):
-        url_api = 'https://{}.bdsmlr.com/infinitepb2/{}'.format(user_id, user_id)
+        if p == 0:
+            url_api = 'https://{}.bdsmlr.com/loadfirst'.format(user_id)
+        else:
+            url_api = 'https://{}.bdsmlr.com/infinitepb2/{}'.format(user_id, user_id)
         data = {
             'scroll': str(info['c']),
             'timenow': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            'last': str(info['last']),
             }
-        print_(u'n:{}, scroll:{}, last:{}'.format(len(info['posts']), data['scroll'], data['last']))
+        if 'last' in info:
+            data['last'] = str(info['last'])
+        print_(u'n:{}, scroll:{}, last:{}'.format(len(info['posts']), data['scroll'], data.get('last')))
         headers = {
             'Referer': url,
             'X-CSRF-TOKEN': token,
@@ -131,8 +134,8 @@ def get_imgs(user_id, session, cw=None):
 
         s = u'{}  {} (tumblr_{}) - {}'.format(tr_(u'읽는 중...'), username, user_id, len(info['posts']))
         if cw is not None:
-            if not cw.valid or not cw.alive:
-                return []
+            if not cw.alive:
+                return
             cw.setTitle(s)
         else:
             print(s)

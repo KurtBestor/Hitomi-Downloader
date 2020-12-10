@@ -1,6 +1,6 @@
 from __future__ import division, print_function, unicode_literals
 import downloader
-import youtube_dl
+import ytdl
 from m3u8_tools import M3u8_stream
 from utils import LazyUrl, get_ext, Downloader, format_filename, clean_title
 from io import BytesIO
@@ -35,7 +35,7 @@ class Video(object):
         if self._url:
             return self._url
         
-        ydl = youtube_dl.YoutubeDL()
+        ydl = ytdl.YoutubeDL()
         info = ydl.extract_info(url)
 
         # get best video

@@ -55,7 +55,7 @@ def _get_stream(url_m3u8):
     return stream
 
 
-@try_n(2)
+@try_n(8)
 def get_video(url, session):
     while url.strip().endswith('/'):
         url = url[:-1]

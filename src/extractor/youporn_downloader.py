@@ -5,7 +5,7 @@ from io import BytesIO
 import os
 from constants import try_n
 from utils import Downloader, LazyUrl, get_ext, format_filename, clean_title
-import youtube_dl
+import ytdl
 
 
 
@@ -26,7 +26,7 @@ class Downloader_youporn(Downloader):
         self.urls.append(video.url)
         self.setIcon(video.thumb)
 
-        self.customWidget.enableSegment()
+        self.enableSegment()
 
         self.title = video.title
 
@@ -34,7 +34,7 @@ class Downloader_youporn(Downloader):
 class Video(object):
     @try_n(4)
     def __init__(self, url):
-        ydl = youtube_dl.YoutubeDL()
+        ydl = ytdl.YoutubeDL()
         info = ydl.extract_info(url)
 
         f = info['formats'][-1]

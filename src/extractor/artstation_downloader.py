@@ -43,6 +43,7 @@ class Downloader_artstation(Downloader):
         return 'artstation_{}'.format(clean_title(id))
 
     @lazy
+    @try_n(2)
     def name(self):
         html = downloader.read_html(self.url_main, session=self.session)
         soup = Soup(html)

@@ -31,8 +31,8 @@ class Downloader_nhentai(Downloader):
         # 1225
         artist = join(info.artists)
         self.artist = artist if info.artists else None
-        group = join(info.groups) if info.groups else 'N／A'
-        lang = info.lang if info.lang else 'N／A'
+        group = join(info.groups)
+        lang = info.lang or 'N／A'
         series = info.seriess[0] if info.seriess else 'N／A'
         title = self.format_title(info.type, info.id, info.title, artist, group, series, lang)
 

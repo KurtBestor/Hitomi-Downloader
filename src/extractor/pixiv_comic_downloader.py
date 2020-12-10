@@ -1,8 +1,3 @@
-# uncompyle6 version 3.5.0
-# Python bytecode 2.7 (62211)
-# Decompiled from: Python 2.7.16 (v2.7.16:413a49145e, Mar  4 2019, 01:30:55) [MSC v.1500 32 bit (Intel)]
-# Embedded file name: pixiv_comic_downloader.pyo
-# Compiled at: 2019-10-03 10:20:37
 import downloader, requests
 from utils import Soup, urljoin, Session, LazyUrl, Downloader, try_n, get_imgs_already, clean_title, get_ext
 import ree as re, json, os
@@ -55,7 +50,7 @@ class Downloader_pixiv_comic(Downloader):
     @property
     def name(self):
         soup = self.soup
-        title = soup.find('meta', {'property': 'og:title'}).attrs['content']
+        title = soup.find('h1').text.strip()
         artist = get_artist(soup)
         if artist:
             self.artist = artist
@@ -95,10 +90,28 @@ def read_html(url, session=None, cw=None):
 
 
 def get_artist(soup):
-    return soup.find('div', class_='works-author').text.strip()
+    artist = soup.find('div', class_='works-author')
+    if not artist:
+        artist = soup.find('div', class_=lambda c: c and c.startswith('Header_author'))
+    return artist.text.strip()
 
 
 def get_pages(soup, url):
+    pages = []
+    for a in soup.findAll('a', class_=lambda c: c and c.startswith('StoryListItem_container')):
+        href = a.attrs['href']
+        href = urljoin(url, href)
+        right = a.find('div', class_=lambda c: c and c.startswith('StoryListItem_right'))
+        number = right.findAll('span', class_=lambda c: c and c.startswith('jsx'))[0].text.strip()
+        title = right.findAll('span', class_=lambda c: c and c.startswith('jsx'))[1].text.strip()
+        title = ' - '.join(x for x in [number, title] if x)
+        page = Page(href, title)
+        pages.append(page)
+
+    return pages[::-1]
+
+
+def get_pages_legacy(soup, url):
     main = soup.find('div', class_='work-main-column')
     view = main.find('div', class_='two-works')
     pages = []
@@ -107,7 +120,7 @@ def get_pages(soup, url):
         href = urljoin(url, href)
         number = a.find('div', class_='episode-num').text.strip()
         title = a.find('div', class_='episode-title').text.strip()
-        title = (u' - ').join(x for x in [number, title] if x)
+        title = ' - '.join(x for x in [number, title] if x)
         page = Page(href, title)
         pages.append(page)
 

@@ -1,6 +1,6 @@
 #coding: utf8
 import downloader
-import youtube_dl
+import ytdl
 from utils import Downloader, get_outdir, Soup, LazyUrl, try_n, compatstr, format_filename, get_ext, clean_title, Session, cut_pair, json_loads, get_print
 from io import BytesIO
 from m3u8_tools import M3u8_stream
@@ -122,7 +122,7 @@ class Video(object):
     def get(self, url):
         if self._url:
             return self._url
-        ydl = youtube_dl.YoutubeDL()
+        ydl = ytdl.YoutubeDL()
         info = ydl.extract_info(url)
         video_best = info['formats'][-1]
         video = video_best['url']

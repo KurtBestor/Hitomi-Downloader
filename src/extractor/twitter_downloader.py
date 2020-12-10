@@ -10,17 +10,17 @@ from datetime import datetime, timedelta
 from translator import tr_
 from error_printer import print_error
 import os
-import youtube_dl
+import ytdl
 import ffmpeg
 import random
 from m3u8_tools import M3u8_stream
-import youtube_dl_test
 import urllib
 from ratelimit import limits, sleep_and_retry
 try:
     from urllib import quote # python2
 except:
     from urllib.parse import quote # python3
+import options
 AUTH = "Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA"
 UA = "Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko"
 #UA = downloader.hdr['User-Agent']#
@@ -51,41 +51,6 @@ def change_ua(session):
     i = random.randrange(len(UAS))
     session.headers['User-Agent'] = UAS[i]
 
-    
-from youtube_dl.utils import ExtractorError
-from youtube_dl.compat import compat_HTTPError
-def _call_api(self, path, video_id, query={}):
-    headers = {
-        'Authorization': AUTH,
-    }
-    if 'auth_token' in self._downloader.cookiejar.get_dict('.twitter.com'):
-        print('auth_token')
-        ct0 = self._downloader.cookiejar._cookies.get('.twitter.com', {}).get('/',{}).get('ct0')
-        if ct0 is None or ct0.is_expired():
-            print('Expired cookies')
-            self._downloader.cookiejar.clear()
-            return self._call_api(path, video_id, query)
-        headers["x-twitter-auth-type"] = "OAuth2Session"
-        headers["x-csrf-token"] = ct0.value
-    else:
-        if not self._GUEST_TOKEN:
-            self._GUEST_TOKEN = self._download_json(
-                self._API_BASE + 'guest/activate.json', video_id,
-                'Downloading guest token', data=b'',
-                headers=headers)['guest_token']
-        headers['x-guest-token'] = self._GUEST_TOKEN
-        
-    try:
-        return self._download_json(
-            self._API_BASE + path, video_id, headers=headers, query=query)
-    except ExtractorError as e:
-        if isinstance(e.cause, compat_HTTPError) and e.cause.code == 403:
-            raise ExtractorError(self._parse_json(
-                e.cause.read().decode(),
-                video_id)['errors'][0]['message'], expected=True)
-        raise
-youtube_dl.extractor.twitter.TwitterBaseIE._call_api = _call_api
-
 
 def get_session():
     session = Session()
@@ -104,17 +69,22 @@ class Downloader_twitter(Downloader):
         self.session = get_session()
         self.url = self.url.replace('twitter_', '')
         #self.url = fix_url(self.url)
-        if 'twitter.com/home' in self.url:
-            raise Exception('No username: home')
         self.artist, self.username = get_artist_username(self.url, self.session)
-        if '/status/' not in self.url:
-            self.url = 'https://twitter.com/{}'.format(self.username)
-
+        if self.username == 'home':
+            raise Exception('No username: home')
+        
     @classmethod
     def fix_url(cls, url):
+        username = re.find(r'twitter.com/([^/]+)/media', url)
+        if username:
+            url = '@' + username
         if url.startswith('@'):
             url = 'https://twitter.com/{}'.format(url.lstrip('@'))
         return url.split('?')[0].split('#')[0].strip('/')
+
+    @classmethod
+    def key_id(cls, url):
+        return cls.fix_url(url).lower()
 
     def read(self):
         cw = self.customWidget
@@ -214,6 +184,16 @@ class TwitterAPI(object):
         #print('call:', url_api)
         data = downloader.read_json(url_api, referer, session=self.session)
         return data
+
+    def search(self, query):
+        endpoint = "2/search/adaptive.json"
+        params = self.params.copy()
+        params["q"] = query
+        params["tweet_search_mode"] = "live"
+        params["query_source"] = "typed_query"
+        params["pc"] = "1"
+        params["spelling_corrections"] = "1"
+        return self._pagination(endpoint, params, "sq-I-t-", "sq-cursor-bottom")
     
     def user_by_screen_name(self, screen_name):
         url_api = "graphql/-xfUfZsnR_zqjFd-IfrN5A/UserByScreenName"
@@ -243,10 +223,11 @@ class TwitterAPI(object):
 
         while True:
             cursor = None
-            self.print_('cursor: {}'.format(params.get("cursor")))
+            if params.get("cursor"):
+                self.print_('cursor: {}'.format(params.get("cursor")))
             
             # 2303
-            n_try = 20
+            n_try = 21
             for try_ in range(n_try):
                 try:
                     data = self._call(url_api, params=params)
@@ -257,7 +238,7 @@ class TwitterAPI(object):
                     e_msg = print_error(e)[0]
                     if try_ < n_try - 1 :
                         self.print_('retry... _pagination ({})\n{}'.format(try_+1, e_msg))
-                        sleep(30)
+                        sleep(30, self.cw)
             else:
                 raise e_
             
@@ -321,11 +302,7 @@ def get_imgs_single(url, session, types, format='[%y-%m-%d] id_ppage', cw=None):
 
 def get_imgs(username, session, title, types, n=0, format='[%y-%m-%d] id_ppage', cw=None):
     print_ = get_print(cw)
-##    try:
-##        return get_imgs_legacy(username, session, title, types, n, format, cw)
-##    except Exception as e:
-##        print_(print_error(e)[-1])
-        
+    
     # Range
     n = max(n, get_max_range(cw))
 
@@ -333,8 +310,9 @@ def get_imgs(username, session, title, types, n=0, format='[%y-%m-%d] id_ppage',
     ids = set()
     names = dict()
     dir_ = os.path.join(get_outdir('twitter'), title)
-    if os.path.isdir(dir_):
-        for name in os.listdir(dir_):
+    if os.path.isdir(dir_) and cw:
+        for name in cw.names_old:
+            name = os.path.basename(name)
             id_ = re.find('([0-9]+)_p', name)
             if id_ is None:
                 continue
@@ -351,22 +329,38 @@ def get_imgs(username, session, title, types, n=0, format='[%y-%m-%d] id_ppage',
             else:
                 names[id_] = [name]
     max_id = max(ids) if ids else 0
-
     
-    imgs = []
+    # 2303
+    imgs_old = []
+    for id_ in sorted(ids, reverse=True):
+        for p, file in enumerate(sorted(os.path.join(dir_, name) for name in names[id_])):
+            img = Image(file, '', id_, 0, p, format, cw, False)
+            img.url = LazyUrl_twitter(None, lambda _: file, img)
+            img.filename = os.path.basename(file)
+            imgs_old.append(img)
+    
+    imgs_new = []
     enough = False
     for tweet in TwitterAPI(session, cw).timeline_media(username):
-        imgs += get_imgs_from_tweet(tweet, session, types, format, cw)
-        if n is not None and len(imgs) >= n:
-            break
-
         id_ = int(tweet['id_str'])
         if id_ < max_id:
             print_('enough')
             enough = True
             break
+        
+        imgs_ = get_imgs_from_tweet(tweet, session, types, format, cw)
 
-        msg = '{}  {} - {}'.format(tr_('읽는 중...'), title, len(imgs))
+        if id_ in ids:
+            print_('duplicate: {}'.format(id_))
+            continue
+        ids.add(id_)
+
+        imgs_new += imgs_
+        
+        if len(imgs_old) + len(imgs_new) >= n:
+            break
+
+        msg = '{}  {} - {}'.format(tr_('읽는 중...'), title, len(imgs_new))
         if cw:
             if not cw.alive:
                 break
@@ -374,256 +368,72 @@ def get_imgs(username, session, title, types, n=0, format='[%y-%m-%d] id_ppage',
         else:
             print(msg)
 
-    if not imgs:
+    if not enough and not imgs_new:
         raise Exception('no imgs')
 
-    if not enough and len(imgs) < n:
-        imgs = get_imgs_legacy(username, session, title, types, n, format, cw, method='search', imgs=imgs)
+    imgs = sorted(imgs_old + imgs_new, key=lambda img: img.id, reverse=True)
 
-    # 2303
-    ids_new = set()
-    for img in imgs:
-        ids_new.add(img.id)
-    for id_ in sorted(ids, reverse=True):
-        if id_ in ids_new:
-            continue
-        imgs += sorted(os.path.join(dir_, name) for name in names[id_])
+    if len(imgs) < n:
+        imgs = get_imgs_more(username, session, title, types, n, format, cw, imgs=imgs)
 
     return imgs
 
 
-def get_imgs_legacy(username, session, title, types, n=None, format='[%y-%m-%d] id_ppage', cw=None, mode='media', method='tab', imgs=None):
+def get_imgs_more(username, session, title, types, n=None, format='[%y-%m-%d] id_ppage', cw=None, mode='media', method='tab', imgs=None):
     print_ = get_print(cw)
-    print_('types: {}'.format(', '.join(types)))
+    imgs = imgs or []
+    print_('imgs: {}, types: {}'.format(len(imgs), ', '.join(types)))
 
     artist, username = get_artist_username(username, session)#
     
     # Range
-    n = max(n, get_max_range(cw))
+    n = max(n or 0, get_max_range(cw))
 
-    max_pos = None
-    ids_set = set()
-    if imgs:
-        for img in imgs:
-            ids_set.add(img.id)
-    else:
-        imgs = []
-    fuck = 0
-    min_position = None
+    ids_set = set(img.id for img in imgs)
+
+    count_no_imgs = 0
+
+    filter_ = '' if options.get('experimental') else ' filter:media' #2687
+
     while len(imgs) < n:
-        if mode == 'media':
-            if method == 'tab':
-                foo = '&max_position={}'.format(max_pos) if max_pos is not None else ''
-                url = 'https://twitter.com/i/profiles/show/{}/media_timeline?include_available_features=1&include_entities=1{}&reset_error_state=false'.format(username, foo)
-                print_('max_pos={},  imgs={}'.format(max_pos, len(imgs)))
-            elif method == 'search':  # 1028
-                max_id = min(ids_set) - 1 if ids_set else None
-                if ids_set:
-                    q = 'from:{} max_id:{} exclude:retweets filter:media -filter:periscope'.format(username, max_id)
-                else:
-                    q = 'from:{} exclude:retweets filter:media -filter:periscope'.format(username)
-                q = quote(q, '')
-                url = 'https://twitter.com/i/search/timeline?f=tweets&vertical=default&q={}&src=typd&include_available_features=1&include_entities=1&reset_error_state=false'.format(q)
-                print_('max_id={},  imgs={}'.format(max_id, len(imgs)))
-            elif method == 'search2':  # 1028
-                max_id = min(ids_set) - 1 if ids_set else None
-                if ids_set:
-                    q = 'from:{} max_id:{} exclude:retweets filter:media -filter:periscope'.format(username, max_id)
-                else:
-                    q = 'from:{} exclude:retweets filter:media -filter:periscope'.format(username)
-                q = quote(q, '')
-                foo = '&max_position={}'.format(max_pos) if max_pos is not None else ''
-                url = 'https://twitter.com/i/search/timeline?f=tweets&vertical=default&q={}&src=typd&include_available_features=1&include_entities=1{}&reset_error_state=false'.format(q, foo)
-                print_('max_pos={},  max_id={},  imgs={}'.format(max_pos, max_id, len(imgs)))
-            else:
-                raise Exception('Invalid method: {}'.format(method))
-        elif mode == 'likes':
-            foo = '&max_position={}'.format(max_pos) if max_pos is not None else ''
-            url = 'https://twitter.com/{}/likes/timeline?include_available_features=1&include_entities=1{}&reset_error_state=false'.format(username, foo)
-        print(url)
-        
-        hdr = {
-            "X-Requested-With": "XMLHttpRequest",
-            "X-Twitter-Active-User": "yes",
-            }
-
-        for try_ in range(16):
-            if cw and not cw.alive:
-                return
-            try:
-                html = downloader.read_html(url, session=session, referer='https://twitter.com/{}'.format(username), headers=hdr) #err
-            except Exception as e:
-                e_msg = print_error(e)[-1]
-                print_('retry... ({}) {}\n{}'.format(try_, url, e_msg))
-                change_ua(session)
-                continue
-            try:
-                data = json.loads(html)
-            except Exception as e:
-                change_ua(session)
-                soup = Soup(html)
-                login = soup.find('div', class_='LoginForm-input')
-                if login and method == 'tab':
-                    raise Exception('Login required!')
-                print_('can not load json: {}'.format(e))
-                sleep(1)
-                continue
-            break
+        if ids_set:
+            max_id = min(ids_set) - 1
+            q = 'from:{} max_id:{} exclude:retweets{} -filter:periscope'.format(username, max_id, filter_)
         else:
-            print_('over try')
-            if not imgs:
-                raise Exception('No imgs')
-            break
+            q = 'from:{} exclude:retweets{} -filter:periscope'.format(username, filter_)
+        print(q)
 
-        if 'items_html' in data:
-            html = data['items_html']
-        else:
-            print_('no items_html')
-            session.cookies.clear() # ???
-            #break
-
-        soup = Soup(html)
-        tweets = soup.findAll('div', class_='tweet') + soup.findAll('span', class_='grid-tweet')
-
-        ids = []
-        for tweet in tweets:
-            id = int(tweet.attrs['data-tweet-id'])
+        tweets = []
+        for tweet in list(TwitterAPI(session, cw).search(q)):
+            id = int(tweet['id'])
             if id in ids_set:
-                print('duplicate')
+                print_('duplicate: {}'.format(id))
                 continue
-            ids.append(id)
             ids_set.add(id)
-            tweet = Tweet(tweet, format, types, session, cw)
-            for img in tweet.imgs:
-                imgs.append(img)
-        
-        if n is not None and len(imgs) >= n:
-            break
-
-        if not ids:
-            foo = 4 if method != 'search2' else 16
-            if len(imgs) == 0:
-                raise Exception('No Image')
-            elif fuck > foo:
-                if method == 'tab': ### search
-                    method = 'search'
-                    fuck = 0
-                    continue
-                elif method == 'search' and not ids and min_position is not None: ### search2
-                    method = 'search2'
-                    max_pos = min_position
-                    #min_position = None
-                    fuck = 0
-                    continue
-                else:
-                    print('too much fuck')
-                    break
-            else:
-                print('fuck!!!!!')
-                change_ua(session)
-                fuck += 1
-        elif fuck:
-            print('reset fuck')
-            fuck = 0
+            tweets.append(tweet)
             
-        max_pos_new = data.get('min_position') # 1028
-        if max_pos_new is None:
-            if ids:
-                max_pos_new = min(ids)
-            else:
-                max_pos_new = max_pos#
-        max_pos = max_pos_new
+        if tweets:
+            count_no_imgs = 0
+        else:
+            count_no_imgs += 1
+            change_ua(session)
+            if count_no_imgs >= 3:
+                break
+            print_('retry...')
+            continue
+        
+        for tweet in tweets:
+            imgs += get_imgs_from_tweet(tweet, session, types, format, cw)
 
-        if data.get('min_position'):
-            min_position = data['min_position']
-            print('min_position:', min_position)
-
-        try:
-            if cw is not None:
-                if not cw.alive:
-                    break
-                cw.setTitle('{}  {} (@{}) - {}'.format(tr_('읽는 중...'), artist, username, len(imgs)))
-        except Exception as e:
-            print(e)
-            raise
+        msg = '{}  {} (@{}) - {}'.format(tr_('읽는 중...'), artist, username, len(imgs))
+        if cw and not cw.alive:
+            break
+        if cw:
+            cw.setTitle(msg)
+        else:
+            print(msg)
 
     return imgs
-
-
-def get_filename(tweet, page, format):
-    id = int(tweet.attrs['data-tweet-id'])
-    for span in tweet.findAll('span'):
-        time = span.attrs.get('data-time')
-        if time:
-            break
-    else:
-        time_ms = (id >> 22) + 1288834974657
-        time = time_ms / 1000
-
-    date = datetime.fromtimestamp(float(time))
-    timeStamp = date.strftime(format).replace(':', '\uff1a')
-    return timeStamp.replace('id', str(id)).replace('page', str(page))
-
-
-class Tweet(object):
-    isVideo = False
-
-    def __init__(self, tweet, format, types, session, cw):
-        print_ = get_print(cw)
-        self.tweet = tweet
-        self.session = session
-        self.username = tweet.attrs['data-screen-name']
-        self.id = int(tweet.attrs['data-tweet-id'])
-        for span in tweet.findAll('span'):
-            time = span.attrs.get('data-time')
-            if time:
-                break
-        else:
-            time_ms = (id >> 22) + 1288834974657
-            time = time_ms / 1000
-        self.time = time
-        self.url = urljoin('https://twitter.com', tweet.attrs['data-permalink-path'])
-        self.withheld = 'withheld-tweet' in tweet.attrs
-        if self.withheld:
-            print_(('    withheld: {}').format(self.id))
-        urls = []
-        if 'img' in types:
-            for div in tweet.findAll('div'):
-                url = div.attrs.get('data-image-url')
-                if not url:
-                    continue
-                if ':' not in os.path.basename(url):
-                    url += ':orig'
-                urls.append(url)
-
-        if 'img' in types:
-            for a in tweet.findAll('a'):
-                url = a.attrs.get('data-expanded-url', '')
-                if '//twitpic.com/' not in url:
-                    continue
-                print_(('twitpic: {}, {}').format(self.id, url))
-                try:
-                    url = get_twitpic(url, session)
-                    if url in urls:
-                        print('duplicate twitpic')
-                        continue
-                    urls.append(url)
-                except Exception as e:
-                    print_(('Failed to read twitpic:\n{}').format(print_error(e)[(-1)]))
-
-        if 'grid-tweet' in tweet.attrs['class']:
-            url = tweet.attrs['data-url'] + ':large'
-            urls.append(url)
-        self.imgs = []
-        for page, url in enumerate(urls):
-            img = Image(url, self.url, self.id, self.time, page, format, cw)
-            self.imgs.append(img)
-
-        if 'PlayableMedia-container' in str(tweet):
-            self.isVideo = True
-            if 'video' in types:
-                img = Image(self.url, self.url, self.id, self.time, 0, format, cw, True)
-                self.imgs.append(img)
 
 
 def get_time(tweet):
@@ -687,7 +497,7 @@ def get_imgs_from_tweet(tweet, session, types, format, cw=None):
 def get_twitpic(url, session):
     html = downloader.read_html(url, session=session)
     soup = Soup(html)
-    url = soup.find('img').attrs['src']
+    url = soup.find('img')['src']
     return url
 
 
@@ -712,6 +522,24 @@ class LazyUrl_twitter(LazyUrl):
         img = Image(data['url'], data['referer'], data['id'], data['time'], data['p'], data['format'], data['cw'], data['isVideo'])
         return img.url
 
+
+class Url_alter(object):
+    count = 0
+
+    def __init__(self, url):
+        urls = [url]
+        if ':' in os.path.basename(url):
+            urls.append(':'.join(url.split(':')[:-1]))
+        base, _, fmt = url.rpartition('.')
+        base += '?format=' + fmt.split(':')[0] + '&name='
+        for name in ['orig', 'large']:
+            urls.append(base + name)
+        self.urls = urls
+
+    def __call__(self):
+        self.count += 1
+        return self.urls[self.count%len(self.urls)]
+        
     
 class Image(object):
     _url_cache = None
@@ -723,8 +551,8 @@ class Image(object):
         self.time = time
         self.p = p
         self.n_thread = n_thread
-        if not isVideo and ':' in os.path.basename(url):
-            url_alter = ':'.join(url.split(':')[:-1])
+        if not isVideo:
+            url_alter = Url_alter(url)
         else:
             url_alter = None
         if isVideo and get_ext(url).lower() not in ['.mp4', '.m3u8']:
@@ -751,7 +579,7 @@ class Image(object):
         print_ = get_print(self.cw)
         for try_ in range(self.try_n):
             try:
-                d = youtube_dl.YoutubeDL()
+                d = ytdl.YoutubeDL()
                 info = d.extract_info(self._url)
                 
                 url = info['url']
@@ -767,7 +595,7 @@ class Image(object):
                 msg = print_error(e)[(-1)]
                 print_('\nTwitter video Error:\n{}'.format(msg))
                 if try_ < self.try_n - 1:
-                    sleep(10)
+                    sleep(10, self.cw)
         else:
             raise e_
 

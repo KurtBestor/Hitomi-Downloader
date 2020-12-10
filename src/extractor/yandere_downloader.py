@@ -20,6 +20,9 @@ class Downloader_yandere(Downloader):
     def fix_url(cls, url):
         url = re.sub(r'\?page=[0-9]+&', '?', url)
         url = re.sub(r'&page=[0-9]+', '', url)
+        pool = re.find('/pool/show/([0-9]+)', url)
+        if pool is not None:
+            url = urljoin(url, '/post?tags=pool%3A{}'.format(pool))
         return url
 
     def read(self):

@@ -4,7 +4,7 @@
 # Embedded file name: bili_downloader2.pyo
 # Compiled at: 2019-10-07 03:49:44
 import downloader
-from utils import Soup, LazyUrl, Downloader, query_url, get_outdir, get_print, cut_pair, format_filename, clean_title, get_resolution
+from utils import Soup, LazyUrl, Downloader, query_url, get_outdir, get_print, cut_pair, format_filename, clean_title, get_resolution, try_n
 import hashlib, json
 import os
 from io import BytesIO
@@ -14,7 +14,6 @@ import math
 import ree as re
 import utils
 from collections import OrderedDict
-import options
 _VALID_URL = 'https?://(?:www\\.|bangumi\\.|)bilibili\\.(?:tv|com)/(?:video/av|anime/(?P<anime_id>\\d+)/play#)(?P<id>\\d+)'
 _APP_KEY = 'iVGUTjsxvpLeuDCf'
 _BILIBILI_KEY = 'aHRmhWMLkdeMuILqORnYZocwMBpMEOdt'
@@ -39,6 +38,7 @@ class Video(object):
 
 
 # 1804
+@try_n(2)
 def fix_url(url, cw=None):
     print_ = get_print(cw)
     if '?' in url:
@@ -97,7 +97,7 @@ class Downloader_bili(Downloader):
         title = format_filename(title, self.id_, '.mp4')[:-4]
         n = int(math.ceil(8.0 / len(videos)))
         self.customWidget.print_(('n_threads: {}').format(n))
-        self.customWidget.enableSegment(n_threads=n)
+        self.enableSegment(n_threads=n)
         self.title = title
 
     def post_processing(self):
@@ -111,9 +111,6 @@ class Downloader_bili(Downloader):
             cw.setNameAt(0, out)
             del cw.imgs[1:]
             cw.dones.add(os.path.realpath(out))
-            if not options.get('lazy'):
-                cw.pageIcon.hide()
-                cw.after_label.setText('')
             cw.dir = outdir
 
 

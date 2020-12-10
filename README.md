@@ -1,7 +1,5 @@
 <p align="center">
-  <br>
   <img src="imgs/card_crop.png" width="50%"/>
-  <br>
   <br>
 </p>
 

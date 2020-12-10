@@ -1,7 +1,7 @@
 #coding:utf8
 from __future__ import division, print_function, unicode_literals
 import requests
-from pixivpy_async.sync import *
+from pixiv_api import *
 import downloader
 from random import shuffle, random
 from timee import sleep
@@ -12,7 +12,6 @@ import os
 import ffmpeg
 import constants
 import ree as re
-import asyncio
 from datetime import datetime
 try:
     from urllib import unquote # python2
@@ -48,7 +47,6 @@ class Downloader_pixiv(Downloader):
     atts = ['_format', '_format_name', 'imgs']
 
     def init(self):
-        asyncio.set_event_loop(asyncio.new_event_loop())###
         self.url = clean_url(self.url)
         url = self.url
 
@@ -204,7 +202,7 @@ class Downloader_pixiv(Downloader):
                         print_(e)
                         if try_ < N_TRY - 1:
                             print_('retry...')
-                        sleep(SLEEP)
+                        sleep(SLEEP, cw)
                 else:
                     raise
 
@@ -384,7 +382,7 @@ def get_imgs(user_id, type='user', n=None, api=None, tags=[], types={'illust', '
             if 'Offset must be no more than' in message:
                 break
             print_('retry...')
-            sleep(SLEEP)
+            sleep(SLEEP, cw)
             bad += 1
             continue
         bad = 0
@@ -495,7 +493,7 @@ def get_imgs_from_illust(illust, api=None, types={'illust', 'manga', 'ugoira'}, 
                     return []
                 if try_ < N_TRY - 1:
                     print_('retry...')
-                sleep(SLEEP)
+                sleep(SLEEP, cw)
         else:
             raise
 
@@ -542,7 +540,7 @@ def get_name(user_id, api=None, cw=None):
             print_(e)
             if try_ < N_TRY - 1:
                 print_('retry...')
-            sleep(SLEEP)
+            sleep(SLEEP, cw)
     else:
         raise
     

@@ -34,7 +34,7 @@ class Downloader_xhamster(Downloader):
 
     def read(self):
         cw = self.customWidget
-        cw.enableSegment(1024*1024//2)
+        self.enableSegment(1024*1024//2)
         thumb = BytesIO()
         
         if '/users/' in self.url:
@@ -63,7 +63,7 @@ class Downloader_xhamster(Downloader):
             self.single = False
             self.title = clean_title(info['title'])
             self.url = info['url']
-            cw.disableSegment()
+            self.disableSegment()
             return
         else:
             urls = []

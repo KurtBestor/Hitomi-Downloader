@@ -1,14 +1,12 @@
 #coding: utf-8
-from youtube_dl_test import YouTube
-import youtube_dl
+import ytdl
 import downloader
 import downloader_v3
 from io import BytesIO
 from constants import empty_thumbnail, isdeleted
 from error_printer import print_error
-#from youtube_mp3 import get_mp3
 from timee import sleep
-import re
+import ree as re
 from utils import urljoin, Downloader, Soup, try_n, get_print, filter_range, get_p2f, LazyUrl, query_url, compatstr, uuid, get_max_range, format_filename, clean_title, get_resolution, get_abr
 import ffmpeg
 import sys
@@ -43,7 +41,7 @@ class Video(object):
         self.max_res = max_res
         self.max_abr = max_abr
         self.cw = cw
-        self.url = LazyUrl(url, self.get, self, pp=self.pp, detect_local=False)
+        self.url = LazyUrl(url, self.get, self, pp=self.pp)
         self.exec_queue = cw.exec_queue if cw else None#
         
     def get(self, url, force=False):
@@ -64,13 +62,13 @@ class Video(object):
         print('max_res: {}'.format(max_res))
         for try_ in range(8):
             try:
-                yt = YouTube(url)
+                yt = ytdl.YouTube(url)
                 break
             except Exception as e:
                 e_ = e
                 s = print_error(e)[-1]
                 print_('### youtube retry...\n{}'.format(s))
-                sleep(try_/2.)
+                sleep(try_/2, cw)
         else:
             raise e_
 
@@ -367,7 +365,7 @@ class Downloader_youtube(Downloader):
             info = get_videos(self.url, type=self.yt_type, max_abr=abr, cw=cw)
         videos = info['videos']
 
-        cw.enableSegment(overwrite=True)
+        self.enableSegment(overwrite=True)
 
         # first video must be valid
         while videos:
@@ -418,12 +416,12 @@ def get_videos(url, type='video', only_mp4=False, audio_included=False, max_res=
     n = get_max_range(cw, 2000)
     
     if '/channel/' in url or '/user/' in url or '/c/' in url:
-        info = read_channel(url, n=n)
+        info = read_channel(url, n=n, cw=cw)
         info['title'] = u'[Channel] {}'.format(info['uploader'])
         if cw:
             info['urls'] = filter_range(info['urls'], cw.range)
     elif '/playlist' in url:
-        info = read_playlist(url, n=n)
+        info = read_playlist(url, n=n, cw=cw)
         info['title'] = u'[Playlist] {}'.format(info['title'])
         if cw:
             info['urls'] = filter_range(info['urls'], cw.range)
@@ -436,25 +434,23 @@ def get_videos(url, type='video', only_mp4=False, audio_included=False, max_res=
 
 
 
-def read_channel(url, n):
-    options = {
-            'extract_flat': True,
-            }
-    ydl = youtube_dl.YoutubeDL(options)
-    info = ydl.extract_info(url)
-
-    info = read_playlist(info['url'], n=n)
-                
-    return info
+def read_channel(url, n, cw=None):
+    return read_playlist(url, n, cw)
 
 
 @try_n(2)
-def read_playlist(url, n):
+def read_playlist(url, n, cw=None):
+    print_ = get_print(cw)
+    for header in ['channel', 'user', 'c']:
+        if '/{}/'.format(header) in url.lower():
+            username = re.find(r'/{}/([^/\?]+)'.format(header), url, re.IGNORECASE)
+            url = urljoin(url, '/{}/{}/videos'.format(header, username))
+        
     options = {
             'extract_flat': True,
             'playlistend': n,
             }
-    ydl = youtube_dl.YoutubeDL(options)
+    ydl = ytdl.YoutubeDL(options)
     info = ydl.extract_info(url)
 
     es = info['entries']
@@ -463,6 +459,13 @@ def read_playlist(url, n):
         href = 'https://www.youtube.com/watch?v={}'.format(e['id'])
         urls.append(href)
     info['urls'] = urls
+
+    if 'uploader' not in info:
+        title = info['title']
+        if title.lower().endswith(' - videos'):
+            title = title[:-len(' - videos')]
+        info['uploader'] = title
+        print_('⚠️ Fix uploader: None -> {}'.format(title))
 
     return info
 

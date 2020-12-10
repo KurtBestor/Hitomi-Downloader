@@ -17,13 +17,14 @@ import constants
 from sankaku_login import login
 from error_printer import print_error
 from constants import clean_url
+from locker import lock
 
 
 @Downloader.register
 class Downloader_sankaku(Downloader):
     type = 'sankaku'
     URLS = ['chan.sankakucomplex.com', 'idol.sankakucomplex.com', 'www.sankakucomplex.com']
-    MAX_CORE = 2
+    MAX_CORE = 4
     display_name = 'Sankaku Complex'
     
     def init(self):
@@ -165,13 +166,13 @@ class Image(object):
             self.filename = os.path.basename(url)
         else:
             self.url = LazyUrl_sankaku(url, self.get, self)
-        
+
+    @lock
     def get(self, url):
         cw = self.cw
         d = self.d
         print_ = get_print(cw)
         
-        sleep(4)
         for try_ in range(4):
             html = ''
             try:
@@ -184,8 +185,10 @@ class Image(object):
                 if '429 Too many requests'.lower() in html.lower():
                     t_sleep = 120 * min(try_ + 1, 2)
                     e = '429 Too many requests... wait {} secs'.format(t_sleep)
+                elif 'post-content-notification' in html: # sankaku plus
+                    raise Exception('Sankaku plus: {}'.format(self.id))
                 else:
-                    t_sleep = 10
+                    t_sleep = 5
                 s = u'[Sankaku] failed to read image (id:{}): {}'.format(self.id, e)
                 print_(s)
                 for i in range(t_sleep):
@@ -286,6 +289,7 @@ def get_imgs(url, title=None, customWidget=None, d=None, types=['img', 'gif', 'v
             if not url_img.startswith('http'):
                 url_img = urljoin('https://{}.sankakucomplex.com'.format(type), url_img)
             id = re.find('show/([0-9]+)', url_img)
+            print_(article)
             if id is None: # sankaku plus
                 continue
             if id in local_ids:
