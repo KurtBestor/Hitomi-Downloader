@@ -39,13 +39,13 @@ class DownloaderHiyobiBookmark(Downloader):
 
     def init(self) -> None:
         self.url: str = self.url.replace("hiyobibookmark_", "")
-        self.bookmark_info_list = []
+        self.bookmark_info_list: list = []
 
     def read(self) -> None:
-        if not len(self.url) == 2:
-            return self.Invalid("이메일/비밀번호 형식으로 작성해주세요.")
-        
         account_info: list = self.url.split("/")
+
+        if not len(account_info) == 2:
+            return self.Invalid("이메일/비밀번호 형식으로 작성해주세요.")
 
         email = account_info[0]
         password = account_info[1]
