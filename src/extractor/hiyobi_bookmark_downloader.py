@@ -93,9 +93,10 @@ class DownloaderHiyobiBookmark(Downloader):
             elif number:
                 self.bookmark_info_list.append(str(number))
             else:
-                raise Exception
+                # 추후 디버깅
+                raise Exception(bookmark_element)
 
-    async def post(self, url, **kwargs):
+    async def post(self, url: str, **kwargs) -> dict:
         async with aiohttp.ClientSession() as cs:
             async with cs.post(url, **kwargs) as r:
                 return await r.json()
@@ -118,7 +119,7 @@ class DownloaderHiyobiBookmark(Downloader):
         )
         return response
 
-    async def post_account_info(self, email: str, password: str) -> dict:
+    async def post_account_info(self, email: str, password: str) -> str:
         response = await self.post(
             "https://api.hiyobi.me/user/login",
             headers={
