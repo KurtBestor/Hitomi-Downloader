@@ -27,10 +27,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 import asyncio
+from io import BytesIO
 
 import aiohttp
 
 from utils import Downloader
+from translator import tr_
 
 
 @Downloader.register
@@ -40,6 +42,7 @@ class DownloaderHiyobiBookmark(Downloader):
     def init(self) -> None:
         self.url: str = self.url.replace("hiyobibookmark_", "")
         self.bookmark_info_list: list = []
+        self.username: str = "User"
 
     def read(self) -> None:
         account_info: list = self.url.split("/")
@@ -52,13 +55,15 @@ class DownloaderHiyobiBookmark(Downloader):
 
         result = asyncio.run(self.main(email, password))
 
-        if isinstance(result, str):
-            url = f"https://hastebin.com/raw/{result}"
-            self.title = result
-            self.urls.append(url)
-            self.filenames[url] = f"{result}.txt"
-        else:
+        if result:
             return result
+
+        f = BytesIO()
+        f.write("\n".join(self.bookmark_info_list).encode("UTF-8"))
+        f.seek(0)
+        self.title = self.username
+        self.urls.append(f)
+        self.filenames[f] = "bookmark.txt"
 
     async def main(self, email: str, password: str):
         token = await self.post_account_info(email, password)
@@ -78,11 +83,9 @@ class DownloaderHiyobiBookmark(Downloader):
 
         await self.add_in_bookmark_info_list(count, token)
 
-        hastebin_key = await self.post_hastebin(self.bookmark_info_list)
-        return hastebin_key
-
     async def add_in_bookmark_info_list(self, count: int, token: str) -> None:
         for paging in range(1, count):
+            self.title = tr_("총 {}페이지 중 {}번 페이지 읽는 중...").format(count - 1, paging)
             paged_bookmark_info = await self.post_hiyobi_bookmark(token, paging)
             self.parsing_bookmark(paged_bookmark_info["list"])
 
@@ -102,12 +105,6 @@ class DownloaderHiyobiBookmark(Downloader):
         async with aiohttp.ClientSession() as cs:
             async with cs.post(url, **kwargs) as r:
                 return await r.json()
-
-    async def post_hastebin(self, bookmark_text: list) -> str:
-        response = await self.post(
-            "https://hastebin.com/documents", data="\n".join(bookmark_text)
-        )
-        return response["key"]
 
     async def post_hiyobi_bookmark(self, token: str, paging: int = 1) -> dict:
         await asyncio.sleep(1)
@@ -129,4 +126,5 @@ class DownloaderHiyobiBookmark(Downloader):
             },
             json={"email": email, "password": password, "remember": True},
         )
+        self.username = response["data"]["name"]
         return response["data"]["token"]
