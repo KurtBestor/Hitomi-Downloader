@@ -107,6 +107,7 @@ class DownloaderHiyobiBookmark(Downloader):
         return response["key"]
 
     async def post_hiyobi_bookmark(self, token: str, paging: int = 1) -> dict:
+        await asyncio.sleep(1)
         response = await self.post(
             f"https://api.hiyobi.me/bookmark/{paging}",
             headers={
