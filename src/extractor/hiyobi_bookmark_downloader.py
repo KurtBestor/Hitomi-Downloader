@@ -38,15 +38,17 @@ class DownloaderHiyobiBookmark(Downloader):
     type = "hiyobibookmark"
 
     def init(self) -> None:
-        self.url: str = self.url.replace("hiyobibookmark_", "").split("/")
+        self.url: str = self.url.replace("hiyobibookmark_", "")
         self.bookmark_info_list = []
 
     def read(self) -> None:
         if not len(self.url) == 2:
             return self.Invalid("이메일/비밀번호 형식으로 작성해주세요.")
+        
+        account_info: list = self.url.split("/")
 
-        email = self.url[0]
-        password = self.url[1]
+        email = account_info[0]
+        password = account_info[1]
 
         result = asyncio.run(self.main(email, password))
 
