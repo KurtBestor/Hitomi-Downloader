@@ -66,9 +66,12 @@ class DownloaderHiyobiBookmark(Downloader):
         self.filenames[f] = "bookmark.txt"
 
     async def main(self, email: str, password: str):
-        token = await self.post_account_info(email, password)
+        token_or_errorMsg = await self.post_account_info(email, password)
 
-        bookmark_info = await self.post_hiyobi_bookmark(token)
+        if isinstance(token_or_errorMsg, str):
+            return token_or_errorMsg
+
+        bookmark_info = await self.post_hiyobi_bookmark(token_or_errorMsg)
 
         bookmark_total_count: int = bookmark_info["count"]
 
@@ -81,7 +84,7 @@ class DownloaderHiyobiBookmark(Downloader):
             else round(bookmark_total_count / 15)
         ) + 1
 
-        await self.add_in_bookmark_info_list(count, token)
+        await self.add_in_bookmark_info_list(count, token_or_errorMsg)
 
     async def add_in_bookmark_info_list(self, count: int, token: str) -> None:
         for paging in range(1, count):
@@ -118,7 +121,7 @@ class DownloaderHiyobiBookmark(Downloader):
         )
         return response
 
-    async def post_account_info(self, email: str, password: str) -> str:
+    async def post_account_info(self, email: str, password: str):
         response = await self.post(
             "https://api.hiyobi.me/user/login",
             headers={
@@ -126,5 +129,9 @@ class DownloaderHiyobiBookmark(Downloader):
             },
             json={"email": email, "password": password, "remember": True},
         )
+
+        if response.get("errorMsg"):
+            return self.Invalid(response["errorMsg"])
+
         self.username = response["data"]["name"]
         return response["data"]["token"]
