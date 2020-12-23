@@ -33,7 +33,6 @@ class Downloader_pixiv_comic(Downloader):
     display_name = 'pixivコミック'
 
     def init(self):
-        self.url = self.url.replace('pixiv_comic_', '')
         if '/viewer/' in self.url:
             html = downloader.read_html(self.url)
             id = re.find('/works/([0-9]+)', html)

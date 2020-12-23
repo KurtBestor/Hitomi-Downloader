@@ -40,7 +40,6 @@ class Downloader_syosetu(Downloader):
     display_name = '小説家になろう'
 
     def init(self):
-        self.url = self.url.replace('syosetu_', '')
         self.url = (u'https://ncode.syosetu.com/{}/').format(self.id_)
 
     @property

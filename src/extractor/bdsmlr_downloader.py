@@ -17,8 +17,6 @@ class Downloader_bdsmlr(Downloader):
     display_name = 'BDSMlr'
 
     def init(self):
-        self.url = self.url.replace('bdsmlr_', '')
-        
         if u'bdsmlr.com/post/' in self.url:
             return self.Invalid(tr_(u'개별 다운로드는 지원하지 않습니다: {}').format(self.url), fail=False)
         

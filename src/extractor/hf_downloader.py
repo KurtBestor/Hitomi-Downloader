@@ -44,8 +44,6 @@ class Image(object):
 def get_username(url):
     if 'user/' in url:
         username = url.split('user/')[1].split('?')[0].split('/')[0]
-    else:
-        username = url.replace('hf_', '')
     return username
 
 

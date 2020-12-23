@@ -36,7 +36,6 @@ class Downloader_gelbooru(Downloader):
     _name = None
     
     def init(self):
-        self.url = self.url.replace('gelbooru_', '')
         if 'gelbooru.com' in self.url.lower():
             self.url = self.url.replace('http://', 'https://')
         else:

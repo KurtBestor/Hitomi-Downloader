@@ -21,7 +21,7 @@ class Downloader_twitch(Downloader):
                 url = 'https://' + url
             self.url = url
         else:
-            url = 'https://www.twitch.tv/videos/{}'.format(url.replace('twitch_', ''))
+            url = 'https://www.twitch.tv/videos/{}'.format(url)
             self.url = url
 
     @classmethod

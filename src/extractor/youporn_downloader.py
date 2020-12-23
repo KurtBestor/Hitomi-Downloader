@@ -17,8 +17,8 @@ class Downloader_youporn(Downloader):
     display_name = 'YouPorn'
     
     def init(self):
-        if self.url.startswith('youporn_'):
-            self.url = 'https://www.youporn.com/watch/{}'.format(self.url.replace('youporn_', '', 1))
+        if 'youporn.com' not in self.url.lower():
+            self.url = 'https://www.youporn.com/watch/{}'.format(self.url)
 
     def read(self):
         video = Video(self.url)

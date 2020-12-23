@@ -41,10 +41,6 @@ class Downloader_hanime(Downloader):
     single = True
     display_name = 'hanime.tv'
 
-    def init(self):
-        if self.url.startswith('hanime_'):
-            self.url = self.url.replace('hanime_', '', 1)
-
     def read(self):
         cw = self.customWidget
         video, session = get_video(self.url)

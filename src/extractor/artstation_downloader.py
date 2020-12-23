@@ -28,7 +28,7 @@ class Downloader_artstation(Downloader):
     display_name = 'ArtStation'
 
     def init(self):
-        self.url_main = 'https://www.artstation.com/{}'.format(self.id.replace('artstation_', '').replace('／', '/'))
+        self.url_main = 'https://www.artstation.com/{}'.format(self.id.replace('artstation_', '', 1).replace('／', '/'))
         
         if '/artwork/' in self.url:
             pass#raise NotImplementedError('Single post')
@@ -53,7 +53,7 @@ class Downloader_artstation(Downloader):
     def read(self):
         cw = self.customWidget
         self.title = self.name
-        id = self.id.replace('artstation_', '').replace('／', '/')
+        id = self.id.replace('artstation_', '', 1).replace('／', '/')
         if '/' in id:
             type = id.split('/')[1]
             id = id.split('/')[0]

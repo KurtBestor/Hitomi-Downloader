@@ -13,7 +13,6 @@ class Downloader_pawoo(Downloader):
     URLS = ['pawoo.net']
     
     def init(self):
-        self.url = self.url.replace('pawoo_', '')
         self.url = 'https://pawoo.net/{}'.format(self.id_)
         self.referer = self.url
         

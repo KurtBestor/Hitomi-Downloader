@@ -18,7 +18,6 @@ class Downloader_hameln(Downloader):
     detect_removed = False
 
     def init(self):
-        self.url = self.url.replace('hameln_', '')
         id_ = re.find('/novel/([^/]+)', self.url)
         if id_ is not None:
             self.url = 'https://syosetu.org/novel/{}/'.format(id_)

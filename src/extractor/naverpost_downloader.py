@@ -53,7 +53,6 @@ class DownloaderNaverPost(Downloader):
     URLS = ["m.post.naver.com", "post.naver.com"]
 
     def init(self):
-        self.url = self.url.replace("naver_post_", "")
         self.parsed_url = urlparse(self.url)  # url 나눔
         self.soup = get_soup(self.url)
 

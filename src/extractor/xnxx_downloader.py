@@ -37,9 +37,6 @@ class Downloader_xnxx(Downloader):
     single = True
     display_name = 'XNXX'
 
-    def init(self):
-        self.url = self.url.replace('xnxx_', '')
-
     def read(self):
         video = get_video(self.url)
         self.urls.append(video.url)

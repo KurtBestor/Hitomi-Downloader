@@ -37,7 +37,7 @@ class DownloaderDiscordEmoji(Downloader):
         pass
 
     def read(self):
-        token_guild_id_list = self.url.replace("discord_", "", 1).split(
+        token_guild_id_list = self.url.split(
             "/"
         )  # 값을 어떻게 받을지 몰라서 일단 나눴어요. discord_이메일/비밀번호/서버아이디 또는 discord_토큰/서버아이디 이런식으로 받게 해놨어요.
 

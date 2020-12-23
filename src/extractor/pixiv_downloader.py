@@ -44,6 +44,7 @@ class Downloader_pixiv(Downloader):
     info = None
     _id = None
     keep_date = True
+    strip_header = False
     atts = ['_format', '_format_name', 'imgs']
 
     def init(self):
@@ -51,13 +52,13 @@ class Downloader_pixiv(Downloader):
         url = self.url
 
         # Determine the type
-        if 'bookmark.php?type=user' in url or headers['following'] in url:
+        if 'bookmark.php?type=user' in url or url.startswith(headers['following']):
             type = 'following'
-        elif 'bookmark.php' in url or headers['bookmark'] in url or '/bookmarks/' in url:
+        elif 'bookmark.php' in url or url.startswith(headers['bookmark']) or '/bookmarks/' in url:
             type = 'bookmark'
-        elif 'illust_id=' in url or headers['illust'] in url or '/artworks/' in url:
+        elif 'illust_id=' in url or url.startswith(headers['illust']) or '/artworks/' in url:
             type = 'illust'
-        elif 'search.php' in url or headers['search'] in url:
+        elif 'search.php' in url or url.startswith(headers['search']):
             type = 'search'
             order = query_url(url).get('order', ['date_d'])[0] # data_d, date, popular_d, popular_male_d, popular_female_d
             scd = query_url(url).get('scd', [None])[0] # 2019-09-27
@@ -91,7 +92,7 @@ class Downloader_pixiv(Downloader):
                'blt': blt, 
                'bgt': bgt, 
                'type': type_}
-        elif 'id=' in url and 'mode=' not in url or headers['user'] in url or 'pixiv.me' in url or '/users/' in url:
+        elif 'id=' in url and 'mode=' not in url or url.startswith(headers['user']) or 'pixiv.me' in url or '/users/' in url:
             type = 'user'
         else:
             self.Invalid((u'[pixiv] Can not determine type: {}').format(url))

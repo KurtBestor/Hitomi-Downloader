@@ -1,5 +1,5 @@
 import downloader
-from utils import Downloader, Soup, LazyUrl, urljoin, format_filename, clean_title, Session, get_ext, get_p2f, get_print, get_max_range
+from utils import Downloader, Soup, LazyUrl, urljoin, format_filename, clean_title, Session, get_ext, get_print, get_max_range
 from io import BytesIO
 from constants import try_n
 import ree as re
@@ -49,7 +49,6 @@ class Downloader_xvideo(Downloader):
     display_name = 'XVideos'
 
     def init(self):
-        self.url = self.url.replace('xvideo_', '')
         if 'xvideos.' in self.url.lower():
             self.url = self.url.replace('http://', 'https://')
         else:
@@ -65,31 +64,22 @@ class Downloader_xvideo(Downloader):
         res = re.find(CHANNEL_PATTERN, url)
         if res:
             return '_'.join(res)
-        return self.fix_url(url)
+        return url
 
     def read(self):
         cw = self.customWidget
+        
         res = re.find(CHANNEL_PATTERN, self.url)
         if res:
             header, username = res
             info = read_channel(self.url, cw)
-            p2f = get_p2f(cw)
-            if p2f:
-                self.single = False
-                videos = [Video(url) for url in info['urls']]
-                self.urls = [video.url for video in videos]
-                videos[0].url()
-                self.title = clean_title('[Channel] {}'.format(info['name']))
-                self.setIcon(videos[0].thumb)
-                return
-            else:
-                cw.gal_num = self.url = info['urls'].pop(0)
-                if info['urls'] and cw.alive:
-                    s = ', '.join(info['urls'])
-                    self.exec_queue.put((s, 'downButton(customWidget)'))
-        video = Video(self.url)
-        video.url()
-        self.title = video.title
+            videos = [Video(url) for url in info['urls']]
+            video = self.process_playlist('[Channel] {}'.format(info['name']), videos)
+        else:
+            video = Video(self.url)
+            video.url()
+            self.title = video.title
+            
         self.setIcon(video.thumb)
         self.urls.append(video.url)
 

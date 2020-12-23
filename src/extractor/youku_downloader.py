@@ -11,9 +11,6 @@ class Downloader_youku(Downloader):
     type = 'youku'
     single = True
     URLS = ['v.youku.com']
-    
-    def init(self):
-        self.url = self.url.replace('youku_', '', 1)
 
     def read(self):
         video = Video(self.url)

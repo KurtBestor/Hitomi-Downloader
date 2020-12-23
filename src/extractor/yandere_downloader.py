@@ -1,10 +1,14 @@
-from bs4 import BeautifulSoup
-from urllib.request import urlopen
 from urllib.parse import unquote
-from utils import Downloader, urljoin, clean_title
+from utils import Downloader, urljoin, clean_title, try_n
 from translator import tr_
 import ree as re
 import os
+import downloader
+
+
+@try_n(4)
+def read_soup(url):
+    return downloader.read_soup(url)
 
 
 @Downloader.register
@@ -12,9 +16,6 @@ class Downloader_yandere(Downloader):
     type = 'yande.re'
     URLS = ['yande.re']
     MAX_CORE = 4
-
-    def init(self):
-        pass
 
     @classmethod
     def fix_url(cls, url):
@@ -33,8 +34,7 @@ class Downloader_yandere(Downloader):
         ids = set()
         url = self.url
         while True:
-            html = urlopen(url)
-            soup = BeautifulSoup(html, "html.parser")
+            soup = read_soup(url)
             tmp = soup.find_all(attrs={'class':'directlink'}, href=True)
             for image_html in tmp:
                 image_url = image_html['href']

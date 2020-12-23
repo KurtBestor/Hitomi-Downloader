@@ -23,7 +23,6 @@ class Downloader_worldcos(Downloader):
     display_name = 'World Cosplay'
     
     def init(self):
-        self.url = self.url.replace('worldcos_', '')
         if 'worldcosplay.net' in self.url.lower():
             self.url = self.url.replace('http://', 'https://')
         else:

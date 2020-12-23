@@ -31,9 +31,6 @@ class Downloader_afreeca(Downloader):
     single = True
     display_name = 'AfreecaTV'
 
-    def init(self):
-        self.url = self.url.replace('afreeca_', '')
-
     def read(self):
         session = Session()
         video = get_video(self.url, session)

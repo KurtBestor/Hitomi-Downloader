@@ -16,7 +16,6 @@ class Downloader_bcy(Downloader):
     display_name = '半次元'
     
     def init(self):
-        self.url = self.url.replace('bcy_', '')
         self.html = downloader.read_html(self.url)
         self.info = get_info(self.url, self.html)
 

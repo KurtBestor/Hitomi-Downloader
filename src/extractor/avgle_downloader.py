@@ -18,7 +18,6 @@ class Downloader_avgle(Downloader):
     URLS = ['avgle.com']
 
     def init(self):
-        self.url = self.url.replace('avgle_', '', 1)
         if not self.customWidget.data_:
             link = 'https://github.com/KurtBestor/Hitomi-Downloader/wiki/Chrome-Extension'
             webbrowser.open(link)

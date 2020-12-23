@@ -34,8 +34,6 @@ class Downloader_manatoki(Downloader):
 
     @try_n(2)
     def init(self):
-        self.url = self.url.replace('manatoki_', '')
-        
         self.session, self.soup, url = get_soup(self.url)
         self.url = self.fix_url(url)
 

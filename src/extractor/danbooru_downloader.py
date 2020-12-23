@@ -20,7 +20,6 @@ class Downloader_danbooru(Downloader):
     _name = None
     
     def init(self):
-        self.url = self.url.replace('danbooru_', '')
         if 'donmai.us' in self.url:
             self.url = self.url.replace('http://', 'https://')
         else:

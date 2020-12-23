@@ -28,7 +28,6 @@ class Downloader_sankaku(Downloader):
     display_name = 'Sankaku Complex'
     
     def init(self):
-        self.url = self.url.replace('sankaku_', '')
         if '/post/' in self.url:
             return self.Invalid('Single post is not supported')
         

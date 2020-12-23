@@ -7,7 +7,7 @@ from constants import empty_thumbnail, isdeleted
 from error_printer import print_error
 from timee import sleep
 import ree as re
-from utils import urljoin, Downloader, Soup, try_n, get_print, filter_range, get_p2f, LazyUrl, query_url, compatstr, uuid, get_max_range, format_filename, clean_title, get_resolution, get_abr
+from utils import urljoin, Downloader, Soup, try_n, get_print, filter_range, LazyUrl, query_url, compatstr, uuid, get_max_range, format_filename, clean_title, get_resolution, get_abr
 import ffmpeg
 import sys
 import constants
@@ -331,9 +331,6 @@ class Downloader_youtube(Downloader):
     
     def init(self):
         ui_setting = self.ui_setting
-        if 'youtube_' in self.url:
-            self.url = u'https://www.youtube.com/watch?v={}'.format(self.url.replace('youtube_',''))
-            
         if self.customWidget.format:
             ext_result = self.customWidget.format
         else:
@@ -348,6 +345,8 @@ class Downloader_youtube(Downloader):
 
     @classmethod
     def fix_url(cls, url): # 2033
+        if not re.match('https?://.+', url, re.IGNORECASE):
+            url = 'https://www.youtube.com/watch?v={}'.format(url)
         qs = query_url(url)
         if 'v' in qs:
             url = url.split('?')[0] + '?v={}'.format(qs['v'][0])
@@ -379,27 +378,14 @@ class Downloader_youtube(Downloader):
         else:
             raise Exception('No videos')
 
-        if len(videos) > 1:
-            p2f = get_p2f(cw)
-            if p2f:
-                self.single = False
-                self.title = clean_title(info['title'])
-                self.urls = [video.url for video in videos]
-                video = videos[0]
-                self.setIcon(video.thumb)
-                return
-            else:
-                video = videos.pop(0)
-                cw.gal_num = cw.url = video.url._url
-                if videos and cw.alive:
-                    s = u', '.join(video.url._url for video in videos)
-                    self.exec_queue.put(([s, {'youtube':cw.format}], 'downButton(cw[0], format_selector=cw[1])'))
-
-        self.urls.append(video.url)
+        if info['type'] != 'single':
+            video = self.process_playlist(info['title'], videos)
+        else:
+            self.urls.append(video.url)
+            self.title = video.title
+            
         self.artist = video.username
         self.setIcon(video.thumb)
-        
-        self.title = video.title
 
 
 def int_(x):
@@ -417,15 +403,18 @@ def get_videos(url, type='video', only_mp4=False, audio_included=False, max_res=
     
     if '/channel/' in url or '/user/' in url or '/c/' in url:
         info = read_channel(url, n=n, cw=cw)
+        info['type'] = 'channel'
         info['title'] = u'[Channel] {}'.format(info['uploader'])
         if cw:
             info['urls'] = filter_range(info['urls'], cw.range)
     elif '/playlist' in url:
         info = read_playlist(url, n=n, cw=cw)
+        info['type'] = 'playlist'
         info['title'] = u'[Playlist] {}'.format(info['title'])
         if cw:
             info['urls'] = filter_range(info['urls'], cw.range)
     else:
+        info['type'] = 'single'
         info['urls'] = [url]
 
     info['videos'] = [Video(url, type, only_mp4, audio_included, max_res, max_abr, cw) for url in info['urls']]

@@ -69,8 +69,8 @@ class Downloader_bili(Downloader):
 
     def init(self):
         self.url = fix_url(self.url, self.customWidget)
-        if 'bili_' in self.url:
-            self.url = u'https://www.bilibili.com/video/{}'.format(self.url.replace('bili_', ''))
+        if 'bilibili.com' not in self.url.lower():
+            self.url = 'https://www.bilibili.com/video/{}'.format(self.url)
         self.url = self.url.replace('m.bilibili', 'bilibili')
 
     @property
@@ -96,7 +96,7 @@ class Downloader_bili(Downloader):
             title += (u'_p{}').format(page)
         title = format_filename(title, self.id_, '.mp4')[:-4]
         n = int(math.ceil(8.0 / len(videos)))
-        self.customWidget.print_(('n_threads: {}').format(n))
+        self.print_(('n_threads: {}').format(n))
         self.enableSegment(n_threads=n)
         self.title = title
 

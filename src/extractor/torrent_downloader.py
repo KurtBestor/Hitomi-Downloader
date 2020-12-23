@@ -28,8 +28,6 @@ class Downloader_torrent(Downloader):
         global torrent
         if torrent is None:
             import torrent
-        if self.url.startswith('torrent_'):
-            self.url = self.url.replace('torrent_', '', 1)
 
     @property
     def name(self):

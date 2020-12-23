@@ -21,7 +21,6 @@ class Downloader_baraag(Downloader):
 
     @classmethod
     def fix_url(cls, url):
-        url = url.replace('baraag_', '')
         id_ = get_id(url) or url
         return 'https://baraag.net/{}'.format(id_)
 

@@ -67,7 +67,6 @@ class Downloader_twitter(Downloader):
 
     def init(self):
         self.session = get_session()
-        self.url = self.url.replace('twitter_', '')
         #self.url = fix_url(self.url)
         self.artist, self.username = get_artist_username(self.url, self.session)
         if self.username == 'home':
@@ -84,7 +83,7 @@ class Downloader_twitter(Downloader):
 
     @classmethod
     def key_id(cls, url):
-        return cls.fix_url(url).lower()
+        return url.lower()
 
     def read(self):
         cw = self.customWidget
@@ -126,7 +125,10 @@ class TwitterAPI(object):
     def __init__(self, session, cw=None):
         self.session = session
         self.cw = cw
-        csrf = hashlib.md5(str(time()).encode()).hexdigest()
+        csrf = session.cookies.get('ct0', domain='.twitter.com')
+        print('csrf:', csrf)
+        if not csrf:
+            csrf = hashlib.md5(str(time()).encode()).hexdigest()
         hdr = {
             "authorization": AUTH,
             "x-twitter-client-language": "en",
@@ -182,7 +184,11 @@ class TwitterAPI(object):
         if params:
             url_api = update_url_query(url_api, params)
         #print('call:', url_api)
-        data = downloader.read_json(url_api, referer, session=self.session)
+        r = self.session.get(url_api, headers={'Referer': referer})
+        csrf = r.cookies.get('ct0')
+        if csrf:
+            self.session.headers['x-csrf-token'] = csrf
+        data = json.loads(r.text)
         return data
 
     def search(self, query):
@@ -231,6 +237,9 @@ class TwitterAPI(object):
             for try_ in range(n_try):
                 try:
                     data = self._call(url_api, params=params)
+                    if 'globalObjects' not in data:
+                        try_ = n_try
+                        raise Exception(str(data['errors']))
                     tweets = data["globalObjects"]["tweets"]
                     break
                 except Exception as e:

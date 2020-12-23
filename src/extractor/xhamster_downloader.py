@@ -1,5 +1,5 @@
 import downloader, ree as re
-from utils import Downloader, get_outdir, Soup, get_p2f, LazyUrl, get_print, cut_pair, get_ext, try_n, format_filename, clean_title
+from utils import Downloader, get_outdir, Soup, LazyUrl, get_print, cut_pair, get_ext, try_n, format_filename, clean_title
 from timee import sleep
 from error_printer import print_error
 import os
@@ -20,7 +20,6 @@ class Downloader_xhamster(Downloader):
     display_name = 'xHamster'
 
     def init(self):
-        self.url = self.url.replace('xhamster_', '')
         if re.search(r'xhamsterlive[0-9]*\.', self.url):
             raise Exception('xHamsterLive')
         if not re.search(r'xhamster[0-9]*\.', self.url):
@@ -40,22 +39,8 @@ class Downloader_xhamster(Downloader):
         if '/users/' in self.url:
             info = read_channel(self.url, cw)
             urls = info['urls']
-            p2f = get_p2f(cw)
-            if p2f:
-                self.single = False
-                self.title = clean_title(info['title'])
-                videos = [Video(url) for url in urls]
-                self.urls = [video.url for video in videos]
-                video = videos[0]
-                video.url()
-                downloader.download(video.info['thumbnail'], buffer=thumb)
-                self.setIcon(thumb)
-                return
-            else:
-                cw.gal_num = self.url = urls.pop(0)
-                if urls and cw.alive:
-                    s = u', '.join(urls)
-                    self.exec_queue.put((s, 'downButton(customWidget)'))
+            videos = [Video(url) for url in urls]
+            video = self.process_playlist(info['title'], videos)
         elif '/photos/gallery/' in self.url:
             info = read_gallery(self.url, cw)
             for img in info['imgs']:
@@ -66,21 +51,20 @@ class Downloader_xhamster(Downloader):
             self.disableSegment()
             return
         else:
-            urls = []
-        video = Video(self.url)
-        video.url()
-        self.urls.append(video.url)
+            video = Video(self.url)
+            video.url()
+            self.urls.append(video.url)
+            self.title = video.title
 
         downloader.download(video.info['thumbnail'], buffer=thumb)
         self.setIcon(thumb)
-        self.title = video.title
 
 
 class Video(object):
     _url = None
 
     def __init__(self, url):
-        url = downloader.real_url(url)
+        #url = downloader.real_url(url)
         self.url = LazyUrl(url, self.get, self)
 
     @try_n(2)
@@ -130,36 +114,56 @@ def get_info(url):
     return info
 
 
+def read_page(username, p, cw):
+    print_ = get_print(cw)
+    url = 'https://xhamster.com/users/{}/videos/{}'.format(username, p)
+    print_(url)
+    n = 4
+    for try_ in range(n):
+        try:
+            soup = downloader.read_soup(url)
+            items = soup.findAll('div', class_='thumb-list__item')
+            if not items and try_ < n-1:
+                continue
+            break
+        except Exception as e:
+            e_ = e
+            print(e)
+    else:
+        raise e_
+    return items
+
+        
 def read_channel(url, cw=None):
     print_ =  get_print(cw)
     username = url.split('/users/')[1].split('/')[0]
 
     info = {}
-    html = downloader.read_html(url)
-    soup = Soup(html)
+    soup = downloader.read_soup(url)
     title = soup.find('div', class_='user-name').text.strip()
     info['title'] = u'[Channel] {}'.format(title)
     
-    items = []
-    for p in range(1, 21):
-        url = 'https://xhamster.com/users/{}/videos/{}'.format(username, p)
-        print_(url)
-        html = downloader.read_html(url)
-        soup = Soup(html)
-        items_ = soup.findAll('div', class_='thumb-list__item')
-        if not items_:
+    urls = []
+    urls_set = set()
+    for p in range(1, 101):
+        items = read_page(username, p, cw)
+        if not items:
             print('no items')
             break
-        for item in items_:
-            items.append(item)
-
-    urls = []
-    for item in items:
-        url = item.a.attrs['href']
-        if url in urls:
-            print('duplicate:', url)
-            continue
-        urls.append(url)
+        for item in items:
+            if item.find('span', class_='thumb-image-container__status-text'): #2858
+                continue
+            url = item.a.attrs['href']
+            if url in urls_set:
+                print('duplicate:', url)
+                continue
+            urls_set.add(url)
+            urls.append(url)
+        s = '{} {} - {}'.format(tr_('읽는 중...'), info['title'], len(urls))
+        if cw:
+            cw.setTitle(s)
+        else:
+            print(s)
 
     info['urls'] = urls
 
@@ -194,8 +198,7 @@ def read_gallery(url, cw=None):
 
     info = {}
 
-    html = downloader.read_html(url)
-    soup = Soup(html)
+    soup = downloader.read_soup(url)
 
     h1 = soup.find('h1')
     if h1.find('a'):

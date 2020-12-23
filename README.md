@@ -7,6 +7,7 @@
 [![GitHub downloads](https://img.shields.io/github/downloads/KurtBestor/Hitomi-Downloader/latest/total.svg?logo=github)](https://github.com/KurtBestor/Hitomi-Downloader/releases/latest)
 [![GitHub downloads](https://img.shields.io/github/downloads/KurtBestor/Hitomi-Downloader/total.svg?logo=github)](https://github.com/KurtBestor/Hitomi-Downloader/releases)
 
+## Links
 - [Download](https://github.com/KurtBestor/Hitomi-Downloader/releases/latest)
 - [Issues](https://github.com/KurtBestor/Hitomi-Downloader/issues)
 - [Scripts](https://github.com/KurtBestor/Hitomi-Downloader/wiki/Scripts)
@@ -14,6 +15,19 @@
 
 ## Demo
 <img src="imgs/how_to_download.gif">
+
+## Features
+- 🍰 Simple and clear user interface
+- 🚀 Download acceleration
+- 💻 Supports 32 threads in a single task
+- 🚥 Supports speed limit
+- 📜 Supports user scripts
+- 🧲 Supports BitTorrent & Magnet
+- 🎞️ Supports M3U8 & MPD format videos
+- 🌙 Dark mode
+- 🧳 Portable
+- 📋 Clipboard monitor
+- 🗃️ Easy to organize tasks
 
 ## Supported Sites
 | Site | URL |
@@ -32,6 +46,7 @@
 | **Epio** | <https://epio.app> |
 | **E(x)Hentai Galleries** | <https://e-hentai.org><br><https://exhentai.org> |
 | **Facebook** | <https://facebook.com> |
+| **FC2 Video** | <https://video.fc2.com> |
 | **Flickr** | <https://flickr.com> |
 | **Gelbooru** | <https://gelbooru.com> |
 | **hanime.tv** | <https://hanime.tv> |
@@ -44,6 +59,7 @@
 | **Jmana** | <https://jmana.net> |
 | **カクヨム** | <https://kakuyomu.jp> |
 | **LHScan** | <https://loveheaven.net> |
+| **Likee** | <https://likee.video> |
 | **Luscious** | <https://luscious.net> |
 | **Manamoa** | <https://manamoa.net> |
 | **MyReadingManga** | <https://myreadingmanga.info> |
@@ -51,6 +67,7 @@
 | **Naver Post** | <https://post.naver.com> |
 | **Naver Webtoon** | <https://comic.naver.com> |
 | **nhentai** | <https://nhentai.net> |
+| **nhentai.com** | <https://nhentai.com> |
 | **Niconico** | <http://nicovideo.jp> |
 | **ニジエ** | <https://nijie.info> |
 | **Pawoo** | <https://pawoo.net> |
@@ -75,3 +92,4 @@
 | **XVideos** | <https://xvideos.com> |
 | **Yande.re** | <https://yande.re> |
 | **YouTube** | <https://youtube.com> |
+| **and more...** | [Supported sites by youtube-dl](http://ytdl-org.github.io/youtube-dl/supportedsites.html) |

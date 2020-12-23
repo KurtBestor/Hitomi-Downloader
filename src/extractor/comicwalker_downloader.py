@@ -50,9 +50,6 @@ class Downloader_comicwalker(Downloader):
     display_name = 'ComicWalker'
     _soup = None
     pages = None
-    
-    def init(self):
-        self.url = url = self.url.replace('comicwalker_', '')
 
     @property
     def soup(self):

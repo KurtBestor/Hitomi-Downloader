@@ -15,7 +15,6 @@ class Downloader_nhentai(Downloader):
     display_name = 'nhentai'
     
     def init(self):
-        self.url = self.url.replace('nhentai_', '')
         self.url = 'https://nhentai.net/g/{}/'.format(self.id_)
 
     @property

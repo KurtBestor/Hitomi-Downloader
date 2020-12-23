@@ -25,8 +25,6 @@ class Downloader_wikiart(Downloader):
     display_name = 'WikiArt'
 
     def init(self):
-        self.url = self.url.replace('wikiart_', '')
-        
         self.url = u'https://www.wikiart.org/en/{}'.format(self.id_)
         html = downloader.read_html(self.url)
         self.soup = Soup(html)

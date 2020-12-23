@@ -13,7 +13,6 @@ class Downloader_asiansister(Downloader):
 
     @try_n(4)
     def init(self):
-        self.url = self.url.replace('asiansister_', '')
         html = downloader.read_html(self.url)
         self.soup = Soup(html)
 

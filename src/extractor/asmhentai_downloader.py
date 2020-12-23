@@ -28,7 +28,6 @@ class Downloader_asmhentai(Downloader):
 
     @classmethod
     def fix_url(cls, url):
-        url = url.replace('asmhentai_', '')
         id_ = get_id(url)
         return 'https://asmhentai.com/g/{}/'.format(id_)
 
