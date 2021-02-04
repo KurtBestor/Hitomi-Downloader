@@ -64,7 +64,7 @@ class Downloader_sankaku(Downloader):
         self.session = Session()
 
         if self.type_sankaku != 'www':
-            login(type, self.session, self.customWidget)
+            login(type, self.session, self.cw)
 
         if self.type_sankaku == 'www':
             html = downloader.read_html(self.url, session=self.session)
@@ -104,7 +104,7 @@ class Downloader_sankaku(Downloader):
         if self.type_sankaku == 'www':
             imgs = get_imgs_www(self.url, self.soup)
         else:
-            imgs = get_imgs(self.url, self.name, customWidget=self.customWidget, d=self, types=types, session=self.session)
+            imgs = get_imgs(self.url, self.name, cw=self.cw, d=self, types=types, session=self.session)
 
         for img in imgs:
             if isinstance(img, str):
@@ -190,11 +190,7 @@ class Image(object):
                     t_sleep = 5
                 s = u'[Sankaku] failed to read image (id:{}): {}'.format(self.id, e)
                 print_(s)
-                for i in range(t_sleep):
-                    sleep(1)
-                    if cw is not None and not cw.alive:
-                        raise Exception('customwidget is dead')
-                
+                sleep(t_sleep, cw)                
         else:
             raise Exception('can not find image (id:{})'.format(self.id))
         soup = Soup(u'<p>{}</p>'.format(url))
@@ -217,18 +213,18 @@ def setPage(url, page):
     return url
 
 
-def get_imgs(url, title=None, customWidget=None, d=None, types=['img', 'gif', 'video'], session=None):
+def get_imgs(url, title=None, cw=None, d=None, types=['img', 'gif', 'video'], session=None):
     if False:#
         raise NotImplementedError('Not Implemented')
-    print_ = get_print(customWidget)
+    print_ = get_print(cw)
     print_(u'types: {}'.format(', '.join(types)))
     
     # Range
-    max_pid = get_max_range(customWidget, 2000)
+    max_pid = get_max_range(cw)
 
     local_ids = {}
-    if customWidget is not None:
-        dir = customWidget.downloader.dir
+    if cw is not None:
+        dir = cw.downloader.dir
         try:
             names = os.listdir(dir)
         except Exception as e:
@@ -248,8 +244,8 @@ def get_imgs(url, title=None, customWidget=None, d=None, types=['img', 'gif', 'v
     else:
         raise Exception('Not supported subdomain')
     url_old = 'https://{}.sankakucomplex.com'.format(type)
-    if customWidget is not None:
-        customWidget.exec_queue.put((customWidget, u"customWidget.setTitle(u'{}  {}')".format(tr_(u'읽는 중...'), title)))
+    if cw is not None:
+        cw.setTitle('{}  {}'.format(tr_('읽는 중...'), title))
     while len(imgs) < max_pid:
         #if page > 25: # Anonymous users can only view 25 pages of results
         #    break
@@ -259,10 +255,7 @@ def get_imgs(url, title=None, customWidget=None, d=None, types=['img', 'gif', 'v
         html = downloader.read_html(url, referer=url_old, session=session)
         if '429 Too many requests'.lower() in html.lower():
             print_('429 Too many requests... wait 120 secs')
-            for i in range(120):
-                sleep(1)
-                if customWidget and not customWidget.alive:
-                    return []
+            sleep(120, cw)
             continue
         page += 1
         url_old = url
@@ -288,7 +281,7 @@ def get_imgs(url, title=None, customWidget=None, d=None, types=['img', 'gif', 'v
             if not url_img.startswith('http'):
                 url_img = urljoin('https://{}.sankakucomplex.com'.format(type), url_img)
             id = re.find('show/([0-9]+)', url_img)
-            print_(article)
+            #print_(article)
             if id is None: # sankaku plus
                 continue
             if id in local_ids:
@@ -301,11 +294,11 @@ def get_imgs(url, title=None, customWidget=None, d=None, types=['img', 'gif', 'v
                 url_imgs.add(url_img)
                 if local:
                     url_img = local_ids[id]
-                img = Image(type, id, url_img, url, local=local, cw=customWidget, d=d)
+                img = Image(type, id, url_img, url, local=local, cw=cw, d=d)
                 imgs.append(img)
                 if len(imgs) >= max_pid:
                     break
-        if customWidget and not customWidget.alive:
+        if cw and not cw.alive:
             break
 
         try:
@@ -317,8 +310,8 @@ def get_imgs(url, title=None, customWidget=None, d=None, types=['img', 'gif', 'v
             #url = setPage(url, page)
             break
         
-        if customWidget is not None:
-            customWidget.setTitle(u'{}  {} - {}'.format(tr_(u'읽는 중...'), title, len(imgs)))
+        if cw is not None:
+            cw.setTitle(u'{}  {} - {}'.format(tr_(u'읽는 중...'), title, len(imgs)))
         else:
             print(len(imgs), 'imgs')
 

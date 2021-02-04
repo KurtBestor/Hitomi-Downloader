@@ -32,7 +32,7 @@ class Downloader_xhamster(Downloader):
         return url.replace((u'xhamster{}.{}/').format(number, top), u'xhamster.com/')
 
     def read(self):
-        cw = self.customWidget
+        cw = self.cw
         self.enableSegment(1024*1024//2)
         thumb = BytesIO()
         
@@ -69,18 +69,22 @@ class Video(object):
 
     @try_n(2)
     def get(self, url):
-        if self._url:
-            return self._url
-        self.info = get_info(url)
+        if self._url is None:
+            self.info = get_info(url)
 
-        self.title = self.info['title']
-        id = self.info['id']
-        
-        video_best = self.info['formats'][(-1)]
-        self._url = video_best['url']
-        ext = get_ext(self._url)
-        self.filename = format_filename(self.title, id, ext)
-        return self._url
+            self.title = self.info['title']
+            id = self.info['id']
+            
+            video_best = self.info['formats'][(-1)]
+            self._url = video_best['url']
+            ext = get_ext(self._url)
+            self.filename = format_filename(self.title, id, ext)
+            
+            if isinstance(self._url, str) and 'referer=force' in self._url.lower():
+                self._referer = self._url
+            else:
+                self._referer = url
+        return self._url, self._referer
 
 
 def get_data(html):

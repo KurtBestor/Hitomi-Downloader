@@ -22,7 +22,7 @@ class Downloader_bdsmlr(Downloader):
         
         self.url = 'https://{}.bdsmlr.com'.format(self.id_)
         self.session = Session()
-        clf2.solve(self.url, session=self.session,  cw=self.customWidget)
+        clf2.solve(self.url, session=self.session,  cw=self.cw)
 
     @property
     def id_(self):
@@ -36,9 +36,7 @@ class Downloader_bdsmlr(Downloader):
         return gal_num
 
     def read(self):
-        cw = self.customWidget
-        
-        info = get_imgs(self.id_, session=self.session, cw=cw)
+        info = get_imgs(self.id_, session=self.session, cw=self.cw)
         
         for post in info['posts']:
             self.urls.append(post.url)
@@ -94,7 +92,7 @@ def get_imgs(user_id, session, cw=None):
     token = soup.find('meta', {'name': 'csrf-token'}).attrs['content']
     print_(u'token: {}'.format(token))
 
-    max_pid = get_max_range(cw)#, 2000)
+    max_pid = get_max_range(cw)
 
     n = len(info['ids'])
     for p in range(1000):

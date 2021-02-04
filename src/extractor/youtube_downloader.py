@@ -26,7 +26,7 @@ def print_streams(streams, cw):
     print_ = get_print(cw)
             
     for stream in streams:
-        print_(u'[{}][{}fps][{}] {} [{} / {}] ─ {}'.format(stream.resolution, stream.fps, stream.abr, stream.subtype, stream.video_codec, stream.audio_codec, stream.format))
+        print_(u'[{}][{}fps][{}][{}] {} [{} / {}] ─ {}'.format(stream.resolution, stream.fps, stream.abr_str, stream.tbr, stream.subtype, stream.video_codec, stream.audio_codec, stream.format))
     print_('')
 
 
@@ -106,14 +106,14 @@ class Video(object):
         elif type == 'audio':
             streams[:] = [stream for stream in streams if stream.abr]
             # Maximum abr
-            abrs = [int_(stream.abr.replace('kbps', '')) for stream in streams]
+            abrs = [stream.abr for stream in streams]
             max_abr = min(max(abrs), max_abr)
             streams_ = list(streams)
             streams[:] = []
             for stream in streams_:
                 if stream.abr is None:
                     continue
-                abr = int(stream.abr.replace('kbps',''))
+                abr = stream.abr
                 if max_abr is None or abr >= max_abr:
                     streams.append(stream)
             #'''
@@ -127,7 +127,7 @@ class Video(object):
                 m = max(ress)
                 prefer_format = 'mp4'
             elif type == 'audio':
-                ress = [int_(stream.abr.replace('kbps', '')) for stream in streams]
+                ress = [stream.abr for stream in streams]
                 m = min(ress)
                 prefer_format = 'webm'
             print('Resolutions:', ress)
@@ -190,7 +190,7 @@ class Video(object):
             best_audio = None
             best_abr = 0
             for stream in streams:
-                abr = int(stream.abr.replace('kbps', ''))
+                abr = stream.abr
                 if abr > best_abr:
                     best_abr = abr
                     best_audio = stream
@@ -331,17 +331,17 @@ class Downloader_youtube(Downloader):
     
     def init(self):
         ui_setting = self.ui_setting
-        if self.customWidget.format:
-            ext_result = self.customWidget.format
+        if self.cw.format:
+            ext_result = self.cw.format
         else:
             ext_result = compatstr(ui_setting.youtubeCombo_type.currentText()).lower().split()[0]
-            self.customWidget.format = ext_result
+            self.cw.format = ext_result
             
         if ext_result in ['mp4', 'mkv', '3gp']:
             self.yt_type = 'video'
         else:
             self.yt_type = 'audio'
-            self.customWidget.setMusic(True)
+            self.cw.setMusic(True)
 
     @classmethod
     def fix_url(cls, url): # 2033
@@ -351,10 +351,15 @@ class Downloader_youtube(Downloader):
         if 'v' in qs:
             url = url.split('?')[0] + '?v={}'.format(qs['v'][0])
         return url
+
+    @classmethod
+    def key_id(cls, url):
+        id_ = re.find(r'youtu.be/([0-9A-Za-z-_]{10,})', url) or re.find(r'[?&]v=([0-9A-Za-z-_]{10,})', url)
+        return id_ or url
     
     def read(self):
         ui_setting = self.ui_setting
-        cw = self.customWidget
+        cw = self.cw
         print_ = get_print(cw)
         if self.yt_type == 'video':
             res = get_resolution()
@@ -373,7 +378,7 @@ class Downloader_youtube(Downloader):
                 video.url()
                 break
             except Exception as e:
-                print(e)
+                self.print_(print_error(e)[0])
                 videos.remove(video)
         else:
             raise Exception('No videos')
@@ -399,7 +404,7 @@ def int_(x):
 def get_videos(url, type='video', only_mp4=False, audio_included=False, max_res=None, max_abr=None, cw=None):
     info = {}
 
-    n = get_max_range(cw, 2000)
+    n = get_max_range(cw)
     
     if '/channel/' in url or '/user/' in url or '/c/' in url:
         info = read_channel(url, n=n, cw=cw)

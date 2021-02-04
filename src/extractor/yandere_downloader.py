@@ -27,7 +27,7 @@ class Downloader_yandere(Downloader):
         return url
 
     def read(self):
-        cw = self.customWidget
+        cw = self.cw
 
         title = self.get_title(self.url)
 

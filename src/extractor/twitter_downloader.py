@@ -86,7 +86,6 @@ class Downloader_twitter(Downloader):
         return url.lower()
 
     def read(self):
-        cw = self.customWidget
         ui_setting = self.ui_setting
         
         title = '{} (@{})'.format(clean_title(self.artist), self.username)
@@ -100,10 +99,10 @@ class Downloader_twitter(Downloader):
                 
         if '/status/' in self.url:
             self.print_('single tweet')
-            imgs = get_imgs_single(self.url, self.session, types, cw=cw)
+            imgs = get_imgs_single(self.url, self.session, types, cw=self.cw)
         else:
             self.print_('multiple tweets')
-            imgs = get_imgs(self.username, self.session, title, types, cw=cw)
+            imgs = get_imgs(self.username, self.session, title, types, cw=self.cw)
         for img in imgs:
             if isinstance(img, Image):
                 self.urls.append(img.url)
@@ -191,6 +190,8 @@ class TwitterAPI(object):
         data = json.loads(r.text)
         return data
 
+##    @sleep_and_retry
+##    @limits(1, 36)
     def search(self, query):
         endpoint = "2/search/adaptive.json"
         params = self.params.copy()
@@ -261,18 +262,6 @@ class TwitterAPI(object):
                             continue
                         tweet = tweets[tid]
                         tweet["user"] = users[tweet["user_id_str"]]
-
-##                        if "quoted_status_id_str" in tweet:
-##                            quoted = tweets[tweet["quoted_status_id_str"]]
-##                            tweet["author"] = tweet["user"]
-##                            if "extended_entities" in quoted:
-##                                tweet["extended_entities"] = \
-##                                    quoted["extended_entities"]
-##                        elif "retweeted_status_id_str" in tweet:
-##                            retweet = tweets[tweet["retweeted_status_id_str"]]
-##                            tweet["author"] = users[retweet["user_id_str"]]
-##                        else:
-##                            tweet["author"] = tweet["user"]
 
                         yield tweet
 
@@ -385,7 +374,7 @@ def get_imgs(username, session, title, types, n=0, format='[%y-%m-%d] id_ppage',
     if len(imgs) < n:
         imgs = get_imgs_more(username, session, title, types, n, format, cw, imgs=imgs)
 
-    return imgs
+    return imgs[:n]
 
 
 def get_imgs_more(username, session, title, types, n=None, format='[%y-%m-%d] id_ppage', cw=None, mode='media', method='tab', imgs=None):

@@ -2,7 +2,7 @@
 import downloader
 import ree as re
 import os
-from utils import Downloader, get_max_range, Soup, clean_title
+from utils import Downloader, get_max_range, Soup, clean_title, get_print
 from translator import tr_
 try: # python2
     from urllib import quote
@@ -51,7 +51,7 @@ class Downloader_danbooru(Downloader):
     def read(self):
         self.title = self.name
 
-        imgs = get_imgs(self.url, self.name, customWidget=self.customWidget)
+        imgs = get_imgs(self.url, self.name, cw=self.cw)
 
         for img in imgs:
             self.urls.append(img.url)
@@ -85,20 +85,16 @@ def setPage(url, page):
     return url
 
 
-def get_imgs(url, title=None, range_=None, customWidget=None):
+def get_imgs(url, title=None, range_=None, cw=None):
     if 'donmai.us/artists' in url:
         raise NotImplementedError('Not Implemented')
     if 'donmai.us/posts/' in url:
         raise NotImplementedError('Not Implemented')
 
-    if customWidget is not None:
-        print_ = customWidget.print_
-    else:
-        def print_(*values):
-            sys.stdout.writelines(values + ('\n',))
+    print_ = get_print(cw)
 
     # Range
-    max_pid = get_max_range(customWidget, 2000)
+    max_pid = get_max_range(cw)
     
     if range_ is None:
         range_ = range(1, 101)
@@ -146,10 +142,10 @@ def get_imgs(url, title=None, range_=None, customWidget=None):
         if len(imgs) >= max_pid:
             break
                 
-        if customWidget is not None:
-            if not customWidget.alive:
+        if cw is not None:
+            if not cw.alive:
                 break
-            customWidget.setTitle(u'{}  {} - {}'.format(tr_(u'읽는 중...'), title, len(imgs)))
+            cw.setTitle(u'{}  {} - {}'.format(tr_(u'읽는 중...'), title, len(imgs)))
         i += 1
     return imgs
 

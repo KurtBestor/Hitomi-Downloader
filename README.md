@@ -37,10 +37,13 @@
 | **AsianSister** | <https://asiansister.com> |
 | **AsmHentai** | <https://asmhentai.com> |
 | **Avgle** | <https://avgle.com> |
+| **baraag.net** | <https://baraag.net> |
 | **半次元** | <https://bcy.net> |
 | **BDSMlr** | <https://bdsmlr.com> |
 | **bilibili** | <https://bilibili.com> |
 | **ComicWalker** | <https://comic-walker.com> |
+| **Coub** | <https://coub.com> |
+| **Danbooru** | <https://danbooru.donmai.us> |
 | **Daum Webtoon** | <http://webtoon.daum.net> |
 | **DeviantArt** | <https://deviantart.com> |
 | **Epio** | <https://epio.app> |
@@ -49,6 +52,7 @@
 | **FC2 Video** | <https://video.fc2.com> |
 | **Flickr** | <https://flickr.com> |
 | **Gelbooru** | <https://gelbooru.com> |
+| **Hameln** | <https://syosetu.org> |
 | **hanime.tv** | <https://hanime.tv> |
 | **Hentai Foundry** | <https://hentai-foundry.com> |
 | **Hitomi.la** | <https://hitomi.la> |
@@ -61,11 +65,11 @@
 | **LHScan** | <https://loveheaven.net> |
 | **Likee** | <https://likee.video> |
 | **Luscious** | <https://luscious.net> |
-| **Manamoa** | <https://manamoa.net> |
 | **MyReadingManga** | <https://myreadingmanga.info> |
 | **Naver Blog** | <https://blog.naver.com> |
 | **Naver Post** | <https://post.naver.com> |
 | **Naver Webtoon** | <https://comic.naver.com> |
+| **Naver TV** | <https://tv.naver.com> |
 | **nhentai** | <https://nhentai.net> |
 | **nhentai.com** | <https://nhentai.com> |
 | **Niconico** | <http://nicovideo.jp> |
@@ -86,10 +90,12 @@
 | **Vimeo** | <https://vimeo.com> |
 | **V LIVE** | <https://vlive.tv> |
 | **Weibo** | <https://weibo.com> |
+| **WikiArt** | <https://www.wikiart.org> |
 | **World Cosplay** | <https://worldcosplay.net> |
 | **xHamster** | <https://xhamster.com> |
 | **XNXX** | <https://xnxx.com> |
 | **XVideos** | <https://xvideos.com> |
 | **Yande.re** | <https://yande.re> |
+| **Youku** | <https://youku.com> |
 | **YouTube** | <https://youtube.com> |
 | **and more...** | [Supported sites by youtube-dl](http://ytdl-org.github.io/youtube-dl/supportedsites.html) |

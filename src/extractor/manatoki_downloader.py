@@ -56,7 +56,7 @@ class Downloader_manatoki(Downloader):
                     break
             else:
                 raise Exception('can not find page')
-            self.customWidget.range_p = [i]
+            self.cw.range_p = [i]
 
         self.name
 
@@ -82,7 +82,7 @@ class Downloader_manatoki(Downloader):
         self.title = tr_('읽는 중... {}').format(self.name)
         self.artist = get_artist(self.soup)
 
-        imgs = get_imgs(self.url, self.name, self.soup, self.session, self.customWidget)
+        imgs = get_imgs(self.url, self.name, self.soup, self.session, self.cw)
         
         for img in imgs:
             if isinstance(img, Image):

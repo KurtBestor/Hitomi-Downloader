@@ -15,10 +15,12 @@ class Downloader_youporn(Downloader):
     single = True
     URLS = ['youporn.com']
     display_name = 'YouPorn'
-    
-    def init(self):
-        if 'youporn.com' not in self.url.lower():
-            self.url = 'https://www.youporn.com/watch/{}'.format(self.url)
+
+    @classmethod
+    def fix_url(cls, url):
+        if 'youporn.com' not in url.lower():
+            url = 'https://www.youporn.com/watch/{}'.format(url)
+        return url
 
     def read(self):
         video = Video(self.url)

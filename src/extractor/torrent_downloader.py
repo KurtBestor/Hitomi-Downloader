@@ -1,8 +1,3 @@
-# uncompyle6 version 3.5.0
-# Python bytecode 2.7 (62211)
-# Decompiled from: Python 2.7.16 (v2.7.16:413a49145e, Mar  4 2019, 01:30:55) [MSC v.1500 32 bit (Intel)]
-# Embedded file name: torrent_downloader.pyo
-# Compiled at: 2019-10-16 05:43:55
 from utils import Downloader, speed_text, clean_title
 import constants, os, downloader
 from size import Size
@@ -11,7 +6,8 @@ try:
 except Exception as e:
     torrent = None
 MAX_PBAR = 1000000
-
+TIMEOUT = 300
+    
 
 @Downloader.register
 class Downloader_torrent(Downloader):
@@ -29,6 +25,13 @@ class Downloader_torrent(Downloader):
         if torrent is None:
             import torrent
 
+    @classmethod
+    def key_id(cls, url):
+        id_, e = torrent.key_id(url)
+        if e:
+            print(e)
+        return id_
+
     @property
     def name(self):
         if self._name is None:
@@ -36,11 +39,14 @@ class Downloader_torrent(Downloader):
         return self._name
 
     def read(self):
-        cw = self.customWidget
+        cw = self.cw
         try:
-            self._info = torrent.get_info(self.url, cw)
+            self._info = torrent.get_info(self.url, cw, timeout=TIMEOUT)
         except Exception as e:
-            return self.Invalid((u'Faild to read metadata: torrent_{}').format(self.url), e, fail=True)
+            return self.Invalid('Faild to read metadata: {}'.format(self.url), e, fail=True)
+        hash_ = self._info._hash.hex()
+        self.print_('Hash: {}'.format(hash_))
+        self.url = 'magnet:?xt=urn:btih:{}'.format(hash_)#
 
         self.urls = [self.url]
         self.title = self.name
@@ -53,7 +59,7 @@ class Downloader_torrent(Downloader):
             cw.imgs.append(filename)
 
     def start_(self):
-        cw = self.customWidget
+        cw = self.cw
         self.read()
         if self.status == 'stop':
             return True
@@ -61,8 +67,8 @@ class Downloader_torrent(Downloader):
         cw.urls = self.urls
         self.size = Size()
         cw.setColor('downloading')
-        self.exec_queue.run(lambda : cw.pbar.setMaximum(MAX_PBAR))
-        self.exec_queue.run(lambda : cw.pbar.setFormat('%p%'))
+        cw.pbar.setMaximum(MAX_PBAR)
+        cw.pbar.setFormat('%p%')
         cw.downloader_pausable = True
         self.update_tools_buttons()
         if cw.paused:
@@ -73,7 +79,7 @@ class Downloader_torrent(Downloader):
             self.update_tools_buttons()
         torrent.download(self._info, save_path=self.dir, callback=self.callback)
         if cw.alive:
-            self.exec_queue.run(lambda : cw.setSpeed(''))
+            cw.setSpeed('')
         if cw.pause_lock and cw.pbar.value() < cw.pbar.maximum():
             cw.pause_data = {'type': self.type, 'url': self.url, 
                'filesize': self._filesize_prev}
@@ -83,11 +89,10 @@ class Downloader_torrent(Downloader):
             return True
         self.title = self.name
         if not self.single:
-            self.exec_queue.run(lambda : cw.pbar.setMaximum(len(cw.imgs)))
+            cw.pbar.setMaximum(len(cw.imgs))
 
     def callback(self, h, s, alerts):
-        cw = self.customWidget
-        exec_queue = self.exec_queue
+        cw = self.cw
         try:
             title = self.name
         except Exception as e:
@@ -119,7 +124,7 @@ class Downloader_torrent(Downloader):
                 self._filesize_prev = filesize
                 self.size += d_size
                 downloader.total_download_size += d_size
-            exec_queue.run(lambda : cw.pbar.setValue(s.progress * MAX_PBAR))
+            cw.pbar.setValue(s.progress * MAX_PBAR)
             if s.state_str == 'queued':
                 title_ = (u'Waiting... {}').format(title)
             elif s.state_str == 'checking files':
@@ -127,15 +132,14 @@ class Downloader_torrent(Downloader):
                 self._filesize_prev = filesize
             elif s.state_str == 'downloading':
                 title_ = (u'{}    (p: {}, s: {})').format(title, s.num_peers, s.num_seeds)
-                exec_queue.run(lambda : cw.setFileSize(filesize))
+                cw.setFileSize(filesize)
                 text = self.size.speed_text()
-                exec_queue.run(lambda : cw.setSpeed(text))
+                cw.setSpeed(text)
             elif s.state_str == 'seeding':
                 title_ = (u'{}').format(title)
-                exec_queue.run(lambda : cw.setFileSize(filesize))
+                cw.setFileSize(filesize)
             else:
                 title_ = (u'{}... {}').format(s.state_str.capitalize(), title)
             cw.setTitle(title_, update_filter=False)
         else:
             return 'abort'
-        return

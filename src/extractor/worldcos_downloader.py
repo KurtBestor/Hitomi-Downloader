@@ -36,7 +36,7 @@ class Downloader_worldcos(Downloader):
     def read(self):
         self.title = self.name
 
-        imgs = get_imgs(self.url, self.name, customWidget=self.customWidget)
+        imgs = get_imgs(self.url, self.name, cw=self.cw)
 
         for img in imgs:
             self.urls.append(img.url)
@@ -54,7 +54,7 @@ def get_name(url):
     return json.loads('"{}"'.format(name))
 
             
-def get_imgs(url, title=None, customWidget=None):
+def get_imgs(url, title=None, cw=None):
     username = re.findall('/member/([^/]+)', url)[0]
 
     url = 'https://worldcosplay.net/member/{}'.format(username)
@@ -93,10 +93,10 @@ def get_imgs(url, title=None, customWidget=None):
 
         p += 1
 
-        if customWidget is not None:
-            if not customWidget.alive:
+        if cw is not None:
+            if not cw.alive:
                 break
-            customWidget.exec_queue.put((customWidget, u"customWidget.setTitle(u'{}  {} - {}')".format(tr_(u'읽는 중...'), title, len(imgs))))
+            cw.setTitle(u'{}  {} - {}'.format(tr_(u'읽는 중...'), title, len(imgs)))
  
         
     return imgs

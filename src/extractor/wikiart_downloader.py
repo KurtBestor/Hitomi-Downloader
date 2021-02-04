@@ -34,12 +34,10 @@ class Downloader_wikiart(Downloader):
         return get_id(self.url)
 
     def read(self):
-        cw = self.customWidget
-
         artist = get_artist(self.id_, self.soup)
         self.artist = artist
 
-        for img in get_imgs(self.url, artist, cw=cw):
+        for img in get_imgs(self.url, artist, cw=self.cw):
             self.urls.append(img.url)
         
         self.title = clean_title(artist)

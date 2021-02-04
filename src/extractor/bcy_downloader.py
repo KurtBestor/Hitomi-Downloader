@@ -29,7 +29,7 @@ class Downloader_bcy(Downloader):
         return title
 
     def read(self):
-        imgs = get_imgs(self.url, self.html, cw=self.customWidget)
+        imgs = get_imgs(self.url, self.html, cw=self.cw)
 
         for img in imgs:
             self.urls.append(img.url)
@@ -123,7 +123,7 @@ def get_imgs_channel(url, html=None, cw=None):
     info = get_info(url, html)
     
     # Range
-    max_pid = get_max_range(cw, 2000)
+    max_pid = get_max_range(cw)
         
     ids = set()
     imgs = []

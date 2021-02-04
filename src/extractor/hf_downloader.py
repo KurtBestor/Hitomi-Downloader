@@ -66,7 +66,7 @@ class Downloader_hf(Downloader):
         username = get_username(self.url)
         self.title = username
 
-        imgs = get_imgs(username, self.title, self.session, cw=self.customWidget)
+        imgs = get_imgs(username, self.title, self.session, cw=self.cw)
 
         for img in imgs:
             self.urls.append(img.url)

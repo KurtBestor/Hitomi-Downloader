@@ -52,9 +52,8 @@ class Downloader_syosetu(Downloader):
         return id
 
     def read(self):
-        print_ = get_print(self.customWidget)
         for try_ in range(8):
-            self.customWidget.print_('get_session')
+            self.print_('get_session')
             try:
                 session = get_session()
                 html = downloader.read_html(self.url, session=session)
@@ -90,7 +89,7 @@ class Downloader_syosetu(Downloader):
                 subtitle = a.text.strip()
                 href = urljoin(self.url, a.attrs['href'])
                 if not re.search(('ncode.syosetu.com/{}/[0-9]+').format(self.id_), href):
-                    print_((u'skip: {}').format(href))
+                    self.print_((u'skip: {}').format(href))
                     continue
                 text = Text(subtitle, update, href, session, False)
                 texts.append(text)
@@ -116,8 +115,7 @@ class Downloader_syosetu(Downloader):
     def post_processing(self):
         if self.single:
             return
-        cw = self.customWidget
-        names = cw.names
+        names = self.cw.names
         filename = os.path.join(self.dir, (u'[merged] {}.txt').format(self.title))
         try:
             with open(filename, 'wb') as (f):
@@ -125,13 +123,13 @@ class Downloader_syosetu(Downloader):
                 if self.novel_ex:
                     f.write(self.novel_ex.encode('utf8'))
                 for i, file in enumerate(names):
-                    self.exec_queue.put((cw, (u'customWidget.pbar.setFormat(u"[%v/%m]  {} [{}/{}]")').format(tr_(u'\ubcd1\ud569...'), i, len(names))))
+                    self.cw.pbar.setFormat(u"[%v/%m]  {} [{}/{}]".format(tr_(u'\ubcd1\ud569...'), i, len(names)))
                     with open(file, 'rb') as (f_):
                         text = f_.read()
                     f.write(b'\n\n\n\n')
                     f.write(text)
         finally:
-            self.exec_queue.put((cw, u'customWidget.pbar.setFormat("[%v/%m]")'))
+            self.cw.pbar.setFormat("[%v/%m]")
 
 
 def get_title_artist(soup):

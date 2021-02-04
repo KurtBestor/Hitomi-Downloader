@@ -39,7 +39,7 @@ class Downloader_artstation(Downloader):
 
     @lazy
     def id(self):
-        id = get_id(self.url, self.customWidget)
+        id = get_id(self.url, self.cw)
         return 'artstation_{}'.format(clean_title(id))
 
     @lazy
@@ -51,7 +51,6 @@ class Downloader_artstation(Downloader):
         return clean_title('{} ({})'.format(name, self.id))
 
     def read(self):
-        cw = self.customWidget
         self.title = self.name
         id = self.id.replace('artstation_', '', 1).replace('／', '/')
         if '/' in id:
@@ -61,9 +60,9 @@ class Downloader_artstation(Downloader):
             type = None
         if '/artwork/' in self.url:
             id_art = get_id_art(self.url)
-            imgs = get_imgs_page(id_art, self.session, cw=cw)
+            imgs = get_imgs_page(id_art, self.session, cw=self.cw)
         else:
-            imgs = get_imgs(id, self.title, self.session, type=type, cw=cw)
+            imgs = get_imgs(id, self.title, self.session, type=type, cw=self.cw)
             
         for img in imgs:
             self.urls.append(img.url)

@@ -34,7 +34,7 @@ class Downloader_pawoo(Downloader):
     def read(self):
         self.title = tr_('읽는 중... {}').format(self.name)
 
-        imgs = get_imgs('pawoo.net', self.id_, self.name, cw=self.customWidget)
+        imgs = get_imgs('pawoo.net', self.id_, self.name, cw=self.cw)
 
         for img in imgs:
             self.urls.append(img.url)

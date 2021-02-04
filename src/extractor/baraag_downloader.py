@@ -15,6 +15,7 @@ def get_id(url):
 class Downloader_baraag(Downloader):
     type = 'baraag'
     URLS = ['baraag.net']
+    display_name = 'baraag.net'
     
     def init(self):
         self.referer = self.url
@@ -41,7 +42,7 @@ class Downloader_baraag(Downloader):
     def read(self):
         self.title = tr_(u'읽는 중... {}').format(self.name)
 
-        imgs = get_imgs('baraag.net', self.id, self.name, cw=self.customWidget)
+        imgs = get_imgs('baraag.net', self.id, self.name, cw=self.cw)
 
         for img in imgs:
             self.urls.append(img.url)

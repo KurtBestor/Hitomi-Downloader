@@ -42,7 +42,6 @@ class Downloader_hanime(Downloader):
     display_name = 'hanime.tv'
 
     def read(self):
-        cw = self.customWidget
         video, session = get_video(self.url)
         self.video = video
         

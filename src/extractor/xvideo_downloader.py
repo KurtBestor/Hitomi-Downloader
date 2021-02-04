@@ -67,12 +67,10 @@ class Downloader_xvideo(Downloader):
         return url
 
     def read(self):
-        cw = self.customWidget
-        
         res = re.find(CHANNEL_PATTERN, self.url)
         if res:
             header, username = res
-            info = read_channel(self.url, cw)
+            info = read_channel(self.url, self.cw)
             videos = [Video(url) for url in info['urls']]
             video = self.process_playlist('[Channel] {}'.format(info['name']), videos)
         else:
@@ -91,7 +89,7 @@ def read_channel(url_page, cw=None):
         raise Exception('Not channel')
     header, username = res
     print(header, username)
-    max_pid = get_max_range(cw, 2000)
+    max_pid = get_max_range(cw)
     info = {}
     info['header'] = header
     info['username'] = username

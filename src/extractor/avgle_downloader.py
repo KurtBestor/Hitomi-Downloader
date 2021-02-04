@@ -18,15 +18,13 @@ class Downloader_avgle(Downloader):
     URLS = ['avgle.com']
 
     def init(self):
-        if not self.customWidget.data_:
+        if not self.cw.data_:
             link = 'https://github.com/KurtBestor/Hitomi-Downloader/wiki/Chrome-Extension'
             webbrowser.open(link)
             return self.Invalid('No data; See: {}'.format(link))
 
     def read(self):
-        cw = self.customWidget
-
-        video = get_video(self.url, cw=cw)
+        video = get_video(self.url, cw=self.cw)
         self.urls.append(video.url)
 
         self.setIcon(video.thumb)

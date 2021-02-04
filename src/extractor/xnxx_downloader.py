@@ -33,9 +33,13 @@ def get_id(url):
 @Downloader.register
 class Downloader_xnxx(Downloader):
     type = 'xnxx'
-    URLS = ['xnxx.com']
+    URLS = [r'regex:xnxx[0-9]*\.(com|es)']
     single = True
     display_name = 'XNXX'
+
+    @classmethod
+    def fix_url(cls, url):
+        return re.sub(r'xnxx[0-9]*\.(com|es)', 'xnxx.com', url)
 
     def read(self):
         video = get_video(self.url)

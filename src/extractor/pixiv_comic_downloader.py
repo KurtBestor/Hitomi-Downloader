@@ -37,13 +37,13 @@ class Downloader_pixiv_comic(Downloader):
             html = downloader.read_html(self.url)
             id = re.find('/works/([0-9]+)', html)
             self.url = ('https://comic.pixiv.net/works/{}').format(id)
-            self.customWidget.print_(('fix url: {}').format(self.url))
+            self.print_(('fix url: {}').format(self.url))
 
     @property
     def soup(self):
         if self._soup is None:
             self.session = Session()
-            self._soup = get_soup(self.url, session=self.session, cw=self.customWidget)
+            self._soup = get_soup(self.url, session=self.session, cw=self.cw)
         return self._soup
 
     @property
@@ -56,7 +56,7 @@ class Downloader_pixiv_comic(Downloader):
         else:
             artist = 'N/A'
         self.dirFormat = self.dirFormat.replace('0:id', '').replace('id', '').replace('()', '').replace('[]', '').strip()
-        self.customWidget.print_((u'dirFormat: {}').format(self.dirFormat))
+        self.print_((u'dirFormat: {}').format(self.dirFormat))
         title = self.format_title('N/A', 'id', title, artist, 'N/A', 'N/A', 'Japanese')
         while '  ' in title:
             title = title.replace('  ', ' ')
@@ -65,7 +65,7 @@ class Downloader_pixiv_comic(Downloader):
 
     def read(self):
         name = self.name
-        self.imgs = get_imgs(self.url, name, self.soup, self.session, cw=self.customWidget)
+        self.imgs = get_imgs(self.url, name, self.soup, self.session, cw=self.cw)
         for img in self.imgs:
             if isinstance(img, Image):
                 self.urls.append(img.url)

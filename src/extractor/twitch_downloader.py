@@ -31,7 +31,6 @@ class Downloader_twitch(Downloader):
         return url.split('?')[0].strip('/')
 
     def read(self):
-        cw = self.customWidget
         if '/directory/' in self.url.lower():
             return self.Invalid('[twitch] Directory is unsupported: {}'.format(self.url))
             
@@ -53,7 +52,7 @@ class Downloader_twitch(Downloader):
             self.urls.append(video.url)
             self.title = video.title
         elif filter == 'clips':
-            info = get_videos(self.url, cw=cw)
+            info = get_videos(self.url, cw=self.cw)
             video = self.process_playlist('[Clip] {}'.format(info['name']), info['videos'])
         else:
             raise NotImplementedError(filter)

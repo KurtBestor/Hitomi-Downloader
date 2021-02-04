@@ -41,8 +41,7 @@ class Downloader_hameln(Downloader):
         self.title = clean_title('[{}] {}'.format(self.artist, self.info['title']), n=-len('[merged] .txt'))
 
     def post_processing(self):
-        cw = self.customWidget
-        names = cw.names
+        names = self.cw.names
         filename = os.path.join(self.dir, '[merged] {}.txt'.format(self.title))
         try:
             with open(filename, 'wb') as (f):
@@ -50,13 +49,13 @@ class Downloader_hameln(Downloader):
                 if self.info['novel_ex']:
                     f.write(self.info['novel_ex'].encode('utf8'))
                 for i, file in enumerate(names):
-                    self.exec_queue.put((cw, ('customWidget.pbar.setFormat(u"[%v/%m]  {} [{}/{}]")').format(tr_('병합...'), i, len(names))))
+                    self.cw.pbar.setFormat('[%v/%m]  {} [{}/{}]'.format(tr_('병합...'), i, len(names)))
                     with open(file, 'rb') as (f_):
                         text = f_.read()
                     f.write(b'\n\n\n\n')
                     f.write(text)
         finally:
-            self.exec_queue.put((cw, 'customWidget.pbar.setFormat("[%v/%m]")'))
+            self.cw.pbar.setFormat('[%v/%m]')
 
 
 class Text(object):

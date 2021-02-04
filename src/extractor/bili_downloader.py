@@ -68,7 +68,7 @@ class Downloader_bili(Downloader):
     display_name = 'bilibili'
 
     def init(self):
-        self.url = fix_url(self.url, self.customWidget)
+        self.url = fix_url(self.url, self.cw)
         if 'bilibili.com' not in self.url.lower():
             self.url = 'https://www.bilibili.com/video/{}'.format(self.url)
         self.url = self.url.replace('m.bilibili', 'bilibili')
@@ -82,7 +82,7 @@ class Downloader_bili(Downloader):
 
     def read(self):
         page = get_page(self.url)
-        videos, info = get_videos(self.url, self.customWidget)
+        videos, info = get_videos(self.url, self.cw)
         if not videos:
             raise Exception('No videos')
         for video in videos:
@@ -101,12 +101,12 @@ class Downloader_bili(Downloader):
         self.title = title
 
     def post_processing(self):
-        cw = self.customWidget
+        cw = self.cw
         with cw.convert(self):
             outdir = get_outdir(self.type)
             out = os.path.join(outdir, self.title + '.mp4')
             ffmpeg.join(cw.names, out, cw)
-            cw.removeDirList.append((self.dir, False))
+            utils.remove(self.dir)
             self.single = True
             cw.setNameAt(0, out)
             del cw.imgs[1:]

@@ -59,7 +59,7 @@ class Downloader_comicwalker(Downloader):
         return self._soup
 
     def read(self):
-        cw = self.customWidget
+        cw = self.cw
         title = get_title(self.soup, cw)
 
         self.imgs = get_imgs(self.url, self.soup, cw)

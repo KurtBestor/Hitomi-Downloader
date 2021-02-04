@@ -149,7 +149,7 @@ class Downloader_pixiv(Downloader):
 
     def read(self):
         type = self.pixiv_type
-        cw = self.customWidget
+        cw = self.cw
         print_ = cw.print_
         ui_setting = self.ui_setting
 
@@ -173,7 +173,7 @@ class Downloader_pixiv(Downloader):
         print('pixiv_query:', query)
         try:
             if type in ('user', 'bookmark', 'search'):
-                max_pid = get_max_range(cw, 2000)
+                max_pid = get_max_range(cw)
                 if ui_setting.groupBox_tag.isChecked():
                     tags = [ compatstr(ui_setting.tagList.item(i).text()) for i in range(ui_setting.tagList.count()) ]
                 else:
@@ -229,7 +229,7 @@ class Downloader_pixiv(Downloader):
         self.title = clean_title(title) # 1390
 
     def post_processing(self):
-        cw = self.customWidget
+        cw = self.cw
         ui_setting = self.ui_setting
         format = self._format
         if cw is not None and format is not None:
@@ -252,7 +252,7 @@ class Downloader_pixiv(Downloader):
             for j, img in enumerate(imgs_ugoira):
                 if not cw.valid or not cw.alive:
                     return
-                self.exec_queue.put((cw, (u'customWidget.pbar.setFormat(u"[%v/%m]  {} [{}/{}]")').format(tr_(u'움짤 변환...'), j, len(imgs_ugoira))))
+                cw.pbar.setFormat(u"[%v/%m]  {} [{}/{}]".format(tr_(u'움짤 변환...'), j, len(imgs_ugoira)))
                 filename = os.path.join(self.dir, img['filename'])
                 out = os.path.splitext(filename)[0] + '.' + format
                 cw.print_((u'convert ugoira: {} --> {}').format(filename, out))
@@ -275,7 +275,7 @@ class Downloader_pixiv(Downloader):
                 except Exception as e:
                     return self.Invalid(e=e)
 
-            self.exec_queue.put((cw, u'customWidget.pbar.setFormat("[%v/%m]")'))
+            cw.pbar.setFormat('[%v/%m]')
 
 
 def get_time(illust):

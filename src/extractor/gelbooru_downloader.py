@@ -57,7 +57,7 @@ class Downloader_gelbooru(Downloader):
     def read(self):
         self.title = self.name
 
-        imgs = get_imgs(self.url, self.name, cw=self.customWidget)
+        imgs = get_imgs(self.url, self.name, cw=self.cw)
 
         for img in imgs:
             self.urls.append(img.url)
@@ -128,7 +128,7 @@ def get_imgs(url, title=None, cw=None):
     print_ = get_print(cw)
 
     # Range
-    max_pid = get_max_range(cw, 2000)
+    max_pid = get_max_range(cw)
 
     imgs = []
     ids = set()
@@ -139,7 +139,7 @@ def get_imgs(url, title=None, cw=None):
         html = downloader.read_html(url)
 
         soup = Soup(html)
-        posts = soup.findAll('div', class_='thumbnail-preview')
+        posts = soup.findAll(class_='thumbnail-preview')
         imgs_new = []
         for post in posts:
             id_ = int(re.find('[0-9]+', post.find('a')['id'], err='no id'))
