@@ -31,18 +31,19 @@ import json
 import re
 
 from distutils.util import strtobool
-from typing import Generator
+from typing import Any, Iterator, List
 from urllib.parse import ParseResult, urlparse, parse_qs
 
 import requests
-
+from bs4 import BeautifulSoup
 import clf2
 import page_selector
 
-from utils import Session, Downloader, Soup, clean_title
+from utils import Downloader, Soup, clean_title
+
 
 class Page(object):
-    def __init__(self, title, url):
+    def __init__(self, title, url) -> None:
         self.title = clean_title(title)
         self.url = url
 
@@ -52,7 +53,7 @@ class DownloaderNaverPost(Downloader):
     type = "naverpost"  # 타입
     URLS = ["m.post.naver.com", "post.naver.com"]
 
-    def init(self):
+    def init(self) -> None:
         self.parsed_url = urlparse(self.url)  # url 나눔
         self.soup = get_soup(self.url)
 
@@ -81,13 +82,13 @@ def f(url):
 
 
 # https://github.com/KurtBestor/Hitomi-Downloader/blob/master/src/extractor/manatoki_downloader.py#L84 참고
-def get_soup(url: str):
+def get_soup(url: str) -> BeautifulSoup:
     res = clf2.solve(url)
     return Soup(res["html"])
 
 
 # 페이지 파싱에서 사용되는 파서
-def page_soup(url: str):
+def page_soup(url: str) -> BeautifulSoup:
     get_html_regex = re.compile(r"\"html\"\:(.+)(\n|\s)\}")
     response = requests.get(url)
     like_html = get_html_regex.search(response.text)[1]
@@ -96,12 +97,13 @@ def page_soup(url: str):
 
 
 # HTML5 data-* 속성이 사용됨.
-def get_img_data_linkdatas(soup: Soup) -> list:
+def get_img_data_linkdatas(soup: Any) -> Iterator[str]:
     a_elements = soup.find_all("a", {"data-linktype": "img"})  # 링크 타입이 img인것만 전부 찾음
-    return [a_element["data-linkdata"] for a_element in a_elements]  # 링크 데이터 리스트
+    for a_element in a_elements:
+        yield a_element["data-linkdata"]
 
 
-def img_src_generator(linkdatas: list) -> Generator:
+def img_src_generator(linkdatas: Iterator[str]) -> Iterator[str]:
     for linkdata in linkdatas:
         data = json.loads(linkdata)
         if data.get("linkUse") is None:
@@ -126,22 +128,22 @@ def decode_escapes(like_html: str) -> str:
     )
 
     return escape_sequence_regex.sub(
-        lambda match: codecs.decode(match.group(0), "unicode-escape"), like_html
+        lambda match: codecs.decode(match.group(0)), like_html
     )
 
 
 # 제목
 class Title:
-    def __init__(self, soup: Soup):
+    def __init__(self, soup: Any):
         self.soup = soup
 
-    def get_profile_title(self) -> clean_title:
+    def get_profile_title(self) -> str:
         profile_name = self.soup.find("p", class_="nick_name").find(
             "span", class_="name"
         )  # 프로필 닉네임
         return clean_title(profile_name.text)  # 닉네임으로만
 
-    def get_series_title(self) -> clean_title:
+    def get_series_title(self) -> str:
         series_name = self.soup.find("h2", class_="tit_series").find(
             "span", class_="ell"
         )  # 시리즈 제목
@@ -150,7 +152,7 @@ class Title:
         )  # 작성자
         return clean_title(f"{series_name.text} ({author.text})")  # 무난하게 붙임
 
-    def get_title(self) -> clean_title:
+    def get_title(self) -> str:
         title = self.soup.find("h3", class_="se_textarea")  # 포스트 제목
         author = self.soup.find("span", class_="se_author")  # 작성자
         return clean_title(f"{title.text.replace(' ', '')} ({author.text})")  # 무난하게 붙임
@@ -158,55 +160,52 @@ class Title:
 
 # 총 포스트 수
 class Total:
-    def __init__(self, soup: Soup):
+    def __init__(self, soup: Any) -> None:
         self.soup = soup
 
     # 0: 팔로워 1: 팔로잉 2: 포스트 3: 좋아요한글
-    def get_total_post(self):
+    def get_total_post(self) -> int:
         profile_info = self.soup.find("div", class_="expert_num_info")  # 프로필 정보
         total_post_element = profile_info.find_all("li", class_="inner")[2]
-        return total_post_element.find("span", class_="num").text  # 총몇개인지만 리턴
+        return int(total_post_element.find("span", class_="num").text)  # 총몇개인지만 리턴
 
     # 0: 포스트 1: 팔로워
-    def get_series_total_post(self):
+    def get_series_total_post(self) -> int:
         series_info = self.soup.find("div", class_="series_follow_area")  # 시리즈 정보
         total_post_element = series_info.find_all("a")[0]
-        return total_post_element.find("em").text  # 총몇개인지만 리턴
+        return int(total_post_element.find("em").text)  # 총몇개인지만 리턴
 
 
-# 왜 제네레이터로 만들었냐고 물어보면 그냥 수정할때나 다른곳에서도 편하게쓸려고 해놓음
 class UrlGenerator:
-    def __init__(self, parsed_url: ParseResult, total_count: int):
+    def __init__(self, parsed_url: ParseResult, total_count: int) -> None:
         self.parsed_url = parsed_url
         self.count = (
-            round(int(total_count) / 20) + 1
-            if not (int(total_count) / 20).is_integer()
-            else round(int(total_count) / 20)
+            round(total_count / 20) + 1
+            if not (total_count / 20).is_integer()
+            else round(total_count / 20)
         )
 
-    def all_post_url_generator(self):
+    def all_post_url_generator(self) -> Iterator[str]:
         query = parse_qs(self.parsed_url.query)
         for i in range(self.count):
-            new_url_query = (
-                f"?memberNo={query['memberNo'][0]}&fromNo={i + 1}"  # 쿼리를 만듭시다
-            )
+            new_url_query = f"?memberNo={query['memberNo'][0]}&fromNo={i + 1}"
             url = f"https://{self.parsed_url.netloc}/async{self.parsed_url.path}{new_url_query}"
             yield url
 
-    def all_series_url_generator(self):
+    def all_series_url_generator(self) -> Iterator[str]:
         query = parse_qs(self.parsed_url.query)
         for i in range(self.count):
-            new_url_query = f"?memberNo={query['memberNo'][0]}&seriesNo={query['seriesNo'][0]}&fromNo={i + 1}"  # 쿼리를 만듭시다
+            new_url_query = f"?memberNo={query['memberNo'][0]}&seriesNo={query['seriesNo'][0]}&fromNo={i + 1}"
             url = f"https://{self.parsed_url.netloc}/my/series/detail/more.nhn{new_url_query}"
             yield url
 
 
 # 여기서 페이지 리스트 만듬
 class PostPage:
-    def __init__(self, soup: page_soup):
+    def __init__(self, soup: Any):
         self.soup = soup
 
-    def all_post_page_generator(self):
+    def all_post_page_generator(self) -> Iterator[List[Page]]:
         titles = self.soup.find_all("strong", class_="tit_feed ell")
         link_elements = self.soup.find_all("a", class_="link_end", href=True)
 
@@ -217,7 +216,7 @@ class PostPage:
 
         yield page[::-1]
 
-    def all_series_page_generator(self):
+    def all_series_page_generator(self) -> Iterator[List[Page]]:
         titles = [
             element.find("span")
             for element in self.soup.find_all("div", class_="spot_post_name")
@@ -232,35 +231,9 @@ class PostPage:
         yield page[::-1]
 
 
-# 귀찮아서 프로퍼티 떡칠 여기서 제네레이터들 전부 리스트로 만들어줄거에요
-class PageClient:
-    def __init__(self, parsed_url: ParseResult, total):
-        self.parsed_url = parsed_url
-        self.total = total
-
-    @property
-    def all_url_list(self):
-        ug = UrlGenerator(self.parsed_url, self.total)
-        return list(ug.all_post_url_generator())
-
-    @property
-    def page_soup_list(self):
-        return [page_soup(url) for url in self.all_url_list]
-
-    def all_post(self):
-        for soup in self.page_soup_list:
-            page = PostPage(soup)
-            return list(page.all_post_page_generator())
-
-    def all_series_post(self):
-        for soup in self.page_soup_list:
-            page = PostPage(soup)
-            return list(page.all_series_page_generator())
-
-
 # 필요한 클래스 전부 상속후 편하게 쓸수있게 만듬
-class Client(PageClient, Title, Total):
-    def __init__(self, parsed_url: ParseResult, soup: Soup):
+class Client(Title, Total, UrlGenerator):
+    def __init__(self, parsed_url: ParseResult, soup: BeautifulSoup):
         Title.__init__(self, soup)
         Total.__init__(self, soup)
 
@@ -270,15 +243,15 @@ class Client(PageClient, Title, Total):
             self.single = True
 
         elif parsed_url.path.startswith("/my.nhn"):
-            PageClient.__init__(self, parsed_url, self.get_total_post())
+            UrlGenerator.__init__(self, parsed_url, self.get_total_post())
             self.title = self.get_profile_title()
-            self.posts = self.all_post()
+            self.posts = self.all_post_url_generator()
             self.single = False
 
         elif parsed_url.path.startswith("/my/series"):
-            PageClient.__init__(self, parsed_url, self.get_series_total_post())
+            UrlGenerator.__init__(self, parsed_url, self.get_series_total_post())
             self.title = self.get_series_title()
-            self.posts = self.all_series_post()
+            self.posts = self.all_series_url_generator()
             self.single = False
 
         else:
