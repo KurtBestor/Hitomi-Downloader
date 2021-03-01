@@ -1,6 +1,5 @@
 import downloader
 from utils import Soup, try_n, Downloader, urljoin, get_print, Session, clean_url, clean_title, LazyUrl, get_ext, fix_title, lazy, get_imgs_already
-import os
 from translator import tr_
 import page_selector
 import utils

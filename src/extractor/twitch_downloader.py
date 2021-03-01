@@ -109,6 +109,16 @@ def get_videos(url, cw=None):
         raise Exception('no videos')
     info['videos'] = sorted(videos, key=lambda video: video.id, reverse=True)
     return info
+
+
+def alter(seg):
+    segs = []
+    if '-muted' in seg.url:
+        seg_ = seg.copy()
+        seg_.url = seg.url.replace('-muted', '')
+        segs.append(seg_)
+    segs.append(seg)
+    return segs
     
 
 class Video(object):
@@ -131,7 +141,7 @@ class Video(object):
         id = info['display_id']
 
         if ext.lower() == '.m3u8':
-            video = M3u8_stream(video, n_thread=4)
+            video = M3u8_stream(video, n_thread=4, alter=alter)
             ext = '.mp4'
         self.filename = format_filename(self.title, id, ext)
         self.url_thumb = info['thumbnail']

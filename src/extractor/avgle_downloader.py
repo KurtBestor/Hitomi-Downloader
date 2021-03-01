@@ -2,13 +2,14 @@
 import downloader
 import os
 from m3u8_tools import M3u8_stream
-from utils import Soup, Downloader, LazyUrl, get_print, try_n, clean_title
+from utils import Soup, Downloader, LazyUrl, get_print, try_n, clean_title, check_alive
 from io import BytesIO
 import constants
 from error_printer import print_error
 import base64
 import json
 import webbrowser
+import errors
 
 
 @Downloader.register
@@ -36,13 +37,14 @@ class Downloader_avgle(Downloader):
 def get_video(url, cw=None):
     print_ = get_print(cw)
     
-    if cw and not cw.alive:
-        return
-
-    html = downloader.read_html(url)
-    soup = Soup(html)
+    check_alive(cw)
 
     data = cw.data_
+    version = data['version']
+    print_('version: {}'.format(version))
+    if version == '0.1':
+        raise errors.OutdatedExtension()
+    data = data['data']
     if not isinstance(data, bytes):
         data = data.encode('utf8')
     s = base64.b64decode(data).decode('utf8')
@@ -53,6 +55,9 @@ def get_video(url, cw=None):
     referer_seg = 'auto' if 'referer=force' in urls[0] else None # 1718
 
     stream = M3u8_stream(url, urls=urls, n_thread=4, referer_seg=referer_seg)
+
+    html = downloader.read_html(url)
+    soup = Soup(html)
 
     url_thumb = soup.find('meta', {'property': 'og:image'}).attrs['content']
     title = soup.find('meta', {'property': 'og:title'}).attrs['content'].strip()

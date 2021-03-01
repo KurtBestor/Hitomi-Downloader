@@ -26,7 +26,7 @@ def print_streams(streams, cw):
     print_ = get_print(cw)
             
     for stream in streams:
-        print_(u'[{}][{}fps][{}][{}] {} [{} / {}] ─ {}'.format(stream.resolution, stream.fps, stream.abr_str, stream.tbr, stream.subtype, stream.video_codec, stream.audio_codec, stream.format))
+        print_(u'[{}][{}fps][{}{}][{}] {} [{} / {}] ─ {}'.format(stream.resolution, stream.fps, stream.abr_str, '(fixed)' if stream.abr_fixed else '', stream.tbr, stream.subtype, stream.video_codec, stream.audio_codec, stream.format))
     print_('')
 
 

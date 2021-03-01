@@ -15,11 +15,11 @@ class Downloader_file(Downloader):
     single = True
     URLS = []
 
-    def init(self):
-        if not self.url.startswith('http'):
-            if self.url[:1] == '/':
-                self.url = self.url[1:]
-            self.url = 'https://' + self.url
+    @classmethod
+    def fix_url(cls, url):
+        if '://' not in url:
+            url = 'https://' + url.lstrip('/')
+        return 'file_' + url
 
     def read(self):
         qs = query_url(self.url)

@@ -76,8 +76,10 @@ class Downloader_twitter(Downloader):
     def fix_url(cls, url):
         username = re.find(r'twitter.com/([^/]+)/media', url)
         if username:
-            url = '@' + username
-        if url.startswith('@'):
+            url = username
+        if 'twitter.com/' in url and not re.find('^https?://', url): #3165; legacy
+            url = 'https://' + url
+        if not re.find('^https?://', url):
             url = 'https://twitter.com/{}'.format(url.lstrip('@'))
         return url.split('?')[0].split('#')[0].strip('/')
 
@@ -581,7 +583,7 @@ class Image(object):
                 info = d.extract_info(self._url)
                 
                 url = info['url']
-                ext = os.path.splitext(url.split('?')[0].split('#')[0])[1]
+                ext = get_ext(url)
                 self.ext = ext
                 print_('get_video: {} {}'.format(url, ext))
                 if ext.lower() == '.m3u8':
