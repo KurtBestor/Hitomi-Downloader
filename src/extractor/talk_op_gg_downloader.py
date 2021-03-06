@@ -34,7 +34,7 @@ from utils import Downloader, Soup
 @Downloader.register
 class DownloaderTalkOPGG(Downloader):
     type = "talkopgg"
-    urls = ["talk.op.gg"]
+    URLS = ["talk.op.gg"]
 
     def init(self) -> None:
         pass
