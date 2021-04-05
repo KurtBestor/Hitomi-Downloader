@@ -275,6 +275,7 @@ class TwitterAPI(object):
                     return
                 params["cursor"] = cursor
             if params.get("cursor") is None: # nothing
+                print_('no cursor')
                 break
     
 
@@ -328,7 +329,8 @@ def get_imgs(username, session, title, types, n=0, format='[%y-%m-%d] id_ppage',
                 names[id_].append(name)
             else:
                 names[id_] = [name]
-    max_id = max(ids) if ids else 0
+    ids_sure = sorted(ids)[:-100]
+    max_id = max(ids_sure) if ids_sure else 0 #3201
     
     # 2303
     imgs_old = []
@@ -341,23 +343,23 @@ def get_imgs(username, session, title, types, n=0, format='[%y-%m-%d] id_ppage',
     
     imgs_new = []
     enough = False
+    c_old = 0
     for tweet in TwitterAPI(session, cw).timeline_media(username):
         id_ = int(tweet['id_str'])
         if id_ < max_id:
             print_('enough')
             enough = True
             break
-        
-        imgs_ = get_imgs_from_tweet(tweet, session, types, format, cw)
 
         if id_ in ids:
             print_('duplicate: {}'.format(id_))
+            c_old += 1
             continue
         ids.add(id_)
 
-        imgs_new += imgs_
-        
-        if len(imgs_old) + len(imgs_new) >= n:
+        imgs_new += get_imgs_from_tweet(tweet, session, types, format, cw)
+
+        if len(imgs_new) + c_old >= n: #3201
             break
 
         msg = '{}  {} - {}'.format(tr_('읽는 중...'), title, len(imgs_new))
@@ -368,7 +370,7 @@ def get_imgs(username, session, title, types, n=0, format='[%y-%m-%d] id_ppage',
         else:
             print(msg)
 
-    if not enough and not imgs_new:
+    if not enough and not imgs_new and c_old == 0:
         raise Exception('no imgs')
 
     imgs = sorted(imgs_old + imgs_new, key=lambda img: img.id, reverse=True)

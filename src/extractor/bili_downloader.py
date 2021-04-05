@@ -14,7 +14,18 @@ import math
 import ree as re
 import utils
 from collections import OrderedDict
-_VALID_URL = 'https?://(?:www\\.|bangumi\\.|)bilibili\\.(?:tv|com)/(?:video/av|anime/(?P<anime_id>\\d+)/play#)(?P<id>\\d+)'
+_VALID_URL = r'''(?x)
+                    https?://
+                        (?:(?:www|bangumi)\.)?
+                        bilibili\.(?:tv|com)/
+                        (?:
+                            (?:
+                                video/[aA][vV]|
+                                anime/(?P<anime_id>\d+)/play\#
+                            )(?P<id_bv>\d+)|
+                            video/[bB][vV](?P<id>[^/?#&]+)
+                        )
+                    '''
 _APP_KEY = 'iVGUTjsxvpLeuDCf'
 _BILIBILI_KEY = 'aHRmhWMLkdeMuILqORnYZocwMBpMEOdt'
 RESOLS = OrderedDict()

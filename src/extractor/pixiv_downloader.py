@@ -14,6 +14,10 @@ except ImportError:
 import constants
 from datetime import datetime
 import requests
+from timee import sleep
+from collections import deque
+from locker import lock
+import threading
 FORCE_LOGIN = True
 LIMIT = 48
 for header in ['pixiv_illust', 'pixiv_bmk', 'pixiv_search', 'pixiv_following', 'pixiv_following_r18']:
@@ -27,6 +31,7 @@ class Downloader_pixiv(Downloader):
     type = 'pixiv'
     MAX_CORE = 16
     keep_date = True
+    STEP = 8, 32
 
     @classmethod
     def fix_url(cls, url):
@@ -107,10 +112,10 @@ class PixivAPI():
     def profile(self, id_):
         return self.call('user/{}/profile/all?lang=en'.format(id_))
 
-    def bookmarks(self, id_, offset=0, limit=None):
+    def bookmarks(self, id_, offset=0, limit=None, rest='show'):
         if limit is None:
             limit = LIMIT
-        return self.call('user/{}/illusts/bookmarks?tag=&offset={}&limit={}&rest=show&lang=en'.format(id_, offset, limit))
+        return self.call('user/{}/illusts/bookmarks?tag=&offset={}&limit={}&rest={}&lang=en'.format(id_, offset, limit, rest))
 
     def search(self, q, order='date_d', mode='all', p=1, s_mode='s_tag', type_='all'):
         return self.call('search/artworks/{0}?word={0}&order={1}&mode={2}&p={3}&s_mode={4}&type={5}&lang=en'.format(quote(q), order, mode, p, s_mode, type_))
@@ -254,13 +259,17 @@ def get_info(url, cw=None, depth=0):
         id_ = api.user_id(url)
         if id_ is None: #
             id_ = my_id()
+        if id_ == my_id():
+            rest = 'all'
+        else:
+            rest = 'show'
         process_user(id_, info, api)
         info['title'] = '{} (pixiv_bmk_{})'.format(info['artist'], info['artist_id'])
         ids = []
         ids_set = set()
         offset = 0
         while len(ids) < max_pid:
-            data = api.bookmarks(id_, offset)
+            data = api.bookmarks(id_, offset, rest=rest)
             c = 0
             for id in [work['id'] for work in data['works']]:
                 if id in ids_set:
@@ -359,15 +368,54 @@ def process_user(id_, info, api):
 def process_ids(ids, info, imgs, cw, depth=0):
     print_ = get_print(cw)
     max_pid = get_max_range(cw)
-    for i, id_illust in enumerate(ids):
-        try:
-            info_illust = get_info('https://www.pixiv.net/en/artworks/{}'.format(id_illust), cw, depth=depth+1)
-        except Exception as e:
-            if depth == 0 and (e.args and e.args[0] == '不明なエラーが発生しました' or type(e) == errors.LoginRequired): # logout during extraction
-                raise e
-            print_('process_ids error ({}):\n{}'.format(depth, print_error(e)[0]))
-            continue
-        imgs += info_illust['imgs']
+    class Thread(threading.Thread):
+        alive = True
+        rem = 0
+
+        def __init__(self, queue):
+            super().__init__(daemon=True)
+            self.queue = queue
+
+        @classmethod
+        @lock
+        def add_rem(cls, x):
+            cls.rem += x
+            
+        def run(self):
+            while self.alive:
+                try:
+                    id_, res, i = self.queue.popleft()
+                except Exception as e:
+                    sleep(.1)
+                    continue
+                try:
+                    info_illust = get_info('https://www.pixiv.net/en/artworks/{}'.format(id_), cw, depth=depth+1)
+                    res[i] = info_illust['imgs']
+                except Exception as e:
+                    if depth == 0 and (e.args and e.args[0] == '不明なエラーが発生しました' or type(e) == errors.LoginRequired): # logout during extraction
+                        res[i] = e
+                    print_('process_ids error ({}):\n{}'.format(depth, print_error(e)[0]))
+                finally:
+                    Thread.add_rem(-1)
+    queue = deque()
+    n, step = Downloader_pixiv.STEP
+    print_('{} / {}'.format(n, step))
+    ts = []
+    for i in range(n):
+        t = Thread(queue)
+        t.start()
+        ts.append(t)
+    for i in range(0, len(ids), step):
+        res = [[]]*step
+        for j, id_illust in enumerate(ids[i:i+step]):
+            queue.append((id_illust, res, j))
+            Thread.add_rem(1)
+        while Thread.rem:
+            sleep(.001, cw)
+        for imgs_ in res:
+            if isinstance(imgs_, Exception):
+                raise imgs_
+            imgs += imgs_
         s = '{} {} - {}'.format(tr_('읽는 중...'), info['title'], len(imgs))
         if cw:
             cw.setTitle(s)
@@ -377,3 +425,5 @@ def process_ids(ids, info, imgs, cw, depth=0):
             break
         if depth == 0:
             check_alive(cw)
+    for t in ts:
+        t.alive = False

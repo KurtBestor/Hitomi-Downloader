@@ -1,4 +1,4 @@
-from utils import Downloader, speed_text, clean_title
+from utils import Downloader, clean_title
 import constants, os, downloader
 from size import Size
 try:
@@ -54,9 +54,10 @@ class Downloader_torrent(Downloader):
         if not files:
             raise Exception('No files')
         cw.single = self.single = len(files) == 1
-        for file in files:
-            filename = os.path.join(self.dir, file)
-            cw.imgs.append(filename)
+        if not cw.imgs:
+            for file in files:
+                filename = os.path.join(self.dir, file)
+                cw.imgs.append(filename)
 
     def start_(self):
         cw = self.cw
@@ -81,8 +82,11 @@ class Downloader_torrent(Downloader):
         if cw.alive:
             cw.setSpeed('')
         if cw.pause_lock and cw.pbar.value() < cw.pbar.maximum():
-            cw.pause_data = {'type': self.type, 'url': self.url, 
-               'filesize': self._filesize_prev}
+            cw.pause_data = {
+                'type': self.type,
+                'url': self.url,
+                'filesize': self._filesize_prev,
+                }
             cw.paused = True
             cw.pause_lock = False
             self.update_tools_buttons()
@@ -110,8 +114,8 @@ class Downloader_torrent(Downloader):
                         cw.dones.add(file)
                         file = constants.compact(file).replace('\\', '/')
                         files = file.split('/')
-                        file = (u' / ').join(files[1:])
-                        msg = (u'Completed: {}').format(file)
+                        file = ' / '.join(files[1:])
+                        msg = 'Completed: {}'.format(file)
                         self.print_(msg)
                         if i == 0:
                             for try_ in range(4):
@@ -126,20 +130,20 @@ class Downloader_torrent(Downloader):
                 downloader.total_download_size += d_size
             cw.pbar.setValue(s.progress * MAX_PBAR)
             if s.state_str == 'queued':
-                title_ = (u'Waiting... {}').format(title)
+                title_ = 'Waiting... {}'.format(title)
             elif s.state_str == 'checking files':
-                title_ = (u'Checking files... {}').format(title)
+                title_ = 'Checking files... {}'.format(title)
                 self._filesize_prev = filesize
             elif s.state_str == 'downloading':
-                title_ = (u'{}    (p: {}, s: {})').format(title, s.num_peers, s.num_seeds)
+                title_ = '{}    (p: {}, s: {})'.format(title, s.num_peers, s.num_seeds)
                 cw.setFileSize(filesize)
                 text = self.size.speed_text()
                 cw.setSpeed(text)
             elif s.state_str == 'seeding':
-                title_ = (u'{}').format(title)
+                title_ = '{}'.format(title)
                 cw.setFileSize(filesize)
             else:
-                title_ = (u'{}... {}').format(s.state_str.capitalize(), title)
+                title_ = '{}... {}'.format(s.state_str.capitalize(), title)
             cw.setTitle(title_, update_filter=False)
         else:
             return 'abort'

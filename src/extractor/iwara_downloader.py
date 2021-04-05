@@ -93,7 +93,13 @@ class Downloader_iwara(Downloader):
 
 def read_channel(url, type_, cw=None):
     print_ = get_print(cw)
-    username = re.find(r'/users/([^/]+)', url, err='no username')
+    html = downloader.read_html(url)
+    soup = Soup(html)
+    if soup.find('div', id='block-mainblocks-user-connect'):
+        username = re.find(r'''/messages/new\?user=(.+)['"]''', html, err='no username')
+    else:
+        username = re.find(r'/users/([^/]+)', url, err='no username')
+    print_('username: {}'.format(username))
     info = {}
     urls = []
     urls_set = set()
