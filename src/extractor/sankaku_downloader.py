@@ -8,7 +8,7 @@
 import downloader
 import ree as re
 import os
-from utils import Downloader, LazyUrl, urljoin, query_url, get_max_range, get_print, Soup, lazy, Session, clean_title
+from utils import Downloader, LazyUrl, urljoin, query_url, get_max_range, get_print, Soup, lazy, Session, clean_title, check_alive
 from translator import tr_
 import urllib
 import sys
@@ -17,7 +17,8 @@ import constants
 from sankaku_login import login
 from error_printer import print_error
 from constants import clean_url
-from locker import lock
+from ratelimit import limits, sleep_and_retry
+from urllib.parse import quote
 
 
 @Downloader.register
@@ -28,22 +29,30 @@ class Downloader_sankaku(Downloader):
     display_name = 'Sankaku Complex'
     
     def init(self):
-        if '/post/' in self.url:
-            return self.Invalid('Single post is not supported')
-        
-        if 'sankakucomplex.com' in self.url:
-            self.url = self.url.replace('http://', 'https://')
-            type = self.url.split('sankakucomplex.com')[0].split('//')[-1].strip('.').split('.')[-1]
-            if type == '':
-                type = 'www'
-            if type not in ['chan', 'idol', 'www']:
-                raise Exception('Not supported subdomain')
-        else:
-            url = self.url
+        type = self.url.split('sankakucomplex.com')[0].split('//')[-1].strip('.').split('.')[-1]
+        if type == '':
+            type = 'www'
+        if type not in ['chan', 'idol', 'www']:
+            raise Exception('Not supported subdomain')
+        self.type_sankaku = type
+        self.url = self.url.replace('&commit=Search', '')
+        self.url = clean_url(self.url)
+        self.session = Session()
+
+        if self.type_sankaku != 'www':
+            login(type, self.session, self.cw)
+
+        if self.type_sankaku == 'www':
+            html = downloader.read_html(self.url, session=self.session)
+            self.soup = Soup(html)
+
+    @classmethod
+    def fix_url(cls, url):
+        if 'sankakucomplex.com' not in url:
             url = url.replace(' ', '+')
             while '++' in url:
                 url = url.replace('++', '+')
-            url = urllib.quote(url)
+            url = quote(url)
             url = url.replace('%2B', '+')
             url = url.replace('%20', '+')#
             if url.startswith('[chan]'):
@@ -57,31 +66,24 @@ class Downloader_sankaku(Downloader):
                 url = url.replace('[www]', '', 1).strip()
             else:
                 raise Exception('Not supported subdomain')
-            self.url = u'https://{}.sankakucomplex.com/?tags={}'.format(type, url)
-        self.type_sankaku = type
-        self.url = self.url.replace('&commit=Search', '')
-        self.url = clean_url(self.url)
-        self.session = Session()
-
-        if self.type_sankaku != 'www':
-            login(type, self.session, self.cw)
-
-        if self.type_sankaku == 'www':
-            html = downloader.read_html(self.url, session=self.session)
-            self.soup = Soup(html)
+            url = 'https://{}.sankakucomplex.com/?tags={}'.format(type, url)
+        return url.replace('http://', 'https://')
 
     @lazy
     def id(self):
         if self.type_sankaku == 'www':
-            id = u'[www] ' + self.soup.find('h1', class_='entry-title').text.strip()
+            id = '[www] ' + self.soup.find('h1', class_='entry-title').text.strip()
         else:
-            qs = query_url(self.url)
-            tags = qs.get('tags', [])
-            tags.sort()
-            id = u' '.join(tags)
-            if not id:
-                id = u'N/A'
-            id = '[{}] '.format(self.type_sankaku) + id
+            if '/post/' in self.url:
+                id = get_id(self.url)
+            else:
+                qs = query_url(self.url)
+                tags = qs.get('tags', [])
+                tags.sort()
+                id = ' '.join(tags)
+                if not id:
+                    id = 'N/A'
+            id = '[{}] {}'.format(self.type_sankaku, id)
         return clean_title(id)
 
     @property
@@ -104,7 +106,9 @@ class Downloader_sankaku(Downloader):
         if self.type_sankaku == 'www':
             imgs = get_imgs_www(self.url, self.soup)
         else:
-            imgs = get_imgs(self.url, self.name, cw=self.cw, d=self, types=types, session=self.session)
+            info = get_imgs(self.url, self.name, cw=self.cw, d=self, types=types, session=self.session)
+            self.single = info['single']
+            imgs = info['imgs']
 
         for img in imgs:
             if isinstance(img, str):
@@ -117,7 +121,7 @@ class Downloader_sankaku(Downloader):
 
 def get_imgs_www(url, soup):
     imgs = []
-    view = soup.find('div', class_="entry-content")
+    view = soup.find('div', class_='entry-content')
     for img in view.findAll('img'):
         img = img.attrs.get('data-lazy-src')
         if not img: # no script
@@ -166,37 +170,40 @@ class Image(object):
         else:
             self.url = LazyUrl_sankaku(url, self.get, self)
 
-    @lock
     def get(self, url):
         cw = self.cw
         d = self.d
         print_ = get_print(cw)
         
         for try_ in range(4):
+            wait(cw)
             html = ''
             try:
                 html = downloader.read_html(url, referer=self.referer, session=self.session)
                 #url = 'https:' + re.findall('[Oo]riginal:? ?<a href="(//[0-9a-zA-Z_-]{2,2}.sankakucomplex.com/data/.{0,320}?)"', html)[0]
                 soup = Soup(html)
-                url = 'https:' + soup.find(id="highres").get('href')
+                highres = soup.find(id='highres')
+                url = urljoin(url, highres['href'] if highres else soup.find(id='image')['src'])
                 break
             except Exception as e:
+                e_msg = print_error(e)[0]
                 if '429 Too many requests'.lower() in html.lower():
                     t_sleep = 120 * min(try_ + 1, 2)
                     e = '429 Too many requests... wait {} secs'.format(t_sleep)
                 elif 'post-content-notification' in html: # sankaku plus
-                    raise Exception('Sankaku plus: {}'.format(self.id))
+                    print_('Sankaku plus: {}'.format(self.id))
+                    return ''
                 else:
                     t_sleep = 5
-                s = u'[Sankaku] failed to read image (id:{}): {}'.format(self.id, e)
+                s = '[Sankaku] failed to read image (id:{}): {}'.format(self.id, e)
                 print_(s)
                 sleep(t_sleep, cw)                
         else:
-            raise Exception('can not find image (id:{})'.format(self.id))
-        soup = Soup(u'<p>{}</p>'.format(url))
+            raise Exception('can not find image (id:{})\n{}'.format(self.id, e_msg))
+        soup = Soup('<p>{}</p>'.format(url))
         url = soup.string
         ext = os.path.splitext(url)[1].split('?')[0]
-        self.filename = u'{}{}'.format(self.id, ext)
+        self.filename = '{}{}'.format(self.id, ext)
         return url
 
 
@@ -213,11 +220,32 @@ def setPage(url, page):
     return url
 
 
+@sleep_and_retry
+@limits(1, 6)
+def wait(cw):
+    check_alive(cw)
+
+
 def get_imgs(url, title=None, cw=None, d=None, types=['img', 'gif', 'video'], session=None):
     if False:#
         raise NotImplementedError('Not Implemented')
     print_ = get_print(cw)
-    print_(u'types: {}'.format(', '.join(types)))
+    print_('types: {}'.format(', '.join(types)))
+    if 'chan.sankakucomplex' in url:
+        type = 'chan'
+    elif 'idol.sankakucomplex' in url:
+        type = 'idol'
+    else:
+        raise Exception('Not supported subdomain')
+
+    info = {}
+    info['single'] = False
+
+    if '/post/' in url:
+        info['single'] = True
+        id = get_id(url)
+        info['imgs'] = [Image(type, id, url, None, cw=cw, d=d)]
+        return info
     
     # Range
     max_pid = get_max_range(cw)
@@ -237,19 +265,13 @@ def get_imgs(url, title=None, cw=None, d=None, types=['img', 'gif', 'video'], se
     imgs = []
     page = 1
     url_imgs = set()
-    if 'chan.sankakucomplex' in url:
-        type = 'chan'
-    elif 'idol.sankakucomplex' in url:
-        type = 'idol'
-    else:
-        raise Exception('Not supported subdomain')
     url_old = 'https://{}.sankakucomplex.com'.format(type)
     if cw is not None:
         cw.setTitle('{}  {}'.format(tr_('읽는 중...'), title))
     while len(imgs) < max_pid:
         #if page > 25: # Anonymous users can only view 25 pages of results
         #    break
-        sleep(1)#
+        wait(cw)
         #url = setPage(url, page)
         print_(url)
         html = downloader.read_html(url, referer=url_old, session=session)
@@ -280,7 +302,7 @@ def get_imgs(url, title=None, cw=None, d=None, types=['img', 'gif', 'video'], se
             url_img = article.a.attrs['href']
             if not url_img.startswith('http'):
                 url_img = urljoin('https://{}.sankakucomplex.com'.format(type), url_img)
-            id = re.find('show/([0-9]+)', url_img)
+            id = get_id(url_img)
             #print_(article)
             if id is None: # sankaku plus
                 continue
@@ -298,8 +320,6 @@ def get_imgs(url, title=None, cw=None, d=None, types=['img', 'gif', 'video'], se
                 imgs.append(img)
                 if len(imgs) >= max_pid:
                     break
-        if cw and not cw.alive:
-            break
 
         try:
             # For page > 50
@@ -311,12 +331,18 @@ def get_imgs(url, title=None, cw=None, d=None, types=['img', 'gif', 'video'], se
             break
         
         if cw is not None:
-            cw.setTitle(u'{}  {} - {}'.format(tr_(u'읽는 중...'), title, len(imgs)))
+            cw.setTitle('{}  {} - {}'.format(tr_('읽는 중...'), title, len(imgs)))
         else:
             print(len(imgs), 'imgs')
 
     if not imgs:
         raise Exception('no images')
+
+    info['imgs'] = imgs
     
-    return imgs
+    return info
+
+
+def get_id(url_img):
+    return re.find('show/([0-9]+)', url_img)
 

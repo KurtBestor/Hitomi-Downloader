@@ -5,7 +5,6 @@ Pornhub Downloader
 from __future__ import division, print_function, unicode_literals
 from io import BytesIO
 import os
-import js2py
 import downloader
 import ree as re
 from utils import (Downloader, Soup, try_n, LazyUrl, urljoin, get_print,
@@ -14,6 +13,7 @@ from utils import (Downloader, Soup, try_n, LazyUrl, urljoin, get_print,
 import clf2
 import utils
 from m3u8_tools import playlist2stream, M3u8_stream
+import ytdl
 
 
 
@@ -104,25 +104,24 @@ class Video(object):
                 raise Exception('no id')
 
             print_('Video')
-            j = decode(html, cw)
 
             # 1968
             #title = j['video_title']
             title = soup.find('h1', class_='title').text.strip()
 
-            url_thumb = j['image_url']
+            ydl = ytdl.YoutubeDL()
+            info = ydl.extract_info(url)
+            url_thumb = info['thumbnail']
             videos = []
-            for video in j['mediaDefinitions']:
-                url_ = video.get('videoUrl').strip()
-                ext = get_ext(url_)
-                if ext.lower() not in ['.mp4', '.m3u8']:
-                    print('not mp4: {}'.format(ext))
-                    continue
-                quality = video.get('quality', 0)
-                if isinstance(quality, list):
-                    quality = quality[0]
-                video['quality'] = int(quality)
-                print_('[{}p] {}'.format(quality, url_))
+            for f in info['formats']:
+                video = {}
+                video['height'] = f['height']
+                video['quality'] = f['height']
+                video['protocol'] = f['protocol']
+                video['videoUrl'] = f['url']
+                if f['protocol'] == 'm3u8':
+                    video['quality'] -= 1
+                print_('[{}p] {} {}'.format(video['height'], video['protocol'], video['videoUrl']))
                 videos.append(video)
 
             if not videos:
@@ -137,7 +136,7 @@ class Video(object):
                 video = videos_good[-1]
             else:
                 video = videos[0]
-            print_('\n[{}p] {}'.format(video['quality'], video['videoUrl']))
+            print_('\n[{}p] {} {}'.format(video['height'], video['protocol'], video['videoUrl']))
 
             file = File(id_, title, video['videoUrl'].strip(), url_thumb)
         
@@ -502,29 +501,3 @@ def get_videos(url, cw=None):
     info['hrefs'] = hrefs
 
     return info
-
-
-@lock
-def decode(html, cw=None):
-    '''
-    decode
-    '''
-    print_ = get_print(cw)
-    print_('decode')
-    soup = Soup(html)
-
-    for script in soup.findAll('script'):
-        script = script.text or script.string or ''
-        script = script.strip()
-        if 'videoUrl' in script:
-            break
-    else:
-        raise Exception('No script')
-
-    flashvars = script.split()[1]
-    script = 'playerObjList={};' + script
-
-    context = js2py.EvalJs()
-    context.execute(script)
-
-    return context.eval(flashvars).to_dict()

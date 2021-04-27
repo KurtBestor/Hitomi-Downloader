@@ -47,12 +47,13 @@ class Video(object):
         if not fs:
             raise Exception('No MP4 videos')
         f = fs[0]
-        self._url = f['url']
         
         self.thumb_url = info['thumbnails'][0]['url']
         self.thumb = IO()
         downloader.download(self.thumb_url, buffer=self.thumb)
         self.title = info['title']
-        ext = get_ext(self._url)
+        url_video = f['url']
+        ext = get_ext(url) or '.mp4'
         self.filename = format_filename(self.title, info['id'], ext)
+        self._url = url_video
         return self._url

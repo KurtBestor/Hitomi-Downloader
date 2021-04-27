@@ -91,7 +91,6 @@
 | **V LIVE** | <https://vlive.tv> |
 | **Weibo** | <https://weibo.com> |
 | **WikiArt** | <https://www.wikiart.org> |
-| **World Cosplay** | <https://worldcosplay.net> |
 | **xHamster** | <https://xhamster.com> |
 | **XNXX** | <https://xnxx.com> |
 | **XVideos** | <https://xvideos.com> |

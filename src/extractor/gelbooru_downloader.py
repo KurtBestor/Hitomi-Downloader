@@ -2,7 +2,7 @@
 import downloader
 import ree as re
 import os
-from utils import Downloader, urljoin, query_url, Soup, get_max_range, get_print, LazyUrl, get_ext, clean_title
+from utils import Downloader, urljoin, query_url, Soup, get_max_range, get_print, LazyUrl, get_ext, clean_title, Session
 from translator import tr_
 try:
     from urllib import quote # python2
@@ -34,18 +34,19 @@ class Downloader_gelbooru(Downloader):
     URLS = ['gelbooru.com']
     MAX_CORE = 8
     _name = None
-    
-    def init(self):
-        if 'gelbooru.com' in self.url.lower():
-            self.url = self.url.replace('http://', 'https://')
+
+    @classmethod
+    def fix_url(cls, url):
+        if 'gelbooru.com' in url.lower():
+            url = url.replace('http://', 'https://')
         else:
-            url = self.url
             url = url.replace(' ', '+')
             while '++' in url:
                 url = url.replace('++', '+')
             url = quote(url)
             url = url.replace('%2B', '+')
-            self.url = u'https://gelbooru.com/index.php?page=post&s=list&tags={}'.format(url)
+            url = 'https://gelbooru.com/index.php?page=post&s=list&tags={}'.format(url)
+        return url
 
     @property
     def name(self):
@@ -116,6 +117,7 @@ def setPage(url, page):
 
 
 def get_imgs(url, title=None, cw=None):
+    print_ = get_print(cw)
     url = clean_url(url)
     if 's=view' in url and 'page=favorites' not in url:
         raise NotImplementedError('Not Implemented')
@@ -125,8 +127,14 @@ def get_imgs(url, title=None, cw=None):
     tags = tags.replace('%20', '+')
     url = 'https://gelbooru.com/index.php?page=post&s=list&tags={}'.format(tags)
 
-    print_ = get_print(cw)
-
+    # 2566
+    user_id = Session().cookies.get('user_id', domain='gelbooru.com')
+    if user_id:
+        cookies = None
+    else:
+        cookies = {'fringeBenefits': 'yup'}
+    print_('user_id: {}'.format(user_id))
+    
     # Range
     max_pid = get_max_range(cw)
 
@@ -136,7 +144,7 @@ def get_imgs(url, title=None, cw=None):
     for p in range(500): #1017
         url = setPage(url, len(ids))
         print_(url)
-        html = downloader.read_html(url)
+        html = downloader.read_html(url, cookies=cookies)
 
         soup = Soup(html)
         posts = soup.findAll(class_='thumbnail-preview')

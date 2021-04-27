@@ -87,8 +87,8 @@ def get_imgs(url, title, cw=None):
             imgs.append(img)
         
         pgn = soup.find('ul', class_='pagination')
-        ps = [getPage(a.attrs['href']) for a in pgn.findAll('a')]
-        if p >= max(ps):
+        ps = [getPage(a.attrs['href']) for a in pgn.findAll('a')] if pgn else []
+        if not ps or p >= max(ps):
             print('max p')
             break
 

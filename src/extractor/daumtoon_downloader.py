@@ -1,15 +1,13 @@
-# uncompyle6 version 3.5.0
-# Python bytecode 2.7 (62211)
-# Decompiled from: Python 2.7.16 (v2.7.16:413a49145e, Mar  4 2019, 01:30:55) [MSC v.1500 32 bit (Intel)]
-# Embedded file name: daumtoon_downloader.pyo
-# Compiled at: 2019-10-03 10:11:29
 import downloader
-from utils import Soup, Session, LazyUrl, Downloader, try_n, get_imgs_already, clean_title, get_print
+from utils import Soup, Session, LazyUrl, Downloader, try_n, get_imgs_already, clean_title, get_print, check_alive
 import json, os
 from timee import time, sleep
 import ree as re
 from translator import tr_
 import page_selector
+
+
+class NotPaidError(Exception): pass
 
 
 class Page(object):
@@ -29,7 +27,7 @@ class Image(object):
         ext = os.path.splitext(url.split('?')[0])[1]
         if ext.lower()[1:] not in ('jpg', 'jpeg', 'bmp', 'png', 'gif', 'webm', 'webp'):
             ext = '.jpg'
-        self.filename = (u'{}/{:04}{}').format(clean_title(page.title), p, ext)
+        self.filename = '{}/{:04}{}'.format(clean_title(page.title), p, ext)
 
     def get(self, _):
         return self._url
@@ -152,6 +150,10 @@ class Downloader_daumtoon(Downloader):
 
 def get_imgs(page, session, cw):
     print_ = get_print(cw)
+    
+    if not downloader.cookiejar.get('PROF', domain='.daum.net') and page.serviceType != 'free': #3314
+        raise NotPaidError()
+        
     html = downloader.read_html(page.url, session=session)
     header, id = get_id(page.url)
     t = int(time())
@@ -183,6 +185,8 @@ def get_imgs(page, session, cw):
         url_data = 'http://webtoon.daum.net/data/pc/{}/viewer_images/{}?timeStamp={}'.format(type_, id, t)
         data_raw = downloader.read_html(url_data, session=session, referer=page.url)
         data = json.loads(data_raw)
+        if not data.get('data'):
+            raise NotPaidError()
         imgs = []
         for img in data['data']:
             img = Image(img['url'], page, len(imgs))
@@ -192,21 +196,23 @@ def get_imgs(page, session, cw):
 
 
 def get_imgs_all(info, title, session, cw=None):
+    print_ = get_print(cw)
     pages = info['pages']
     pages = page_selector.filter(pages, cw)
     imgs = []
     for p, page in enumerate(pages):
-        if page.serviceType != 'free':
-            continue
         imgs_already = get_imgs_already('daumtoon', title, page, cw)
         if imgs_already:
             imgs += imgs_already
             continue
-        imgs += get_imgs(page, session, cw)
+        try:
+            imgs += get_imgs(page, session, cw)
+        except NotPaidError:
+            print_('Not paid: {}'.format(page.title)) #3314
+            continue
         if cw is not None:
             cw.setTitle(tr_(u'\uc77d\ub294 \uc911... {} / {}  ({}/{})').format(title, page.title, p + 1, len(pages)))
-            if not cw.alive:
-                break
+        check_alive(cw)
 
     return imgs
 

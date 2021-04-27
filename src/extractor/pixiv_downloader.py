@@ -117,8 +117,29 @@ class PixivAPI():
             limit = LIMIT
         return self.call('user/{}/illusts/bookmarks?tag=&offset={}&limit={}&rest={}&lang=en'.format(id_, offset, limit, rest))
 
-    def search(self, q, order='date_d', mode='all', p=1, s_mode='s_tag', type_='all'):
-        return self.call('search/artworks/{0}?word={0}&order={1}&mode={2}&p={3}&s_mode={4}&type={5}&lang=en'.format(quote(q), order, mode, p, s_mode, type_))
+    def search(self, q, order='date_d', mode='all', p=1, s_mode='s_tag_full', type_='all', scd=None, ecd=None, wlt=None, wgt=None, hlt=None, hgt=None, blt=None, bgt=None, ratio=None, tool=None):
+        url = 'search/artworks/{0}?word={0}&order={1}&mode={2}&p={3}&s_mode={4}&type={5}&lang=en'.format(quote(q), order, mode, p, s_mode, type_)
+        if scd:
+            url += '&scd={}'.format(scd)
+        if ecd:
+            url += '&ecd={}'.format(ecd)
+        if wlt:
+            url += '&wlt={}'.format(wlt)
+        if wgt:
+            url += '&wgt={}'.format(wgt)
+        if hlt:
+            url += '&hlt={}'.format(hlt)
+        if hgt:
+            url += '&hgt={}'.format(hgt)
+        if blt:
+            url += '&blt={}'.format(blt)
+        if bgt:
+            url += '&bgt={}'.format(bgt)
+        if ratio:
+            url += '&ratio={}'.format(ratio)
+        if tool:
+            url += '&tool={}'.format(tool)
+        return self.call(url)
 
     @try_n(8)
     def following(self, p, r18=False):
@@ -178,10 +199,10 @@ def pretty_tag(tag):
 def tags_matched(tags_illust, cw=None):
     print_ = get_print(cw)
 
-    cache = getattr(cw, '__pixiv_tag_cache', None)
+    cache = cw.get_extra('pixiv_tag_cache') if cw else None
     if cache is not None:
-        tags = cache['tags']
-        tags_ex = cache['tags_ex']
+        tags = set(cache['tags'])
+        tags_ex = set(cache['tags_ex'])
     else:
         if utils.ui_setting and utils.ui_setting.groupBox_tag.isChecked():
             tags_ = [compatstr(utils.ui_setting.tagList.item(i).text()) for i in range(utils.ui_setting.tagList.count())]
@@ -199,9 +220,9 @@ def tags_matched(tags_illust, cw=None):
         print_('tags_ex: [{}]'.format(', '.join(tags_ex)))
         if cw:
             cache = {}
-            cache['tags'] = tags
-            cache['tags_ex'] = tags_ex
-            cw.__pixiv_tag_cache = cache
+            cache['tags'] = list(tags)
+            cache['tags_ex'] = list(tags_ex)
+            cw.set_extra('pixiv_tag_cache', cache)
 
     tags_illust = set(pretty_tag(tag) for tag in tags_illust)
     return (not tags or tags & tags_illust) and tags_ex.isdisjoint(tags_illust)
@@ -289,11 +310,36 @@ def get_info(url, cw=None, depth=0):
         qs = query_url(url)
         order = qs.get('order', ['date_d'])[0]
         mode = qs.get('mode', ['all'])[0]
+        s_mode = qs.get('s_mode', ['s_tag_full'])[0]
+        scd = qs.get('scd', [None])[0]
+        ecd = qs.get('ecd', [None])[0]
+        type_ = qs.get('type', ['all'])[0]
+        wlt = qs.get('wlt', [None])[0]
+        wgt = qs.get('wgt', [None])[0]
+        hlt = qs.get('hlt', [None])[0]
+        hgt = qs.get('hgt', [None])[0]
+        blt = qs.get('blt', [None])[0]
+        bgt = qs.get('bgt', [None])[0]
+        ratio = qs.get('ratio', [None])[0]
+        tool = qs.get('tool', [None])[0]
+        logs = [
+            'order: {}'.format(order),
+            'mode: {}'.format(mode),
+            's_mode: {}'.format(s_mode),
+            'scd / ecd: {} / {}'.format(scd, ecd),
+            'type: {}'.format(type_),
+            'wlt /  wgt: {} / {}'.format(wlt, wgt),
+            'hlt / hgt: {} / {}'.format(hlt, hgt),
+            'blt / bgt: {} / {}'.format(blt, bgt),
+            'ratio: {}'.format(ratio),
+            'tool: {}'.format(tool),
+                ]
+        print_('\n'.join(logs))
         ids = []
         ids_set = set()
         p = 1
         while len(ids) < max_pid:
-            data = api.search(q, order, mode, p=p)
+            data = api.search(q, order, mode, p=p, s_mode=s_mode, scd=scd, ecd=ecd, type_=type_, wlt=wlt, wgt=wgt, hlt=hlt, hgt=hgt, blt=blt, bgt=bgt, ratio=ratio, tool=tool)
             c = 0
             for id in [illust['id'] for illust in data['illustManga']['data'] if 'id' in illust]:
                 if id in ids_set:

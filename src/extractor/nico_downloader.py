@@ -3,8 +3,11 @@ import downloader
 import nndownload
 from io import BytesIO
 import ree as re
-from utils import Downloader, get_print, compatstr, format_filename, clean_title, try_n
+from utils import Downloader, get_print, compatstr, format_filename, clean_title, try_n, LazyUrl, get_abr
+import utils
 from nico_login import login, logout
+import ffmpeg
+import os
 
 
 def get_id(url):
@@ -16,20 +19,44 @@ def get_id(url):
 
 
 class Video(object):
-    def __init__(self, session, info):
+    def __init__(self, session, info, format, cw):
         self.session = session
         self.info = info
-        self.url = info['url']
         self.title = info['title']
         self.ext = info['ext']
         self.id = info['id']
+        self.format = format
+        self.username = info['uploader']
+        self.url = LazyUrl('https://www.nicovideo.jp/watch/{}'.format(self.id), lambda _: info['url'], self, pp=self.pp)
+        self.cw = cw
         
-        self.fileName = format_filename(self.title, self.id, self.ext)
+        self.filename = format_filename(self.title, self.id, self.ext)
         
         self.url_thumb = info['thumbnail_url']
         print('thumb:', self.url_thumb)
         self.thumb = BytesIO()
         downloader.download(self.url_thumb, buffer=self.thumb)
+
+    def pp(self, filename):
+        cw = self.cw
+        if cw:
+            with cw.convert(self):
+                return self._pp(filename)
+        else:
+            return self._pp(filename)
+
+    def _pp(self, filename):
+        if self.format == 'mp4':
+            return
+        name, ext_old = os.path.splitext(filename)
+        filename_new = '{}.mp3'.format(name)
+        ffmpeg.convert(filename, filename_new, '-shortest -preset ultrafast -b:a {}k'.format(get_abr()), cw=self.cw)
+
+        if utils.ui_setting.albumArt.isChecked():
+            self.thumb.seek(0)#
+            ffmpeg.add_cover(filename_new, self.thumb, {'artist':self.username, 'title':self.title}, cw=self.cw)
+
+        return filename_new
 
     def __repr__(self):
         return u'Video({})'.format(self.id)
@@ -41,17 +68,24 @@ class Downloader_nico(Downloader):
     single = True
     URLS = ['nicovideo.jp']
     display_name = 'Niconico'
-    
-    def init(self):
-        if not re.match('https?://.+', self.url, re.IGNORECASE):
-            self.url = 'https://www.nicovideo.jp/watch/{}'.format(self.url)
+    _format = 'mp4'
 
     @property
     def id_(self):
         return get_id(self.url)
 
+    @classmethod
+    def fix_url(cls, url):
+        id_ = get_id(url)
+        return 'https://www.nicovideo.jp/watch/{}'.format(id_)
+
     def read(self):
         ui_setting = self.ui_setting
+        if self.cw.format:
+            self._format = self.cw.format
+
+        if self._format == 'mp3':
+            self.cw.setMusic(True)
 
         if ui_setting.nicoBox.isChecked():
             username = compatstr(ui_setting.nico_id.text())
@@ -68,13 +102,12 @@ class Downloader_nico(Downloader):
 
         self.session = session
         try:
-            video = get_video(session, self.id_, cw=self.cw)
+            video = get_video(session, self.id_, self._format, self.cw)
         except Exception as e:
             logout()
             raise
 
         self.urls.append(video.url)
-        self.filenames[video.url] = video.fileName
         self.setIcon(video.thumb)
 
         self.enableSegment()
@@ -83,15 +116,22 @@ class Downloader_nico(Downloader):
 
 
 @try_n(2)
-def get_video(session, id, cw=None):
+def get_video(session, id, format, cw=None):
     print_ = get_print(cw)
 
     try:
         info = nndownload.request_video(session, id)
     except:
         raise Exception('Err')
-    video = Video(session, info)
+    video = Video(session, info, format, cw)
 
     return video
 
 
+import selector
+@selector.options('nico')
+def options():
+    return [
+        {'text': 'MP4 (동영상)', 'format': 'mp4'},
+        {'text': 'MP3 (음원)', 'format': 'mp3'},
+        ]

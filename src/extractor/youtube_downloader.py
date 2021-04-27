@@ -180,8 +180,9 @@ class Video(object):
             # only mp4; https://github.com/KurtBestor/Hitomi-Downloader-issues/issues/480
             def isGood(stream):
                 return stream.audio_codec.lower().startswith('mp4')
-            if any(isGood(stream) for stream in streams):
-                streams = [stream for stream in streams if isGood(stream)]
+            streams_good = [stream for stream in streams if isGood(stream)]
+            if streams_good:
+                streams = streams_good
                 print_streams(streams, cw)
             # only audio?
             if any(stream.resolution is None for stream in streams):
@@ -288,8 +289,7 @@ class Video(object):
         elif self.type == 'audio' and ext != '.mp3': # convert non-mp3 audio -> mp3
             name, ext_old = os.path.splitext(filename)
             filename_new = u'{}.mp3'.format(name)
-            abr = get_abr()
-            ffmpeg.convert(filename, filename_new, '-shortest -preset ultrafast -b:a {}k'.format(abr), cw=cw)
+            ffmpeg.convert(filename, filename_new, '-shortest -preset ultrafast -b:a {}k'.format(get_abr()), cw=cw)
 
         if self.type == 'audio' and ui_setting.albumArt.isChecked():
             try:
@@ -369,6 +369,9 @@ class Downloader_youtube(Downloader):
             info = get_videos(self.url, type=self.yt_type, max_abr=abr, cw=cw)
         videos = info['videos']
 
+        if not videos:
+            raise Exception('No videos')
+
         self.enableSegment(overwrite=True)
 
         # first video must be valid
@@ -378,10 +381,11 @@ class Downloader_youtube(Downloader):
                 video.url()
                 break
             except Exception as e:
+                e_ = e
                 self.print_(print_error(e)[0])
                 videos.remove(video)
         else:
-            raise Exception('No videos')
+            raise e_
 
         if info['type'] != 'single':
             video = self.process_playlist(info['title'], videos)
@@ -473,3 +477,9 @@ def select():
         return format
 
 
+@selector.options('youtube')
+def options():
+    return [
+        {'text': 'MP4 (동영상)', 'format': 'mp4'},
+        {'text': 'MP3 (음원)', 'format': 'mp3'},
+        ]

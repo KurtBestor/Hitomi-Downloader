@@ -18,16 +18,17 @@ class Downloader_danbooru(Downloader):
     type='danbooru'
     URLS = ['danbooru.donmai.us']
     _name = None
-    
-    def init(self):
-        if 'donmai.us' in self.url:
-            self.url = self.url.replace('http://', 'https://')
+
+    @classmethod
+    def fix_url(cls, url):
+        if 'donmai.us' in url:
+            url = url.replace('http://', 'https://')
         else:
-            url = self.url
             url = url.replace(' ', '+')
             while '++' in url:
                 url = url.replace('++', '+')
-            self.url = u'https://danbooru.donmai.us/?tags={}'.format(quote(url))
+            url = u'https://danbooru.donmai.us/?tags={}'.format(quote(url))
+        return url.strip('+')
 
     @property
     def name(self):

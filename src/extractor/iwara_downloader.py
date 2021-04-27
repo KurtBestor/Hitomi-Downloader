@@ -51,15 +51,13 @@ class Downloader_iwara(Downloader):
     single = True
     display_name = 'Iwara'
 
-    def init(self):
-        self.url = clean_url(self.url)
-
     @classmethod
     def fix_url(cls, url):
+        url = clean_url(url)
         return url.split('?')[0]
 
     def read(self):
-        if '/users/' in self.url:
+        if '/users/' in self.url or '/user/' in self.url:
             type_ = 'videos'
             try:
                 if self.url.split('/users/')[1].split('/')[1] == 'images':
