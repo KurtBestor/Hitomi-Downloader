@@ -3,7 +3,7 @@ import downloader
 import ree as re
 from timee import sleep, clock, time
 from constants import clean_url
-from utils import Downloader, urljoin, try_n, Session, get_print, clean_title, Soup, fix_protocol
+from utils import Downloader, urljoin, try_n, Session, get_print, clean_title, Soup, fix_protocol, domain
 import os
 from translator import tr_
 import json
@@ -13,10 +13,18 @@ import clf2
 import errors
 
 
+def suitable(url):
+    if domain(url.lower(), 2) not in ['weibo.com', 'weibo.cn']:
+        return False
+    if '/tv/' in url.lower():
+        return False
+    return True
+
+
 @Downloader.register
 class Downloader_weibo(Downloader):
     type = 'weibo'
-    URLS = ['weibo.com', 'weibo.cn']
+    URLS = [suitable]
 
     def init(self):
         self.session = Session()

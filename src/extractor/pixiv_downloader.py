@@ -1,5 +1,5 @@
 import downloader
-from utils import Downloader, Session, urljoin, clean_title, LazyUrl, get_ext, get_print, try_n, compatstr, get_max_range, check_alive, query_url
+from utils import Downloader, Session, urljoin, clean_title, LazyUrl, get_ext, get_print, try_n, compatstr, get_max_range, check_alive, query_url, get_outdir
 import ffmpeg
 import utils
 import os
@@ -18,6 +18,7 @@ from timee import sleep
 from collections import deque
 from locker import lock
 import threading
+from ratelimit import limits, sleep_and_retry
 FORCE_LOGIN = True
 LIMIT = 48
 for header in ['pixiv_illust', 'pixiv_bmk', 'pixiv_search', 'pixiv_following', 'pixiv_following_r18']:
@@ -77,6 +78,8 @@ class PixivAPI():
         return re.find('/users/([0-9]+)', url) or re.find('[?&]id=([0-9]+)', url)
 
     @try_n(8)
+    @sleep_and_retry
+    @limits(30, 1) #3355
     def call(self, url):
         url = urljoin('https://www.pixiv.net/ajax/', url)
         e_ = None
@@ -158,6 +161,7 @@ class PixivAPI():
 
 
 class Image():
+    local = False
     def __init__(self, url, referer, id_, p, format_, info, cw, ugoira=None):
         self._url = url
         self.id_ = id_
@@ -175,10 +179,16 @@ class Image():
         name = self.format_.replace('id', '###id*').replace('page', '###page*').replace('artist', '###artist*').replace('title', '###title*')
         name = name.replace('###id*', str(self.id_)).replace('###page*', str(self.p)).replace('###artist*', self.artist).replace('###title*', self.title)
         self.filename = clean_title(name.strip(), allow_dot=True, n=-len(ext)) + ext
+        if self.ugoira and self.ugoira['ext']: #3355
+            filename_local = os.path.join(self.cw.dir, self.filename)
+            filename_local = '{}{}'.format(os.path.splitext(filename_local)[0], self.ugoira['ext'])
+            if os.path.exists(filename_local):
+                self.filename = os.path.basename(filename_local)
+                self.local = True
         return self._url
 
     def pp(self, filename):
-        if self.ugoira and self.ugoira['ext']:
+        if self.ugoira and self.ugoira['ext'] and not self.local:
             with self.cw.convert(self):
                 if utils.ui_setting:
                     dither = utils.ui_setting.checkDither.isChecked()
@@ -196,11 +206,14 @@ def pretty_tag(tag):
     return tag.replace(' ', '').lower()
 
 
-def tags_matched(tags_illust, cw=None):
+@lock
+def tags_matched(tags_illust, tags_add, cw=None):
     print_ = get_print(cw)
 
     cache = cw.get_extra('pixiv_tag_cache') if cw else None
+    init = True
     if cache is not None:
+        init = False
         tags = set(cache['tags'])
         tags_ex = set(cache['tags_ex'])
     else:
@@ -216,32 +229,33 @@ def tags_matched(tags_illust, cw=None):
                 tags_ex.add(tag[1:].strip())
             else:
                 tags.add(tag)
-        print_('tags: [{}]'.format(', '.join(tags)))
-        print_('tags_ex: [{}]'.format(', '.join(tags_ex)))
+
+    if init:
         if cw:
             cache = {}
             cache['tags'] = list(tags)
             cache['tags_ex'] = list(tags_ex)
             cw.set_extra('pixiv_tag_cache', cache)
+        print_('tags: [{}]'.format(', '.join(tags)))
+        print_('tags_ex: [{}]'.format(', '.join(tags_ex)))
 
+    if tags_add:
+        tags.update((pretty_tag(tag) for tag in tags_add))
+        if init:
+            print_('tags_add: {}'.format(tags_add))
+    
     tags_illust = set(pretty_tag(tag) for tag in tags_illust)
     return (not tags or tags & tags_illust) and tags_ex.isdisjoint(tags_illust)
 
 
-def get_info(url, cw=None, depth=0):
+def get_info(url, cw=None, depth=0, tags_add=None):
     print_ = get_print(cw)
     api = PixivAPI()
     info = {}
     imgs = []
     
-    if utils.ui_setting:
-        ugoira_ext = [None, '.gif', '.webp', '.png'][utils.ui_setting.ugoira_convert.currentIndex()]
-    else:
-        ugoira_ext = None
-    if utils.ui_setting:
-        format_ = compatstr(utils.ui_setting.pixivFormat.currentText())
-    else:
-        format_ = 'id_ppage'
+    ugoira_ext = [None, '.gif', '.webp', '.png'][utils.ui_setting.ugoira_convert.currentIndex()] if utils.ui_setting else None
+    format_ = compatstr(utils.ui_setting.pixivFormat.currentText()) if utils.ui_setting else 'id_ppage'
             
     max_pid = get_max_range(cw)
     
@@ -260,7 +274,7 @@ def get_info(url, cw=None, depth=0):
         info['create_date'] = parse_time(data['createDate'])
         tags_illust = set(tag['tag'] for tag in data['tags']['tags'])
         
-        if tags_matched(tags_illust, cw):
+        if tags_matched(tags_illust, tags_add, cw):
             if data['illustType'] == 2: # ugoira
                 data = api.ugoira_meta(id_)
                 ugoira = {
@@ -372,17 +386,31 @@ def get_info(url, cw=None, depth=0):
             p += 1
         process_ids(ids[:max_pid], info, imgs, cw, depth)
     elif api.user_id(url): # User illusts
+        m = re.search(r'/users/[0-9]+/([\w]+)/?([^\?#/]*)', url)
+        if m is None:
+            types = ['illusts', 'manga']
+            tag = None
+        else:
+            type_ = m.groups()[0]
+            types = [{'illustrations': 'illusts'}.get(type_) or type_]
+            tag = unquote(m.groups()[1]) or None
+        print_('types: {}, tag: {}'.format(types, tag))
+        
         id_ = api.user_id(url)
         process_user(id_, info, api)
         data = api.profile(id_)
         info['title'] = '{} (pixiv_{})'.format(info['artist'], info['artist_id'])
+        
         ids = []
-        for illusts in [data['illusts'], data['manga']]:
+        for type_ in types:
+            illusts = data[type_]
             if not illusts:
                 continue
             ids += list(illusts.keys())
         ids = sorted(ids, key=int, reverse=True)
-        process_ids(ids[:max_pid], info, imgs, cw, depth)
+        if not ids:
+            raise Exception('no imgs')
+        process_ids(ids[:max_pid], info, imgs, cw, depth, tags_add=[tag] if tag else None)
     else:
         raise NotImplementedError()
     info['imgs'] = imgs[:max_pid]
@@ -411,7 +439,7 @@ def process_user(id_, info, api):
     info['artist'] = data_user['name']
 
 
-def process_ids(ids, info, imgs, cw, depth=0):
+def process_ids(ids, info, imgs, cw, depth=0, tags_add=None):
     print_ = get_print(cw)
     max_pid = get_max_range(cw)
     class Thread(threading.Thread):
@@ -435,12 +463,12 @@ def process_ids(ids, info, imgs, cw, depth=0):
                     sleep(.1)
                     continue
                 try:
-                    info_illust = get_info('https://www.pixiv.net/en/artworks/{}'.format(id_), cw, depth=depth+1)
+                    info_illust = get_info('https://www.pixiv.net/en/artworks/{}'.format(id_), cw, depth=depth+1, tags_add=tags_add)
                     res[i] = info_illust['imgs']
                 except Exception as e:
                     if depth == 0 and (e.args and e.args[0] == '不明なエラーが発生しました' or type(e) == errors.LoginRequired): # logout during extraction
                         res[i] = e
-                    print_('process_ids error ({}):\n{}'.format(depth, print_error(e)[0]))
+                    print_('process_ids error (id: {}, d:{}):\n{}'.format(id_, depth, print_error(e)[0]))
                 finally:
                     Thread.add_rem(-1)
     queue = deque()

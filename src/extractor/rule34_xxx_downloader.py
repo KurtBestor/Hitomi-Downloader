@@ -1,7 +1,7 @@
 import downloader
 import ree as re
 import os
-from utils import Downloader, urljoin, query_url, Soup, get_max_range, get_print, clean_title
+from utils import Downloader, urljoin, query_url, Soup, get_max_range, get_print, clean_title, try_n
 from translator import tr_
 try:
     from urllib import quote # python2
@@ -108,7 +108,7 @@ def get_imgs(url, title=None, cw=None):
     for p in range(500): #1017
         url = setPage(url, p)
         print_(url)
-        html = downloader.read_html(url)
+        html = try_n(4, sleep=30)(downloader.read_html)(url) #3340
 
         soup = Soup(html)
         posts = soup.findAll('post')

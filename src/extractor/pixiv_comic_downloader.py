@@ -35,7 +35,7 @@ class Downloader_pixiv_comic(Downloader):
     def init(self):
         if '/viewer/' in self.url:
             html = downloader.read_html(self.url)
-            id = re.find('/works/([0-9]+)', html)
+            id = re.find('/works/([0-9]+)', html, err='no id')
             self.url = ('https://comic.pixiv.net/works/{}').format(id)
             self.print_(('fix url: {}').format(self.url))
 

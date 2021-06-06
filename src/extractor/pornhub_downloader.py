@@ -116,7 +116,7 @@ class Video(object):
             for f in info['formats']:
                 video = {}
                 video['height'] = f['height']
-                video['quality'] = f['height']
+                video['quality'] = f['height'] or 0
                 video['protocol'] = f['protocol']
                 video['videoUrl'] = f['url']
                 if f['protocol'] == 'm3u8':

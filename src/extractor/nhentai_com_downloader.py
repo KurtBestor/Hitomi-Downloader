@@ -10,7 +10,7 @@ import json
 @Downloader.register
 class Downloader_nhentai_com(Downloader):
     type = 'nhentai_com'
-    URLS = ['nhentai.com']
+    URLS = [r'regex:https?://nhentai.com']
     MAX_CORE = 16
     display_name = 'nhentai.com'
     

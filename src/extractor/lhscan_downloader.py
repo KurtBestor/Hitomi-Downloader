@@ -66,7 +66,7 @@ class Downloader_lhscan(Downloader):
 
     @property
     def name(self):
-        title = self.soup.findAll('span', {'itemprop': 'name'})[-1].text.strip()
+        title = self.soup.find('ul', class_='manga-info').find('h3').text
         return clean_title(title)
 
     def read(self):

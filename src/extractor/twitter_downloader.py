@@ -1,7 +1,7 @@
 #coding:utf8
 from __future__ import division, print_function, unicode_literals
 import downloader
-from utils import Downloader, Session, cache, LazyUrl, get_ext, try_n, Soup, get_print, update_url_query, urljoin, try_n, get_max_range, get_outdir, clean_title
+from utils import Downloader, Session, LazyUrl, get_ext, try_n, Soup, get_print, update_url_query, urljoin, try_n, get_max_range, get_outdir, clean_title, lock, check_alive
 from timee import time, sleep
 import hashlib
 import json
@@ -24,32 +24,14 @@ import options
 AUTH = "Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA"
 UA = "Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko"
 #UA = downloader.hdr['User-Agent']#
-UAS = [
-    'Opera/9.80 (Windows NT 6.1; U; en-US) Presto/2.7.62 Version/11.01',
-    'Opera/9.80 (Windows NT 6.1; WOW64; U; pt) Presto/2.10.229 Version/11.62',
-    'Opera/12.0(Windows NT 5.1;U;en)Presto/22.9.168 Version/12.00',
-    'Opera/9.80 (Windows NT 5.1; U; en) Presto/2.9.168 Version/11.51',
-    'Opera/9.80 (X11; Linux x86_64; U; fr) Presto/2.9.168 Version/11.50',
-    'Opera/9.80 (X11; Linux x86_64; U; pl) Presto/2.7.62 Version/11.00',
-    'Opera/9.80 (Windows NT 6.1 x64; U; en) Presto/2.7.62 Version/11.00',
-    'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.1',
-    'Opera/9.80 (Windows NT 6.1; U; zh-cn) Presto/2.6.37 Version/11.00',
-    'Opera/9.80 (X11; Linux i686; U; ru) Presto/2.8.131 Version/11.11',
-    'Opera/9.80 (Windows NT 6.1; Opera Tablet/15165; U; en) Presto/2.8.149 Version/11.1',
-    'Opera/9.80 (Macintosh; Intel Mac OS X 10.6.8; U; de) Presto/2.9.168 Version/11.52',
-    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2227.0 Safari/537.36',
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.75.14 (KHTML, like Gecko) Version/7.0.3 Safari/7046A194A',
-    'Opera/9.80 (Windows NT 5.1; U; zh-tw) Presto/2.8.131 Version/11.10',
-    'Opera/9.80 (Windows NT 6.0) Presto/2.12.388 Version/12.14',
-    'Opera/9.80 (X11; Linux i686; U; hu) Presto/2.9.168 Version/11.50',
-    'Opera/9.80 (Windows NT 6.0; U; en) Presto/2.8.99 Version/11.10',
-    'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36',
-    'Opera/9.80 (X11; Linux x86_64; U; bg) Presto/2.8.131 Version/11.10',
-    ]
+RETRY_PAGINATION = 21
+RETRY_MORE = 3
+TIMEOUT_GUEST_TOKEN = 3600
+CACHE_GUEST_TOKEN = None
+
 
 def change_ua(session):
-    i = random.randrange(len(UAS))
-    session.headers['User-Agent'] = UAS[i]
+    session.headers['User-Agent'] = downloader.ua.random
 
 
 def get_session():
@@ -113,41 +95,48 @@ class Downloader_twitter(Downloader):
 
         self.title = title
 
-        
-@cache(3600)
-def _guest_token(headers):
-    session = Session()
-    r = session.post('https://api.twitter.com/1.1/guest/activate.json', headers=headers)
-    data = json.loads(r.text)
-    return data['guest_token']
+
+@lock
+def _guest_token(session, headers, cache=True):
+    global CACHE_GUEST_TOKEN
+    token = None
+    if cache:
+        if CACHE_GUEST_TOKEN and CACHE_GUEST_TOKEN[1] - time() < TIMEOUT_GUEST_TOKEN:
+            token = CACHE_GUEST_TOKEN[0]
+    if token is None:
+        print('!!! get guest_token')
+        name = 'x-guest-token'
+        if name in headers:
+            del headers[name]
+        r = session.post('https://api.twitter.com/1.1/guest/activate.json', headers=headers)
+        data = json.loads(r.text)
+        token = data['guest_token']
+        CACHE_GUEST_TOKEN = token, time()
+    return token
 
 
 class TwitterAPI(object):
-    def __init__(self, session, cw=None):
+    def __init__(self, session, cw=None, cache_guest_token=True):
         self.session = session
         self.cw = cw
-        csrf = session.cookies.get('ct0', domain='.twitter.com')
-        print('csrf:', csrf)
-        if not csrf:
-            csrf = hashlib.md5(str(time()).encode()).hexdigest()
         hdr = {
             "authorization": AUTH,
             "x-twitter-client-language": "en",
             "x-twitter-active-user": "yes",
-            "x-csrf-token": csrf,
             "Origin": "https://twitter.com",
             }
         session.headers.update(hdr)
-        session.cookies.set('ct0', csrf, domain='.twitter.com')
-            
 
-        if session.cookies.get("auth_token", domain=".twitter.com"):
+        auth_token = session.cookies.get("auth_token", domain=".twitter.com")
+        if auth_token:
             session.headers["x-twitter-auth-type"] = "OAuth2Session"
+            print('auth_token:', auth_token)
         else:
             # guest token
-            guest_token = _guest_token(session.headers)
+            guest_token = _guest_token(session, session.headers, cache=cache_guest_token)
             session.headers["x-guest-token"] = guest_token
             session.cookies.set("gt", guest_token, domain=".twitter.com")
+            print('guest_token:', guest_token)
 
         self.params = {
             "include_profile_interstitial_type": "1",
@@ -236,7 +225,7 @@ class TwitterAPI(object):
                 self.print_('cursor: {}'.format(params.get("cursor")))
             
             # 2303
-            n_try = 21
+            n_try = RETRY_PAGINATION
             for try_ in range(n_try):
                 try:
                     data = self._call(url_api, params=params)
@@ -252,7 +241,7 @@ class TwitterAPI(object):
                         self.print_('retry... _pagination ({})\n{}'.format(try_+1, e_msg))
                         sleep(30, self.cw)
             else:
-                raise e_
+                break#raise e_ #3392
             
             users = data["globalObjects"]["users"]
             for instr in data["timeline"]["instructions"]:
@@ -345,6 +334,7 @@ def get_imgs(username, session, title, types, n=0, format='[%y-%m-%d] id_ppage',
     enough = False
     c_old = 0
     for tweet in TwitterAPI(session, cw).timeline_media(username):
+        check_alive(cw)
         id_ = int(tweet['id_str'])
         if id_ < max_id:
             print_('enough')
@@ -364,8 +354,6 @@ def get_imgs(username, session, title, types, n=0, format='[%y-%m-%d] id_ppage',
 
         msg = '{}  {} - {}'.format(tr_('읽는 중...'), title, len(imgs_new))
         if cw:
-            if not cw.alive:
-                break
             cw.setTitle(msg)
         else:
             print(msg)
@@ -395,9 +383,14 @@ def get_imgs_more(username, session, title, types, n=None, format='[%y-%m-%d] id
 
     count_no_imgs = 0
 
-    filter_ = '' if options.get('experimental') else ' filter:media' #2687
-
     while len(imgs) < n:
+        check_alive(cw)
+        if options.get('experimental') or count_no_imgs: #2687, #3392
+            filter_ = ''
+        else:
+            filter_ = ' filter:media'
+        cache_guest_token = bool(count_no_imgs)
+    
         if ids_set:
             max_id = min(ids_set) - 1
             q = 'from:{} max_id:{} exclude:retweets{} -filter:periscope'.format(username, max_id, filter_)
@@ -406,7 +399,7 @@ def get_imgs_more(username, session, title, types, n=None, format='[%y-%m-%d] id
         print(q)
 
         tweets = []
-        for tweet in list(TwitterAPI(session, cw).search(q)):
+        for tweet in list(TwitterAPI(session, cw, cache_guest_token).search(q)):
             id = int(tweet['id'])
             if id in ids_set:
                 print_('duplicate: {}'.format(id))
@@ -419,7 +412,7 @@ def get_imgs_more(username, session, title, types, n=None, format='[%y-%m-%d] id
         else:
             count_no_imgs += 1
             change_ua(session)
-            if count_no_imgs >= 3:
+            if count_no_imgs >= RETRY_MORE:
                 break
             print_('retry...')
             continue
@@ -428,8 +421,6 @@ def get_imgs_more(username, session, title, types, n=None, format='[%y-%m-%d] id
             imgs += get_imgs_from_tweet(tweet, session, types, format, cw)
 
         msg = '{}  {} (@{}) - {}'.format(tr_('읽는 중...'), artist, username, len(imgs))
-        if cw and not cw.alive:
-            break
         if cw:
             cw.setTitle(msg)
         else:

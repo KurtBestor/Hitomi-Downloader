@@ -213,7 +213,7 @@ def setPage(url, page):
 
     # Change the page
     if 'page=' in url:
-        url = re.sub('page=[0-9]*', 'page={}'.format(page), url)
+        url = re.sub(r'page=[0-9]*', 'page={}'.format(page), url)
     else:
         url += '&page={}'.format(page)
         
@@ -274,7 +274,11 @@ def get_imgs(url, title=None, cw=None, d=None, types=['img', 'gif', 'video'], se
         wait(cw)
         #url = setPage(url, page)
         print_(url)
-        html = downloader.read_html(url, referer=url_old, session=session)
+        try:
+            html = downloader.read_html(url, referer=url_old, session=session)
+        except Exception as e: #3366
+            print_(print_error(e)[0])
+            break
         if '429 Too many requests'.lower() in html.lower():
             print_('429 Too many requests... wait 120 secs')
             sleep(120, cw)
@@ -325,6 +329,10 @@ def get_imgs(url, title=None, cw=None, d=None, types=['img', 'gif', 'video'], se
             # For page > 50
             pagination = soup.find('div', class_='pagination')
             url = urljoin('https://{}.sankakucomplex.com'.format(type), pagination.attrs['next-page-url'])
+            #3366
+            p = int(re.find(r'[?&]page=([0-9]+)', url, default=1))
+            if p > 100:
+                url = setPage(url, 100)
         except Exception as e:
             print_(print_error(e)[-1])
             #url = setPage(url, page)

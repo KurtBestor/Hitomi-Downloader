@@ -1,17 +1,64 @@
-# uncompyle6 version 3.5.0
-# Python bytecode 2.7 (62211)
-# Decompiled from: Python 2.7.16 (v2.7.16:413a49145e, Mar  4 2019, 01:30:55) [MSC v.1500 32 bit (Intel)]
-# Embedded file name: pinter_downloader.pyo
-# Compiled at: 2019-10-21 07:44:55
 import downloader
-from utils import Session, Downloader, LazyUrl, clean_url, try_n, Soup, clean_title
+from utils import Session, Downloader, LazyUrl, clean_url, try_n, Soup, clean_title, get_ext, get_max_range
 import json, os, ree as re
 from timee import sleep
 from translator import tr_
 import urllib
 import constants
 from ratelimit import limits, sleep_and_retry
+from m3u8_tools import playlist2stream, M3u8_stream
 BASE_URL = 'https://www.pinterest.com'
+
+
+@Downloader.register
+class Downloader_pinter(Downloader):
+    type = 'pinter'
+    URLS = ['pinterest.']
+    type_pinter = 'board'
+    display_name = 'Pinterest'
+
+    @try_n(4)
+    def init(self):
+        self.api = PinterestAPI()
+        self._pin_id = re.find(r'https?://.*pinterest\.[^/]+/pin/([0-9]+)', self.url)
+        if self._pin_id is not None:
+            self.type_pinter = 'pin'
+        else:
+            username, board = get_username_board(self.url)
+            if '/' in board:
+                self.type_pinter = 'section'
+        self.print_('type: {}'.format(self.type_pinter))
+        if self.type_pinter in ['board', 'section']:
+            self.info = get_info(username, board, self.api)
+        else:
+            raise NotImplementedError(self.type_pinter)
+
+    @classmethod
+    def fix_url(cls, url):
+        if 'pinterest.' not in url:
+            url = 'https://www.pinterest.com/{}'.format(url)
+        return url
+
+    @property
+    def name(self):
+        if self.type_pinter == 'pin':
+            return self._pin_id
+        username = self.info['owner']['username']
+        name = self.info['name']
+        return clean_title((u'{}/{}').format(username, name))
+
+    def read(self):
+        if self.type_pinter == 'pin':
+            self.single = True
+            id = int(self._pin_id)
+        else:
+            id = self.info['id']
+        self.title = self.name
+        imgs = get_imgs(id, self.api, cw=self.cw, title=self.name, type=self.type_pinter)
+        for img in imgs:
+            self.urls.append(img.url)
+        self.title = self.name
+
 
 def get_info(username, board, api):
     if '/' in board:
@@ -31,52 +78,7 @@ def get_info(username, board, api):
         print('section_id:', info['id'])
     else:
         info = api.board(username, board)
-        #info = board_info(username, board)
     return info
-
-
-def board_info(username, board):
-    url = u'https://www.pinterest.com/{}/{}/'.format(username, board)
-    html = downloader.read_html(url)
-    soup = Soup(html)
-    data = soup.find('script', id='initial-state').text
-    data = json.loads(data)['resourceResponses']
-    info = data[0]['response']['data']
-    return info
-
-
-@Downloader.register
-class Downloader_pinter(Downloader):
-    type = 'pinter'
-    URLS = ['pinterest.']
-    type_pinter = 'board'
-    display_name = 'Pinterest'
-
-    @try_n(4)
-    def init(self):
-        if 'pinterest.' not in self.url:
-            self.url = u'https://www.pinterest.com/{}'.format(self.url)
-        self.api = PinterestAPI()
-        username, board = get_username_board(self.url)
-        if '/' in board:
-            self.type_pinter = 'section'
-        self.print_(('type: {}').format(self.type_pinter))
-        self.info = get_info(username, board, self.api)
-
-    @property
-    def name(self):
-        username = self.info['owner']['username']
-        name = self.info['name']
-        return clean_title((u'{}/{}').format(username, name))
-
-    def read(self):
-        self.title = self.name
-        id = self.info['id']
-        imgs = get_imgs(id, self.api, cw=self.cw, title=self.name, type=self.type_pinter)
-        for img in imgs:
-            self.urls.append(img.url)
-
-        self.title = self.name
 
 
 class PinterestAPI:
@@ -162,18 +164,27 @@ class Image(object):
     def __init__(self, img):
         self.id = img['id']
         print(self.id)
-        self.url0 = img['images']['orig']['url']
+        videos = img.get('videos')
+        if videos and 'video_list' in videos:
+            src = list(videos['video_list'].values())[0]['url']
+        else:
+            src = img['images']['orig']['url']
 
-        def f(_):
-            return self.url0
+        ext = get_ext(src)
+        if ext.lower() == '.m3u8':
+            try:
+                src = playlist2stream(src)
+            except:
+                src = M3u8_stream(src)
+            ext = '.mp4'
 
-        self.url = LazyUrl(('{}/pin/{}/').format(BASE_URL, self.id), f, self)
-        ext = os.path.splitext(self.url0.split('?')[0].split('#')[0])[1]
+        self.url = LazyUrl(('{}/pin/{}/').format(BASE_URL, self.id), lambda _: src, self)
         self.filename = ('{}{}').format(self.id, ext)
 
 
 
 def get_imgs(id, api, cw=None, title=None, type='board'):
+    n = get_max_range(cw)
     imgs = []
     ids = set()
     print('get_imgs: type={}'.format(type))
@@ -181,6 +192,8 @@ def get_imgs(id, api, cw=None, title=None, type='board'):
         gen = api.board_pins(id)
     elif type == 'section':
         gen = api.board_section_pins(id)
+    elif type == 'pin':
+        gen = [api.pin(id)]
     else:
         raise Exception((u'Type "{}" is not supported').format(type))
     for img in gen:
@@ -194,8 +207,10 @@ def get_imgs(id, api, cw=None, title=None, type='board'):
         ids.add(img.id)
         print(img.url)
         print(img.filename)
-        print
+        print()
         imgs.append(img)
+        if len(imgs) >= n:
+            break
         if cw is not None:
             if not cw.alive:
                 return []

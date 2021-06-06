@@ -5,7 +5,7 @@ from time import sleep
 from translator import tr_
 import page_selector
 import json
-UA = downloader.hdr['User-Agent']
+import clf2
 
 
 class Page(object):
@@ -28,13 +28,12 @@ class Image(object):
 class Downloader_kakaopage(Downloader):
     type = 'kakaopage'
     URLS = ['page.kakao.com/home']
-    MAX_CORE = 8
+    MAX_CORE = 4
     MAX_SPEED = 4.0
     display_name = 'KakaoPage'
 
     def init(self):
         self.session = Session()
-        self.session.headers['User-Agent'] = UA
 
     @classmethod
     def fix_url(cls, url):
@@ -99,9 +98,14 @@ def get_pages(url, session):
     return pages
 
 
+def read_html(url, session):
+    res = clf2.solve(url, session=session)
+    return res['html']
+
+
 @try_n(2)
 def get_imgs_page(page, session):
-    html = downloader.read_html(page.url, session=session)
+    html = read_html(page.url, session=session)
     did = re.find('"did" *: *"(.+?)"', html, err='no did')
     url_api = 'https://api2-page.kakao.com/api/v1/inven/get_download_data/web'
     data = {
@@ -133,7 +137,7 @@ def get_info(url, session, cw=None):
 
     info = {}
     
-    html = downloader.read_html(url, session=session)
+    html = read_html(url, session=session)
     soup = Soup(html)
 
     __NEXT_DATA__ = soup.find('script', id='__NEXT_DATA__')
@@ -142,7 +146,7 @@ def get_info(url, session, cw=None):
         tid = data['props']['initialState']['common']['constant']['tid']
         print_('tid: {}'.format(tid))
         session.cookies['_kptid'] = tid
-        html = downloader.read_html(url, session=session)
+        html = read_html(url, session=session)
         soup = Soup(html)
 
     title = soup.find('h2').text.strip()
