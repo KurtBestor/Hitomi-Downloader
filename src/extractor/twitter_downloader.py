@@ -101,7 +101,7 @@ def _guest_token(session, headers, cache=True):
     global CACHE_GUEST_TOKEN
     token = None
     if cache:
-        if CACHE_GUEST_TOKEN and CACHE_GUEST_TOKEN[1] - time() < TIMEOUT_GUEST_TOKEN:
+        if CACHE_GUEST_TOKEN and time() - CACHE_GUEST_TOKEN[1] < TIMEOUT_GUEST_TOKEN:
             token = CACHE_GUEST_TOKEN[0]
     if token is None:
         print('!!! get guest_token')
