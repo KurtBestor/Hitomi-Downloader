@@ -42,13 +42,16 @@ def get_id(url):
     return header, body
 
 
+def header_to_type(header):
+    if header == 'league_':
+        return 'leaguetoon'
+    return 'webtoon'
+
+
 def get_info(url, session):
     referer = url
     header, id = get_id(referer)
-    if 'league_' in id:
-        type_ = 'leaguetoon'
-    else:
-        type_ = 'webtoon'
+    type_ = header_to_type(header)
 
     info = {}
     ids = set()
@@ -122,7 +125,7 @@ class Downloader_daumtoon(Downloader):
         if '/viewer/' in self.url:
             return self.Invalid(tr_('목록 주소를 입력해주세요: {}').format(self.url))
         if '/view/' not in self.url and not self.url.lower().startswith('http'):
-            self.url = ('http://webtoon.daum.net/webtoon/view/{}').format(self.url)
+            self.url = 'http://webtoon.daum.net/webtoon/view/{}'.format(self.url)
         self.session = None
         self._info = get_info(self.url, self.session)
 
@@ -145,7 +148,6 @@ class Downloader_daumtoon(Downloader):
 
         self.title = self.name
         self.session = None
-        return
 
 
 def get_imgs(page, session, cw):
@@ -158,15 +160,15 @@ def get_imgs(page, session, cw):
     header, id = get_id(page.url)
     t = int(time())
     soup = Soup(html)
-    if 'league_' in id:
-        type_ = 'leaguetoon'
-    else:
-        type_ = 'webtoon'
+    type_ = header_to_type(header)
 
     url_data = 'http://webtoon.daum.net/data/pc/{}/viewer/{}?timeStamp={}'.format(type_, id, t)
     data_raw = downloader.read_html(url_data, session=session, referer=page.url)
     data = json.loads(data_raw)
-    m_type = data['data']['webtoonEpisode']['multiType']
+    if header == 'league_':
+        m_type = None
+    else:
+        m_type = data['data']['webtoonEpisode']['multiType']
     print_('m_type: {}'.format(m_type))
     
     if m_type == 'chatting':

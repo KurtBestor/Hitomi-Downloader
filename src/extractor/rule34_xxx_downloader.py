@@ -35,18 +35,19 @@ class Downloader_rule34_xxx(Downloader):
     MAX_CORE = 8
     display_name = 'Rule34.xxx'
     _name = None
-    
-    def init(self):
-        if 'rule34.xxx' in self.url.lower():
-            self.url = self.url.replace('http://', 'https://')
+
+    @classmethod
+    def fix_url(cls, url):
+        if 'rule34.xxx' in url.lower():
+            url = url.replace('http://', 'https://')
         else:
-            url = self.url
             url = url.replace(' ', '+')
             while '++' in url:
                 url = url.replace('++', '+')
             url = quote(url)
             url = url.replace('%2B', '+')
-            self.url = u'https://rule34.xxx/index.php?page=post&s=list&tags={}'.format(url)
+            url = u'https://rule34.xxx/index.php?page=post&s=list&tags={}'.format(url)
+        return url
 
     @property
     def name(self):

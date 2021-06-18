@@ -1,6 +1,6 @@
 import downloader
 import ree as re
-from utils import Session, LazyUrl, Soup, Downloader, try_n, get_print, clean_title, print_error, urljoin
+from utils import Session, LazyUrl, Soup, Downloader, try_n, get_print, clean_title, print_error, urljoin, get_imgs_already
 from time import sleep
 from translator import tr_
 import page_selector
@@ -48,11 +48,13 @@ class Downloader_kakaopage(Downloader):
         info = get_info(self.url, self.session, cw=self.cw)
 
         for img in info['imgs']:
-            self.urls.append(img.url)
+            if isinstance(img, Image):
+                img = img.url
+            self.urls.append(img)
 
         self.artist = info['artist']
 
-        self.title = clean_title('[{}] {}'.format(info['artist'], info['title']))
+        self.title = info['title']
 
         
         
@@ -150,13 +152,14 @@ def get_info(url, session, cw=None):
         soup = Soup(html)
 
     title = soup.find('h2').text.strip()
-    info['title'] = title
     artist = soup.find('meta', {'name': 'author'})['content']
     for x in [' ,', ', ']:
         while x in artist:
             artist = artist.replace(x, ',')
     artist = artist.replace(',', ', ')
     info['artist'] = artist
+    info['title_raw'] = title
+    info['title'] = clean_title('[{}] {}'.format(artist, title))
 
     imgs = []
 
@@ -164,8 +167,14 @@ def get_info(url, session, cw=None):
         if cw is not None:
             if not cw.alive:
                 return
-            cw.setTitle('{} {} / {}  ({} / {})'.format(tr_('읽는 중...'), title, page.title, i + 1, len(pages)))
+            cw.setTitle('{} {} / {}  ({} / {})'.format(tr_('읽는 중...'), info['title'], page.title, i + 1, len(pages)))
 
+        #3463
+        imgs_already = get_imgs_already('kakaopage', info['title'], page, cw)
+        if imgs_already:
+            imgs += imgs_already
+            continue
+        
         try:
             _imgs = get_imgs_page(page, session)
             e_msg = None

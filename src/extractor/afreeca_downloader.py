@@ -1,16 +1,13 @@
-# uncompyle6 version 3.5.0
-# Python bytecode 2.7 (62211)
-# Decompiled from: Python 2.7.16 (v2.7.16:413a49145e, Mar  4 2019, 01:30:55) [MSC v.1500 32 bit (Intel)]
-# Embedded file name: afreeca_downloader.pyo
-# Compiled at: 2019-10-07 03:48:35
 import downloader
-from utils import Soup, Downloader, get_outdir, Session, LazyUrl, try_n, format_filename, clean_title
+from utils import Soup, Downloader, get_outdir, Session, LazyUrl, try_n, format_filename, clean_title, get_print
 import ree as re
 from timee import sleep, time
 import os
 from io import BytesIO
 import shutil
 from m3u8_tools import playlist2stream, M3u8_stream
+import errors
+
 
 class Video(object):
 
@@ -33,7 +30,7 @@ class Downloader_afreeca(Downloader):
 
     def read(self):
         session = Session()
-        video = get_video(self.url, session)
+        video = get_video(self.url, session, self.cw)
         self.urls.append(video.url)
 
         self.setIcon(video.thumb)
@@ -53,19 +50,25 @@ def _get_stream(url_m3u8):
 
 
 @try_n(8)
-def get_video(url, session):
+def get_video(url, session, cw):
+    print_ = get_print(cw)
     while url.strip().endswith('/'):
         url = url[:-1]
 
     html = downloader.read_html(url, session=session)
+    if "document.location.href='https://login." in html:
+        raise errors.LoginRequired()
     soup = Soup(html)
     url_thumb = soup.find('meta', {'property': 'og:image'}).attrs['content']
-    params = re.findall('VodParameter *= *[\'"]([^\'"]+)[\'"]', html)[0]
+    print_('url_thumb: {}'.format(url_thumb))
+    params = re.find('VodParameter *= *[\'"]([^\'"]+)[\'"]', html, err='No VodParameter')
     params += '&adultView=ADULT_VIEW&_={}'.format(int(time()*1000))
-    url_xml = 'http://afbbs.afreecatv.com:8080/api/video/get_video_info.php?' + params
+    url_xml = 'http://stbbs.afreecatv.com:8080/api/video/get_video_info.php?' + params
     print(url_xml)
     html = downloader.read_html(url_xml, session=session, referer=url)
     soup = Soup(html)
+    if '<flag>PARTIAL_ADULT</flag>' in html:
+        raise errors.LoginRequired()
     title = soup.find('title').string.strip()
     urls_m3u8 = re.findall('https?://[^>]+playlist.m3u8', html)
     if not urls_m3u8:

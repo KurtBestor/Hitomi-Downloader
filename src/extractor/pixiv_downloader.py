@@ -48,8 +48,12 @@ class Downloader_pixiv(Downloader):
             url = 'https://www.pixiv.net/bookmark_new_illust.php'
         elif not re.find(r'^https?://', url) and '.' not in url:
             url = 'https://www.pixiv.net/en/users/{}'.format(url)
+            
+        #3474
+        url = re.sub(r'(users/[0-9]+)/artworks$', r'\1', url)
+        
         url = re.sub(r'[?&]p=[0-9]+$', '', url)
-        return url
+        return url.strip('/')
 
     @classmethod
     def key_id(cls, url):
@@ -295,29 +299,30 @@ def get_info(url, cw=None, depth=0, tags_add=None):
         if id_ is None: #
             id_ = my_id()
         if id_ == my_id():
-            rest = 'all'
+            rests = ['show', 'hide']
         else:
-            rest = 'show'
+            rests = ['show']
         process_user(id_, info, api)
         info['title'] = '{} (pixiv_bmk_{})'.format(info['artist'], info['artist_id'])
         ids = []
         ids_set = set()
-        offset = 0
-        while len(ids) < max_pid:
-            data = api.bookmarks(id_, offset, rest=rest)
-            c = 0
-            for id in [work['id'] for work in data['works']]:
-                if id in ids_set:
-                    continue
-                ids_set.add(id)
-                ids.append(id)
-                c += 1
-            if not c:
-                break
-            offset += LIMIT
-            if depth == 0:
-                check_alive(cw)
-        process_ids(ids[:max_pid], info, imgs, cw, depth)
+        for rest in rests:
+            offset = 0
+            while len(ids) < max_pid:
+                data = api.bookmarks(id_, offset, rest=rest)
+                c = 0
+                for id in [work['id'] for work in data['works']]:
+                    if id in ids_set:
+                        continue
+                    ids_set.add(id)
+                    ids.append(id)
+                    c += 1
+                if not c:
+                    break
+                offset += LIMIT
+                if depth == 0:
+                    check_alive(cw)
+        process_ids(ids, info, imgs, cw, depth)
     elif '/tags/' in url or 'search.php' in url: # Search
         q = unquote(re.find(r'/tags/([^/]+)', url) or re.find('[?&]word=([^&]*)', url, err='no tags'))
         info['title'] = '{} (pixiv_search_{})'.format(q, q.replace(' ', '+'))
@@ -364,7 +369,7 @@ def get_info(url, cw=None, depth=0, tags_add=None):
             if not c:
                 break
             p += 1
-        process_ids(ids[:max_pid], info, imgs, cw, depth)
+        process_ids(ids, info, imgs, cw, depth)
     elif 'bookmark_new_illust.php' in url or 'bookmark_new_illust_r18.php' in url: # Newest works: Following
         r18 = 'bookmark_new_illust_r18.php' in url
         id_ = my_id()
@@ -384,16 +389,18 @@ def get_info(url, cw=None, depth=0, tags_add=None):
             if not c:
                 break
             p += 1
-        process_ids(ids[:max_pid], info, imgs, cw, depth)
+        process_ids(ids, info, imgs, cw, depth)
     elif api.user_id(url): # User illusts
         m = re.search(r'/users/[0-9]+/([\w]+)/?([^\?#/]*)', url)
-        if m is None:
-            types = ['illusts', 'manga']
-            tag = None
+        type_ = {'illustrations': 'illusts', 'manga': 'manga'}.get(m and m.groups()[0])
+        if type_:
+            types = [type_]
         else:
-            type_ = m.groups()[0]
-            types = [{'illustrations': 'illusts'}.get(type_) or type_]
+            types = ['illusts', 'manga']
+        if m:
             tag = unquote(m.groups()[1]) or None
+        else:
+            tag = None
         print_('types: {}, tag: {}'.format(types, tag))
         
         id_ = api.user_id(url)
@@ -410,7 +417,7 @@ def get_info(url, cw=None, depth=0, tags_add=None):
         ids = sorted(ids, key=int, reverse=True)
         if not ids:
             raise Exception('no imgs')
-        process_ids(ids[:max_pid], info, imgs, cw, depth, tags_add=[tag] if tag else None)
+        process_ids(ids, info, imgs, cw, depth, tags_add=[tag] if tag else None)
     else:
         raise NotImplementedError()
     info['imgs'] = imgs[:max_pid]
