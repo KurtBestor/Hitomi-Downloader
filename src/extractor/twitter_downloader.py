@@ -50,7 +50,7 @@ class Downloader_twitter(Downloader):
     def init(self):
         self.session = get_session()
         #self.url = fix_url(self.url)
-        self.artist, self.username = get_artist_username(self.url, self.session)
+        self.artist, self.username = get_artist_username(self.url, self.session, self.cw)
         if self.username == 'home':
             raise Exception('No username: home')
         
@@ -97,8 +97,9 @@ class Downloader_twitter(Downloader):
 
 
 @lock
-def _guest_token(session, headers, cache=True):
+def _guest_token(session, headers, cache=True, cw=None):
     global CACHE_GUEST_TOKEN
+    print_ = get_print(cw)
     token = None
     if cache:
         if CACHE_GUEST_TOKEN and time() - CACHE_GUEST_TOKEN[1] < TIMEOUT_GUEST_TOKEN:
@@ -111,6 +112,9 @@ def _guest_token(session, headers, cache=True):
         r = session.post('https://api.twitter.com/1.1/guest/activate.json', headers=headers)
         data = json.loads(r.text)
         token = data['guest_token']
+        print_('token type: {}'.format(type(token)))
+        if isinstance(token ,int): #3525
+            token = str(token)
         CACHE_GUEST_TOKEN = token, time()
     return token
 
@@ -133,7 +137,7 @@ class TwitterAPI(object):
             print('auth_token:', auth_token)
         else:
             # guest token
-            guest_token = _guest_token(session, session.headers, cache=cache_guest_token)
+            guest_token = _guest_token(session, session.headers, cache=cache_guest_token, cw=cw)
             session.headers["x-guest-token"] = guest_token
             session.cookies.set("gt", guest_token, domain=".twitter.com")
             print('guest_token:', guest_token)
@@ -264,7 +268,7 @@ class TwitterAPI(object):
                     return
                 params["cursor"] = cursor
             if params.get("cursor") is None: # nothing
-                print_('no cursor')
+                self.print_('no cursor')
                 break
     
 
@@ -374,7 +378,7 @@ def get_imgs_more(username, session, title, types, n=None, format='[%y-%m-%d] id
     imgs = imgs or []
     print_('imgs: {}, types: {}'.format(len(imgs), ', '.join(types)))
 
-    artist, username = get_artist_username(username, session)#
+    artist, username = get_artist_username(username, session, cw)#
     
     # Range
     n = max(n or 0, get_max_range(cw))
@@ -594,13 +598,13 @@ class Image(object):
 
 
 @try_n(4)
-def get_artist_username(url, session):
+def get_artist_username(url, session, cw=None):
     if 'twitter.' not in url:
         username = url.strip('@')
     else:
         id = re.find('/status/([0-9]+)', url)
         if id:
-            tweet = TwitterAPI(session).tweet(id, url)
+            tweet = TwitterAPI(session, cw).tweet(id, url)
             user_id = tweet['globalObjects']['tweets'][id]['user_id_str']
             username = tweet['globalObjects']['users'][user_id]['screen_name']
             print('username fixed:', username)
@@ -608,7 +612,7 @@ def get_artist_username(url, session):
             username = re.find('twitter.[^/]+/([^/?]+)', url)
     if not username:
         raise Exception('no username')
-    data = TwitterAPI(session).user_by_screen_name(username)
+    data = TwitterAPI(session, cw).user_by_screen_name(username)
     artist = data['legacy']['name']
     username = data['legacy']['screen_name']
     return artist, username

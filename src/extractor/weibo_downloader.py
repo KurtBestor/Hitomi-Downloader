@@ -3,7 +3,7 @@ import downloader
 import ree as re
 from timee import sleep, clock, time
 from constants import clean_url
-from utils import Downloader, urljoin, try_n, Session, get_print, clean_title, Soup, fix_protocol, domain
+from utils import Downloader, urljoin, try_n, Session, get_print, clean_title, Soup, fix_protocol, domain, get_max_range
 import os
 from translator import tr_
 import json
@@ -118,6 +118,8 @@ def get_id(url, cw=None):
 def get_imgs(uid, oid, title, session, cw=None, d=None, parent=None):
     print_ = get_print(cw)
     print_('uid: {}, oid:{}'.format(uid, oid))
+    
+    max_pid = get_max_range(cw)
 
     @try_n(4)
     def get_album_imgs(album, page):
@@ -168,21 +170,23 @@ def get_imgs(uid, oid, title, session, cw=None, d=None, parent=None):
     imgs = []
     for album in albums:
         print('Album:', album.id, album.type)
+        imgs_album = []
         for p in range(1, 101):
             imgs_new = get_album_imgs(album, p)
-            imgs += imgs_new
+            imgs_album += imgs_new
             s = u'{} {}  -  {}'.format(tr_(u'읽는 중...'), title, len(imgs))
             if cw:
-                if not cw.alive:
-                    return []
                 cw.setTitle(s)
             else:
                 print(s)
+            if len(imgs_album) >= max_pid:
+                break
             if not imgs_new:
                 break
             sleep(1)
+        imgs += imgs_album
 
     imgs = sorted(imgs, key=lambda img: img.timestamp, reverse=True)
-    return imgs
+    return imgs[:max_pid]
 
 

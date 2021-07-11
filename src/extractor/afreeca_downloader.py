@@ -28,6 +28,10 @@ class Downloader_afreeca(Downloader):
     single = True
     display_name = 'AfreecaTV'
 
+    @classmethod
+    def fix_url(cls, url):
+        return url.rstrip(' /')
+    
     def read(self):
         session = Session()
         video = get_video(self.url, session, self.cw)
@@ -52,9 +56,6 @@ def _get_stream(url_m3u8):
 @try_n(8)
 def get_video(url, session, cw):
     print_ = get_print(cw)
-    while url.strip().endswith('/'):
-        url = url[:-1]
-
     html = downloader.read_html(url, session=session)
     if "document.location.href='https://login." in html:
         raise errors.LoginRequired()

@@ -20,6 +20,7 @@ import utils
 from PyQt import QtCore, QtGui
 from translator import tr_
 from m3u8_tools import dash2stream
+from datetime import datetime
 
 
 def print_streams(streams, cw):
@@ -74,6 +75,11 @@ class Video(object):
 
         streams = yt.streams.all()
         print_streams(streams, cw)
+        
+        #3528
+        time = datetime.strptime(yt.info['upload_date'], '%Y%m%d')
+        self.utime = (time-datetime(1970,1,1)).total_seconds()
+        print_('utime: {}'.format(self.utime))
 
         if type == 'video':
             streams[:] = [stream for stream in streams if stream.video_codec is not None]
@@ -328,6 +334,7 @@ class Downloader_youtube(Downloader):
     URLS = ['youtube.co', 'youtu.be']
     lock = True
     display_name = 'YouTube'
+    keep_date = True #3528
     
     def init(self):
         ui_setting = self.ui_setting

@@ -19,6 +19,7 @@ from collections import deque
 from locker import lock
 import threading
 from ratelimit import limits, sleep_and_retry
+##import asyncio
 FORCE_LOGIN = True
 LIMIT = 48
 for header in ['pixiv_illust', 'pixiv_bmk', 'pixiv_search', 'pixiv_following', 'pixiv_following_r18']:
@@ -60,10 +61,16 @@ class Downloader_pixiv(Downloader):
         return url.replace('://www.', '://').replace('/en/', '/')
 
     def read(self):
-        info = get_info(self.url, self.cw)
-        for img in info['imgs']:
-            self.urls.append(img.url)
-        self.title = clean_title(info['title'])
+##        loop = asyncio.new_event_loop()
+##        asyncio.set_event_loop(loop)
+        try:
+            info = get_info(self.url, self.cw)
+            for img in info['imgs']:
+                self.urls.append(img.url)
+            self.title = clean_title(info['title'])
+        finally:
+##            loop.close()
+            pass
 
 
 class PixivAPIError(errors.LoginRequired): pass

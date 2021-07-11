@@ -1,8 +1,3 @@
-# uncompyle6 version 3.5.0
-# Python bytecode 2.7 (62211)
-# Decompiled from: Python 2.7.16 (v2.7.16:413a49145e, Mar  4 2019, 01:30:55) [MSC v.1500 32 bit (Intel)]
-# Embedded file name: navertoon_downloader.pyo
-# Compiled at: 2019-10-03 10:19:35
 import downloader
 from utils import Soup, urljoin, Downloader, LazyUrl, get_imgs_already, clean_title, get_ext, get_print
 from constants import try_n
@@ -47,8 +42,13 @@ class Downloader_navertoon(Downloader):
     display_name = 'Naver Webtoon'
 
     def init(self):
-        self.url = get_main(self.url)
         self.__info, _ = get_pages(self.url, self.cw)
+
+    @classmethod
+    def fix_url(cls, url):
+        url = re.sub(r'[?&]page=[0-9]+', '', re.sub(r'[?&]no=[0-9]+', '', url)).replace('m.comic.naver.', 'comic.naver.')
+        url = url.replace('detail.nhn', 'list.nhn').replace('/detail?', '/list?')
+        return url.rstrip('#')
 
     @property
     def name(self):
@@ -68,14 +68,6 @@ class Downloader_navertoon(Downloader):
                 self.urls.append(img)
 
         self.title = self.name
-
-
-def get_main(url):
-    url_main = re.sub('[?&]page=[0-9]+', '', re.sub('[?&]no=[0-9]+', '', url)).replace('detail.nhn', 'list.nhn').replace('m.comic.naver.', 'comic.naver.')
-    while url_main.endswith('#'):
-        url_main = url_main[:-1]
-
-    return url_main
 
 
 def set_no(url, p):
@@ -101,7 +93,7 @@ def set_page(url, p):
 @try_n(4)
 def get_pages(url, cw=None):
     print_ = get_print(cw)
-    url = get_main(url).replace('comic.naver.', 'm.comic.naver.')
+    url = Downloader_navertoon.fix_url(url).replace('comic.naver.', 'm.comic.naver.')
     id = get_id(url)
     print('id:', id)
     print(url)
@@ -119,7 +111,7 @@ def get_pages(url, cw=None):
 
         raise Exception(title)
 
-    print('artist:', artist)
+    print_('artist: {}'.format(artist))
     title = soup.find('meta', {'property': 'og:title'}).attrs['content']
     pages = []
     nos = set()
@@ -134,7 +126,7 @@ def get_pages(url, cw=None):
         view = soup.findAll('ul', class_='section_episode_list')[(-1)]
         for lst in view.findAll('li'):
             url_page = urljoin(url, lst.find('a').attrs['href'])
-            if 'detail.nhn' not in url_page.lower():
+            if 'detail.nhn' not in url_page.lower() and 'detail?' not in url_page.lower(): #3540
                 continue
             print_('url_page: {}'.format(url_page))
             text = lst.find('strong', class_='title').find('span', class_='name').text.strip()
@@ -160,7 +152,7 @@ def get_pages(url, cw=None):
 @page_selector.register('navertoon')
 @try_n(4)
 def f(url):
-    url = get_main(url)
+    url = Downloader_navertoon.fix_url(url)
     info, pages = get_pages(url)
     return pages
 

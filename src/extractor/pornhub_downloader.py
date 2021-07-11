@@ -14,6 +14,7 @@ import clf2
 import utils
 from m3u8_tools import playlist2stream, M3u8_stream
 import ytdl
+import errors
 
 
 
@@ -53,6 +54,7 @@ class Video(object):
     thumb = None
 
     def __init__(self, url, cw, session):
+        url = Downloader_pornhub.fix_url(url)
         self.url = LazyUrl(url, self.get, self)
         self.cw = cw
         self.session = session
@@ -68,11 +70,22 @@ class Video(object):
             return self._url
 
         id_ = re.find(r'viewkey=(\w+)', url, re.IGNORECASE) or \
-              re.find(r'/embed/(\w+)', url, re.IGNORECASE)
-        print('id: {}'.format(id_))
+              re.find(r'/embed/(\w+)', url, re.IGNORECASE, err='no id')
+        print_('id: {}'.format(id_))
         if 'viewkey=' not in url.lower() and '/gif/' not in url.lower():
             url = urljoin(url, '/view_video.php?viewkey={}'.format(id_))
-        html = downloader.read_html(url, session=session)
+
+        url_test = url.replace('pornhubpremium.com', 'pornhub.com')
+        try:
+            html = downloader.read_html(url_test, session=session)
+            soup = Soup(html)
+            if soup.find('div', id='lockedPlayer'):
+                print_('Locked player')
+                raise Exception('Locked player')
+            url = url_test
+        except: #3511
+            url = url.replace('pornhub.com', 'pornhubpremium.com')
+            html = downloader.read_html(url, session=session)
             
         soup = Soup(html)
         soup = fix_soup(soup, url, session, cw)
@@ -173,22 +186,30 @@ class Downloader_pornhub(Downloader):
     type = 'pornhub'
     single = True
     strip_header = False
-    URLS = ['pornhub.com', 'pornhubpremium.com']
+    URLS = ['pornhub.com', 'pornhubpremium.com', 'pornhubthbh7ap3u.onion']
 
     def init(self):
         self.session = Session() # 1791
-        if 'pornhub_gif_' in self.url:
-            self.url = 'https://www.pornhub.com/gif/{}'.format(
-                self.url.replace('pornhub_gif_', ''))
-        elif 'pornhub_album_' in self.url:
-            self.url = 'https://www.pornhub.com/album/{}'.format(
-                self.url.replace('pornhub_album_', ''))
-        elif 'pornhub_' in self.url:
-            self.url = 'https://www.pornhub.com/view_video.php?viewkey={}'\
-                       .format(self.url.replace('pornhub_', ''))
         if 'pornhubpremium.com' in self.url.lower() and\
            not is_login(self.session, self.cw):
-            return self.Invalid('[Pornhub] Login cookies required')
+            raise errors.LoginRequired()
+
+    @classmethod
+    def fix_url(cls, url):
+        if 'pornhub_gif_' in url:
+            url = 'https://www.pornhub.com/gif/{}'.format(
+                url.replace('pornhub_gif_', ''))
+        elif 'pornhub_album_' in url:
+            url = 'https://www.pornhub.com/album/{}'.format(
+                url.replace('pornhub_album_', ''))
+        elif 'pornhub_' in url:
+            url = 'https://www.pornhub.com/view_video.php?viewkey={}'\
+                       .format(url.replace('pornhub_', ''))
+        if '/authenticate/goToLoggedIn' in url:
+            qs = utils.query_url(url)
+            url = urljoin(url, qs['url'][0])
+        url = url.replace('pornhubthbh7ap3u.onion', 'pornhub.com')
+        return url
 
     @classmethod
     def key_id(cls, url):
@@ -359,8 +380,10 @@ def get_videos(url, cw=None):
 
     session = Session()
 
+    domain = utils.domain(url)
+
     if mode in ['pornstar']:
-        url_main = 'https://www.pornhub.com/{}/{}'.format(mode, username)
+        url_main = 'https://{}/{}/{}'.format(domain, mode, username)
         html = downloader.read_html(url_main, session=session)
         soup = Soup(html)
         soup = fix_soup(soup, url_main, session, cw)
@@ -414,11 +437,11 @@ def get_videos(url, cw=None):
         try:
             if mode in ['users', 'model']:
                 if mode == 'users':
-                    url_api = 'https://www.pornhub.com/users/{}/videos/public/'\
-                              'ajax?o=mr&page={}'.format(username, p)
+                    url_api = 'https://{}/users/{}/videos/public/'\
+                              'ajax?o=mr&page={}'.format(domain, username, p)
                 elif mode == 'model':
-                    url_api = 'https://www.pornhub.com/model/{}/videos/upload/'\
-                              'ajax?o=mr&page={}'.format(username, p)
+                    url_api = 'https://{}/model/{}/videos/upload/'\
+                              'ajax?o=mr&page={}'.format(domain, username, p)
                 r = session.post(url_api)
                 soup = Soup(r.text)
                 if soup.find('h1'):
@@ -426,18 +449,18 @@ def get_videos(url, cw=None):
                     break
             elif mode in ['pornstar']:
                 if free:
-                    url_api = 'https://www.pornhub.com/{}/{}/videos/upload'\
-                              '?page={}'.format(mode, username, p)
+                    url_api = 'https://{}/{}/{}/videos/upload'\
+                              '?page={}'.format(domain, mode, username, p)
                     soup = downloader.read_soup(url_api, session=session)
                     soup = fix_soup(soup, url_api, session, cw)
                     soup = soup.find('div', class_='videoUList')
                 else:
-                    url_api = 'https://www.pornhub.com/{}/{}?page={}'.format(mode, username, p)
+                    url_api = 'https://{}/{}/{}?page={}'.format(domain, mode, username, p)
                     soup = downloader.read_soup(url_api, session=session)
                     soup = fix_soup(soup, url_api, session, cw)
                     soup = soup.find('ul', class_='pornstarsVideos')
             elif mode in ['channels']:
-                url_api = 'https://www.pornhub.com/{}/{}/videos?page={}'.format(mode, username, p)
+                url_api = 'https://{}/{}/{}/videos?page={}'.format(domain, mode, username, p)
                 soup = downloader.read_soup(url_api, session=session)
                 soup = fix_soup(soup, url_api, session, cw)
                 try:
@@ -445,10 +468,10 @@ def get_videos(url, cw=None):
                 except:
                     break
             elif mode in ['playlist']:
-                #url_api = 'https://www.pornhub.com/playlist/viewChunked?id={}&offset={}&itemsPerPage=40'.format(username, len(hrefs))
+                #url_api = 'https://{}/playlist/viewChunked?id={}&offset={}&itemsPerPage=40'.format(domain, username, len(hrefs))
                 if token is None:
                     raise Exception('no token')
-                url_api = 'https://www.pornhub.com/playlist/viewChunked?id={}&token={}&page={}'.format(username, token, p)
+                url_api = 'https://{}/playlist/viewChunked?id={}&token={}&page={}'.format(domain, username, token, p)
                 soup = downloader.read_soup(url_api, session=session)
             else:
                 raise NotImplementedError(mode)
