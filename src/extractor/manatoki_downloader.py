@@ -48,14 +48,15 @@ class Downloader_manatoki(Downloader):
             else:
                 raise Exception('no selected option')
             self.session, self.soup, url = get_soup(url)
-            self.url = self.fix_url(url)
+            url_page = self.fix_url(url)
             
-            for i, page in enumerate(get_pages(self.url, self.soup)):
+            for i, page in enumerate(get_pages(url_page, self.soup)):
                 if page.id == int(op['value']):
                     break
             else:
                 raise Exception('can not find page')
             self.cw.range_p = [i]
+            self.url = url_page
 
         self.name
 

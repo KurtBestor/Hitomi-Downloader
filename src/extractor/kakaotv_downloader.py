@@ -17,7 +17,7 @@ class Downloader_vlive(Downloader):
         return url.split('?')[0].strip('/')
 
     def read(self):
-        video = Video(self.url)
+        video = Video(self.url, cw=self.cw)
         video.url()#
 
         self.urls.append(video.url)
@@ -32,15 +32,16 @@ class Downloader_vlive(Downloader):
 class Video(object):
     _url = None
     
-    def __init__(self, url):
+    def __init__(self, url, cw=None):
         self.url = LazyUrl(url, self.get, self)
+        self.cw = cw
 
     @try_n(2)
     def get(self,  url):
         if self._url:
             return self._url
         
-        ydl = ytdl.YoutubeDL()
+        ydl = ytdl.YoutubeDL(cw=self.cw)
         info = ydl.extract_info(url)
         fs = [f for f in info['formats'] if f['ext'] == 'mp4']
         f = sorted(fs, key=lambda f: f['height'])[-1]

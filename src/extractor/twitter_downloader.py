@@ -113,7 +113,7 @@ def _guest_token(session, headers, cache=True, cw=None):
         data = json.loads(r.text)
         token = data['guest_token']
         print_('token type: {}'.format(type(token)))
-        if isinstance(token ,int): #3525
+        if isinstance(token, int): #3525
             token = str(token)
         CACHE_GUEST_TOKEN = token, time()
     return token
@@ -410,19 +410,23 @@ def get_imgs_more(username, session, title, types, n=None, format='[%y-%m-%d] id
                 continue
             ids_set.add(id)
             tweets.append(tweet)
+
+        imgs_ = []
+        for tweet in tweets:
+            imgs_ += get_imgs_from_tweet(tweet, session, types, format, cw)
             
-        if tweets:
+        if imgs_:
+            if count_no_imgs:
+                print_('reset count_no_imgs: {}'.format(len(imgs_)))
+            imgs += imgs_
             count_no_imgs = 0
         else:
             count_no_imgs += 1
             change_ua(session)
             if count_no_imgs >= RETRY_MORE:
                 break
-            print_('retry...')
+            print_('retry... {}'.format(count_no_imgs))
             continue
-        
-        for tweet in tweets:
-            imgs += get_imgs_from_tweet(tweet, session, types, format, cw)
 
         msg = '{}  {} (@{}) - {}'.format(tr_('읽는 중...'), artist, username, len(imgs))
         if cw:
@@ -576,7 +580,7 @@ class Image(object):
         print_ = get_print(self.cw)
         for try_ in range(self.try_n):
             try:
-                d = ytdl.YoutubeDL()
+                d = ytdl.YoutubeDL(cw=self.cw)
                 info = d.extract_info(self._url)
                 
                 url = info['url']

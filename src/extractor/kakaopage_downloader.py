@@ -69,7 +69,7 @@ def get_pages(url, session):
 
     pages = []
     ids = set()
-    for p in range(100):
+    for p in range(500): #2966
         url_api = 'https://api2-page.kakao.com/api/v5/store/singles'
         data = {
             'seriesid': id_,

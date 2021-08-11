@@ -27,7 +27,7 @@ def print_streams(streams, cw):
     print_ = get_print(cw)
             
     for stream in streams:
-        print_(u'[{}][{}fps][{}{}][{}] {} [{} / {}] ─ {}'.format(stream.resolution, stream.fps, stream.abr_str, '(fixed)' if stream.abr_fixed else '', stream.tbr, stream.subtype, stream.video_codec, stream.audio_codec, stream.format))
+        print_('[{}][{}fps][{}{}][{}] {} [{} / {}] ─ {}'.format(stream.resolution, stream.fps, stream.abr_str, '(fixed)' if stream.abr_fixed else '', stream.tbr, stream.subtype, stream.video_codec, stream.audio_codec, stream.format))
     print_('')
 
 
@@ -63,7 +63,7 @@ class Video(object):
         print('max_res: {}'.format(max_res))
         for try_ in range(8):
             try:
-                yt = ytdl.YouTube(url)
+                yt = ytdl.YouTube(url, cw=self.cw)
                 break
             except Exception as e:
                 e_ = e
@@ -124,7 +124,7 @@ class Video(object):
                     streams.append(stream)
             #'''
         else:
-            raise Exception(u'type "{}" is not supported'.format(type))
+            raise Exception('type "{}" is not supported'.format(type))
 
         # Pick the best
         while streams:
@@ -146,7 +146,7 @@ class Video(object):
                         foo = False
                     if stream_final is None or (stream_final.fps <= stream.fps and (foo or (stream_final.subtype.lower()!=prefer_format and stream.subtype.lower()==prefer_format) or stream_final.fps < stream.fps)):
                         #print(foo)
-                        print_(u'# stream_final {} {} {} {} {} {}fps'.format(stream, stream.format, stream.resolution, stream.subtype, stream.audio_codec, stream.fps))
+                        print_('# stream_final {} {} {} {} {} {}fps'.format(stream, stream.format, stream.resolution, stream.subtype, stream.audio_codec, stream.fps))
                         stream_final = stream
             
             ok = downloader.ok_url(stream_final.url, referer=url) if isinstance(stream_final.url, str) else True
@@ -183,7 +183,7 @@ class Video(object):
             print('audio required')
             streams = [stream for stream in yt.streams.all() if stream.abr]
             print_streams(streams, cw)
-            # only mp4; https://github.com/KurtBestor/Hitomi-Downloader-issues/issues/480
+            # only mp4; https://github.com/KurtBestor/Hitomi-Downloader/issues/480
             def isGood(stream):
                 return stream.audio_codec.lower().startswith('mp4')
             streams_good = [stream for stream in streams if isGood(stream)]
@@ -238,14 +238,14 @@ class Video(object):
         #soup = Soup(yt.watch_html)
         #title =  soup.title.text.replace('- YouTube', '').strip()
         self.title = title
-        ext = u'.' + self.stream.subtype
+        ext = '.' + self.stream.subtype
         self.filename = format_filename(title, self.id, ext)
 
-        print_(u'Resolution: {}'.format(stream.resolution))
-        print_(u'Codec: {} / {}'.format(stream.video_codec, stream.audio_codec))
-        print_(u'Abr: {}'.format(stream.abr))
-        print_(u'Subtype: {}'.format(stream.subtype))
-        print_(u'FPS: {}\n'.format(stream.fps))
+        print_('Resolution: {}'.format(stream.resolution))
+        print_('Codec: {} / {}'.format(stream.video_codec, stream.audio_codec))
+        print_('Abr: {}'.format(stream.abr))
+        print_('Subtype: {}'.format(stream.subtype))
+        print_('FPS: {}\n'.format(stream.fps))
 
         return self._url
 
@@ -263,13 +263,13 @@ class Video(object):
         ui_setting = utils.ui_setting
         ext = os.path.splitext(filename)[1].lower()
         if not os.path.isfile(filename):
-            print(u'no file: {}'.format(filename))
+            print('no file: {}'.format(filename))
             return
         
         filename_new = None
         if self.type == 'video' and (self.audio is not None or ext != '.mp4'): # UHD or non-mp4
             if self.audio is not None: # merge
-                print_(u'Download audio: {}'.format(self.audio))
+                print_('Download audio: {}'.format(self.audio))
                 hash = uuid()
                 path = os.path.join(os.path.dirname(filename), '{}_a.tmp'.format(hash))
                 if cw is not None:
@@ -282,19 +282,19 @@ class Video(object):
                 #print(out)
                 name, ext_old = os.path.splitext(filename)
                 if ext_old.lower() != ext.lower():
-                    print_(u'rename ext {} --> {}'.format(ext_old, ext))
-                    filename_new = u'{}{}'.format(name, ext)
+                    print_('rename ext {} --> {}'.format(ext_old, ext))
+                    filename_new = '{}{}'.format(name, ext)
                     if os.path.isfile(filename_new):
                         os.remove(filename_new)
                     os.rename(filename, filename_new)
             else: # convert non-mp4 video -> mp4
                 name, ext_old = os.path.splitext(filename)
-                filename_new = u'{}.mp4'.format(name)
-                print_(u'Convert video: {} -> {}'.format(filename, filename_new))
+                filename_new = '{}.mp4'.format(name)
+                print_('Convert video: {} -> {}'.format(filename, filename_new))
                 ffmpeg.convert(filename, filename_new, cw=cw)
         elif self.type == 'audio' and ext != '.mp3': # convert non-mp3 audio -> mp3
             name, ext_old = os.path.splitext(filename)
-            filename_new = u'{}.mp3'.format(name)
+            filename_new = '{}.mp3'.format(name)
             ffmpeg.convert(filename, filename_new, '-shortest -preset ultrafast -b:a {}k'.format(get_abr()), cw=cw)
 
         if self.type == 'audio' and ui_setting.albumArt.isChecked():
@@ -310,9 +310,9 @@ class Video(object):
             if lang in self.subtitles:
                 try:
                     subtitle = self.subtitles[lang]
-                    filename_sub = u'{}.vtt'.format(os.path.splitext(filename)[0])
+                    filename_sub = '{}.vtt'.format(os.path.splitext(filename)[0])
                     downloader.download(subtitle, os.path.dirname(filename_sub), fileName=os.path.basename(filename_sub), overwrite=True)
-                    filename_sub_new = u'{}.srt'.format(os.path.splitext(filename_sub)[0])
+                    filename_sub_new = '{}.srt'.format(os.path.splitext(filename_sub)[0])
                     cw.imgs.append(filename_sub_new)
                     cw.dones.add(os.path.realpath(filename_sub_new).replace('\\\\?\\', ''))
                     srt_converter.convert(filename_sub, filename_sub_new)
@@ -420,13 +420,13 @@ def get_videos(url, type='video', only_mp4=False, audio_included=False, max_res=
     if '/channel/' in url or '/user/' in url or '/c/' in url:
         info = read_channel(url, n=n, cw=cw)
         info['type'] = 'channel'
-        info['title'] = u'[Channel] {}'.format(info['uploader'])
+        info['title'] = '[Channel] {}'.format(info['uploader'])
         if cw:
             info['urls'] = filter_range(info['urls'], cw.range)
     elif '/playlist' in url:
         info = read_playlist(url, n=n, cw=cw)
         info['type'] = 'playlist'
-        info['title'] = u'[Playlist] {}'.format(info['title'])
+        info['title'] = '[Playlist] {}'.format(info['title'])
         if cw:
             info['urls'] = filter_range(info['urls'], cw.range)
     else:
@@ -455,7 +455,7 @@ def read_playlist(url, n, cw=None):
             'extract_flat': True,
             'playlistend': n,
             }
-    ydl = ytdl.YoutubeDL(options)
+    ydl = ytdl.YoutubeDL(options, cw=cw)
     info = ydl.extract_info(url)
 
     es = info['entries']
@@ -479,7 +479,7 @@ import selector
 @selector.register('youtube')
 def select():
     if utils.ui_setting.askYoutube.isChecked():
-        value = utils.messageBox(tr_(u'Youtube format?'), icon=QtGui.QMessageBox.Question, buttons=[tr_(u'MP4 (동영상)'), tr_(u'MP3 (음원)')])
+        value = utils.messageBox(tr_('Youtube format?'), icon=QtGui.QMessageBox.Question, buttons=[tr_('MP4 (동영상)'), tr_('MP3 (음원)')])
         format = ['mp4', 'mp3'][value]
         return format
 

@@ -19,7 +19,7 @@ class Downloader_vlive(Downloader):
             raise NotImplementedError('channel')
 
     def read(self):
-        video = get_video(self.url)
+        video = get_video(self.url, cw=self.cw)
         
         self.urls.append(video.url)
 
@@ -30,12 +30,12 @@ class Downloader_vlive(Downloader):
     
 
 @try_n(4)
-def get_video(url):
+def get_video(url, cw=None):
     options = {
         'noplaylist': True,
         }
     
-    ydl = ytdl.YoutubeDL(options)
+    ydl = ytdl.YoutubeDL(options, cw=cw)
     info = ydl.extract_info(url)
 
     fs = []

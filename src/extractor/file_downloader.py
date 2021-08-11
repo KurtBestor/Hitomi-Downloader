@@ -1,12 +1,8 @@
-# uncompyle6 version 3.5.0
-# Python bytecode 2.7 (62211)
-# Decompiled from: Python 2.7.16 (v2.7.16:413a49145e, Mar  4 2019, 01:30:55) [MSC v.1500 32 bit (Intel)]
-# Embedded file name: file_downloader.pyo
-# Compiled at: 2019-10-02 14:06:58
 import downloader, json, os
 from constants import try_n
 from utils import Downloader, query_url, clean_title, get_ext
 from timee import sleep
+from hashlib import md5
 
 
 @Downloader.register
@@ -32,10 +28,20 @@ class Downloader_file(Downloader):
             for esc in ['?', '#']:
                 name = name.split(esc)[0]
 
-        if not get_ext(name):
-            name += downloader.get_ext(self.url)
+        ext = get_ext(name)
+        if not ext:
+            try:
+                ext = downloader.get_ext(self.url)
+            except:
+                ext = ''
+        name = os.path.splitext(name)[0]
 
         self.urls.append(self.url)
-        self.filenames[self.url] = clean_title(name)
         
-        self.title = name
+        id_ = md5(self.url.encode('utf8')).hexdigest()[:8]
+        tail = ' ({}){}'.format(id_, ext)
+        filename = clean_title(name, n=-len(tail)) + tail
+        
+        self.filenames[self.url] = filename
+        
+        self.title = filename

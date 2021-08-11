@@ -148,7 +148,7 @@ def get_audios(url, cw, album_art):
         #'extract_flat': True,
         }
 
-    ydl = ytdl.YoutubeDL()
+    ydl = ytdl.YoutubeDL(cw=cw)
     info = ydl.extract_info(url)
     if 'entries' in info:
         entries = info['entries']

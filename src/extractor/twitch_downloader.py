@@ -6,6 +6,7 @@ from io import BytesIO
 from m3u8_tools import M3u8_stream
 import ree as re
 from translator import tr_
+import errors
 
 
 @Downloader.register
@@ -47,7 +48,7 @@ class Downloader_twitch(Downloader):
             filter = None
             
         if filter is None:
-            video = Video(self.url)
+            video = Video(self.url, self.cw)
             video.url()
             self.urls.append(video.url)
             self.title = video.title
@@ -94,7 +95,7 @@ def get_videos(url, cw=None):
         for edge in data[0]['data']['user']['clips']['edges']:
             url_video = edge['node']['url']
             info['name'] = edge['node']['broadcaster']['displayName']
-            video = Video(url_video)
+            video = Video(url_video, cw)
             video.id = int(edge['node']['id'])
             videos.append(video)
             cursor_new = edge['cursor']
@@ -124,15 +125,26 @@ def alter(seg):
 class Video(object):
     _url = None
 
-    def __init__(self, url):
+    def __init__(self, url, cw):
         self.url = LazyUrl(url, self.get, self)
+        self.cw = cw
 
     @try_n(4)
     def get(self, url):
+        print_ = get_print(self.cw)
         if self._url:
             return self._url
-        ydl = ytdl.YoutubeDL()
-        info = ydl.extract_info(url)
+        ydl = ytdl.YoutubeDL(cw=self.cw)
+        try:
+            info = ydl.extract_info(url)
+        except Exception as e:
+            ex = type(ytdl.get_extractor(url))(ydl)
+            _download_info = getattr(ex, '_download_info', None)
+            if _download_info is not None:
+                vod_id = ex._match_id(url)
+                info = _download_info(vod_id)
+                print_(info)
+            raise
         video_best = info['formats'][-1]
         video = video_best['url']
         

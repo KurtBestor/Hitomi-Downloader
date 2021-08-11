@@ -37,18 +37,25 @@ class Page(object):
 @Downloader.register
 class Downloader_lhscan(Downloader):
     type = 'lhscan'
-    URLS = ['lhscan.net', 'loveheaven.net', 'lovehug.net']
+    URLS = [
+        #'lhscan.net', 'loveheaven.net',
+        'lovehug.net', 'welovemanga.net', 'weloma.net',
+        ]
     MAX_CORE = 16
     display_name = 'LHScan'
     _soup = None
     
     def init(self):
-        self.url = self.url.replace('lhscan.net', 'loveheaven.net')
         self.session = Session()
         #clf2.solve(self.url, session=self.session, cw=self.cw)
         soup = self.soup
         if not soup.find('ul', class_='manga-info'):
             self.Invalid(u'{}: {}'.format(tr_(u'목록 주소를 입력해주세요'), self.url))
+
+    @classmethod
+    def fix_url(cls, url):
+        url = url.replace('lovehug.net', 'welovemanga.net')
+        return url
 
     @property
     def soup(self):
@@ -58,9 +65,10 @@ class Downloader_lhscan(Downloader):
                     html = downloader.read_html(self.url, session=self.session)
                     break
                 except Exception as e:
+                    e_ = e
                     print(e)
             else:
-                raise
+                raise e_
             self._soup = Soup(html)
         return self._soup
 
@@ -99,14 +107,20 @@ def get_imgs_page(page, session, cw=None):
             src = base64.b64decode(src).strip().decode('utf8')
         except:
             pass
-        src = urljoin(page.url, src)
+        src0 = src
+        src = src.replace('welovemanga.net', '1')#
+        src = urljoin(page.url, src).strip()
         if 'Credit_LHScan_' in src or '5e1ad960d67b2_5e1ad962338c7' in src:
             continue
         if 'fe132b3d32acc39f5adcea9075bedad4LoveHeaven' in src:
             continue
         if 'LoveHug_600cfd96e98ff.jpg' in src:
             continue
-        img = Image(src.strip(), page, len(imgs))
+        if 'image_5f0ecf23aed2e.png' in src:
+            continue
+        if not imgs:
+            print_(src0)
+        img = Image(src, page, len(imgs))
         imgs.append(img)
 
     return imgs

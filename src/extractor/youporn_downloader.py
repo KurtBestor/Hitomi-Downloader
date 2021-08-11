@@ -23,7 +23,7 @@ class Downloader_youporn(Downloader):
         return url
 
     def read(self):
-        video = Video(self.url)
+        video = Video(self.url, cw=self.cw)
 
         self.urls.append(video.url)
         self.setIcon(video.thumb)
@@ -35,8 +35,8 @@ class Downloader_youporn(Downloader):
 
 class Video(object):
     @try_n(4)
-    def __init__(self, url):
-        ydl = ytdl.YoutubeDL()
+    def __init__(self, url, cw=None):
+        ydl = ytdl.YoutubeDL(cw=cw)
         info = ydl.extract_info(url)
 
         f = info['formats'][-1]

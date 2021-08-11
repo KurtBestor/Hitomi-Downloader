@@ -28,7 +28,7 @@ class Downloader_etc(Downloader):
 
         if video.artist:
             self.artist = video.artist
-        
+
         self.urls.append(video.url)
 
         self.print_('url_thumb: {}'.format(video.url_thumb))
@@ -37,7 +37,7 @@ class Downloader_etc(Downloader):
             self.enableSegment()#
         if isinstance(video.url(), M3u8_stream):
             self.disableSegment()
-        
+
         self.title = '[{}] {}'.format(video.header, video.title)
 
 
@@ -54,16 +54,29 @@ def format_(f):
     return '{} - {} - {} - {}'.format(f['format'], f['_resolution'], f['_audio'], f['url'])
 
 
-@try_n(4)
 def get_video(url, session, cw, ie_key=None):
     print_ = get_print(cw)
+    try:
+        video = _get_video(url, session, cw, ie_key, allow_m3u8=True)
+        if isinstance(video.url(), M3u8_stream):
+            c = video.url().segs[0].download(cw)
+            if not c:
+                raise Exception('invalid m3u8')
+        return video
+    except Exception as e:
+        print_(e)
+        return _get_video(url, session, cw, ie_key, allow_m3u8=False)
+
+@try_n(4)
+def _get_video(url, session, cw, ie_key=None, allow_m3u8=True):
+    print_ = get_print(cw)
+    print_('get_video: {}, {}'.format(allow_m3u8, url))
     options = {
         'noplaylist': True,
         #'extract_flat': True,
         'playlistend': 1,
         }
-    
-    ydl = ytdl.YoutubeDL(options)
+    ydl = ytdl.YoutubeDL(options, cw=cw)
     info = ydl.extract_info(url)
     if not ie_key:
         ie_key = ytdl.get_extractor_name(url)
@@ -79,7 +92,7 @@ def get_video(url, session, cw, ie_key=None):
             url_new = entry.get('url') or entry['webpage_url']
         if url_new != url:
             return get_video(url_new, session, cw, ie_key=get_ie_key(info))
-    
+
     session.headers.update(info.get('http_headers', {}))
     #session.cookies.update(ydl.cookiejar)
 
@@ -100,8 +113,20 @@ def get_video(url, session, cw, ie_key=None):
     if not fs:
         raise Exception('No videos')
 
-    f = sorted(fs, key=lambda f:(f['_resolution'], f['_index']))[-1]
-    if f['_audio']:
+    def filter_f(fs):
+        for f in fs:
+            if allow_m3u8:
+                return f
+            ext = get_ext_(f['url'], session, url)
+            if ext.lower() != '.m3u8':
+                return f
+            print_('invalid url: {}'.format(f['url']))
+        return list(fs)[0]#
+
+    f_video = filter_f(reversed(sorted(fs, key=lambda f:(f['_resolution'], f['_index']))))
+    print_('video0: {}'.format(format_(f_video)))
+
+    if f_video['_audio']:
         f_audio = None
     else:
         fs_audio = sorted([f_audio for f_audio in fs if (not f_audio['_resolution'] and f_audio['_audio'])], key=lambda f:(f['_audio'], f['_index']))
@@ -109,13 +134,14 @@ def get_video(url, session, cw, ie_key=None):
             f_audio = fs_audio[-1]
         else:
             try:
-                f = sorted([f for f in fs if f['_audio']], key=lambda f:(f['_resolution'], f['_index']))[-1]
-            except IndexError:
-                pass
+                print_('trying to get f_video with audio')
+                f_video = filter_f(reversed(sorted([f for f in fs if f['_audio']], key=lambda f:(f['_resolution'], f['_index']))))
+            except Exception as e:
+                print_('failed to get f_video with audio: {}'.format(e))
             f_audio = None
-    print_('video: {}'.format(format_(f)))
+    print_('video: {}'.format(format_(f_video)))
     print_('audio: {}'.format(format_(f_audio)))
-    video = Video(f, f_audio, info, session, url, cw=cw)
+    video = Video(f_video, f_audio, info, session, url, cw=cw)
 
     return video
 
@@ -126,6 +152,15 @@ def get_ie_key(info):
     if ie_key.lower().endswith('playlist'):
         ie_key = ie_key[:-len('playlist')]
     return ie_key
+
+
+def get_ext_(url, session, referer):
+    try:
+        ext = downloader.get_ext(url, session, referer)
+    except Exception as e:
+        print(e)
+        ext = get_ext(url)
+    return ext
 
 
 class Video(object):
@@ -145,11 +180,7 @@ class Video(object):
         if self.url_thumb:
             downloader.download(self.url_thumb, referer=referer, buffer=self.thumb, session=session)
 
-        try:
-            ext = downloader.get_ext(self.url, session, referer)
-        except Exception as e:
-            print(e)
-            ext = get_ext(self.url)
+        ext = get_ext_(self.url, session, referer)
 
         if not ext:
             print('empty ext')
@@ -157,7 +188,7 @@ class Video(object):
                 ext = '.mp4'
             else:
                 ext = '.mp3'
-            
+
         if ext.lower() == '.m3u8':
             try:
                 url = playlist2stream(self.url, referer, session=session, n_thread=4)
@@ -182,5 +213,3 @@ class Video(object):
             downloader.download(self.f_audio['url'], buffer=f, referer=self.referer, session=self.session)
             ffmpeg.merge(filename, f, cw=self.cw)
         return filename
-        
-

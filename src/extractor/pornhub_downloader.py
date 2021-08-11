@@ -122,7 +122,7 @@ class Video(object):
             #title = j['video_title']
             title = soup.find('h1', class_='title').text.strip()
 
-            ydl = ytdl.YoutubeDL()
+            ydl = ytdl.YoutubeDL(cw=self.cw)
             info = ydl.extract_info(url)
             url_thumb = info['thumbnail']
             videos = []

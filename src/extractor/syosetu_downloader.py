@@ -142,15 +142,24 @@ def get_title_artist(soup):
 def get_text(url, subtitle, update, session):
     html = downloader.read_html(url, session=session)
     soup = Soup(html)
-    p = soup.find('div', id='novel_p')
-    p = '' if p is None else p.text.strip()
-    story = soup.find('div', id='novel_honbun').text.strip()
     if update:
         update = u'        ' + update
     else:
         update = ''
+        
+    story = soup.find('div', id='novel_honbun').text.strip()
+        
+    p = soup.find('div', id='novel_p')
+    p = '' if p is None else p.text.strip()
     if p:
-        story = (u'{}\n\n{}').format(p, story)
+        story = '{}\n\n════════════════════════════════\n\n{}'.format(p, story)
+        
+    #2888
+    a = soup.find('div', id='novel_a')
+    a = '' if a is None else a.text.strip()
+    if a:
+        story = '{}\n\n════════════════════════════════\n\n{}'.format(story, a)
+        
     text =u'''────────────────────────────────
 
   ◆  {}{}

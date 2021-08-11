@@ -21,7 +21,7 @@ class Downloader_navertv(Downloader):
             self.url = 'https://tv.naver.com/v/{}'.format(self.url)
 
     def read(self):
-        video = Video(self.url)
+        video = Video(self.url, cw=self.cw)
         video.url()#
 
         self.urls.append(video.url)
@@ -36,15 +36,16 @@ class Downloader_navertv(Downloader):
 class Video(object):
     _url = None
     
-    def __init__(self, url):
+    def __init__(self, url, cw=None):
         self.url = LazyUrl(url, self.get, self)
+        self.cw = cw
 
     @try_n(4)
     def get(self, url):
         if self._url:
             return self._url
         
-        ydl = ytdl.YoutubeDL()
+        ydl = ytdl.YoutubeDL(cw=self.cw)
         info = ydl.extract_info(url)
         fs = [f for f in info['formats'] if f['protocol'] in ['http', 'https']]
         fs = sorted(fs, key=lambda f: int(f.get('width', 0)), reverse=True)

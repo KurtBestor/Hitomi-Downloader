@@ -179,6 +179,7 @@ class Image():
         self.p = p
         self.format_ = format_
         self.artist = info['artist']
+        self.artistid = info['artist_id'] #3636
         self.title = info['raw_title']
         self.utime = info['create_date']
         self.cw = cw
@@ -187,8 +188,14 @@ class Image():
 
     def get(self, referer):
         ext = get_ext(self._url)
-        name = self.format_.replace('id', '###id*').replace('page', '###page*').replace('artist', '###artist*').replace('title', '###title*')
-        name = name.replace('###id*', str(self.id_)).replace('###page*', str(self.p)).replace('###artist*', self.artist).replace('###title*', self.title)
+        d ={
+            'id': self.id_,
+            'page': self.p,
+            'artist': self.artist,
+            'artistid': self.artistid,
+            'title': self.title,
+            }
+        name = utils.format(self.format_, d)
         self.filename = clean_title(name.strip(), allow_dot=True, n=-len(ext)) + ext
         if self.ugoira and self.ugoira['ext']: #3355
             filename_local = os.path.join(self.cw.dir, self.filename)
