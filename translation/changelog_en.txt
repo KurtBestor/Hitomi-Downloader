@@ -1,49 +1,49 @@
-3.6    【Aug 12, 2021】
+3.6 2021-08-12
 
-[버그 해결 / 사이트 변경에 의한 수정]
+Bug Resolution / Modification by Site Change.
 
-- #2966
+- Downloading more than 2 000 items is now possible on Kakao #2966
 
-- Twitter 일부 계정 무한 로딩 문제 해결
+- Twitter Troubleshooting Some Accounts Infinite Loading
 
-- LHScan 새 도메인 지원 (#3603)
+- LHScan New Domain Support (#3603)
 
-- Hitomi.la 업데이트 대응 (#3638)
+- Hitomi.la Update Response (#3638)
 
-- #3632
+- urllib problem with proxy corrected #3632
 
-- #3641
+- Corrected infinite loading from script issue #3641
 
-- E(x)Hentai 최대 동시 작업 무시하는 문제 해결 (#3643)
+- Troubleshooting E(x)Hentai Maximum Concurrent Tasks Ignored (#3643)
 
-- 기타 자잘한 것들
+- Other little things.
 
 
-[변경/추가된 기능]
+[Change/Additional Features]
 
-- 초기 로딩 시간 최적화
+- Initial loading time optimization
 
-- 썸네일 로딩 시간 최적화
+- Optimize: thumbnail loading time
 
-- 설정 파일 (*.ini) 크기 최적화
+- Optimize: setting file (*.ini) size
 
-- 설정 파일 (*.ini) 구조 변경 (신버전에서 작성한 설정 파일 구버전에서 읽을 수 없음)
+- Change: the structure of the setup file (*.ini) (New .ini isn't compatible with old versions)
 
-- 고급 설정에서 스크롤할 때 콤보박스나 슬라이더 반응하지 않도록 수정
+- Modify: combo box or slider not to react when scrolling in advanced settings
 
-- 미리보기 창 크기 조절 가능하게 수정
+- Modify: preview window size is now adjustable
 
-- 다운로더 작업 목록 필터링했을 때 그룹에 해당 갯수 표시
+- Show the number of downloader jobs in the group when filtered
 
-- 소설가가 되자 꼬릿말 추가 (#2888, #3610)
+- Let's be a novelist, add a tail word (#2888, #3610)
 
-- 일시정지 후 완료시킬 수 있게 수정 (#3482, #3609)
+- Modified to allow completion after pause (#3482, #3609)
 
-- 작업 레이지 로딩 끄는 옵션 (#3613)
+- Option to turn off loading of job lager (#3613)
 
-- Pixiv 파일명 형식 "artistid" 추가 (#3636)
+- Add Pixiv Filename Format "artistid" (#3636)
 
-- 기타 자잘한 것들
+- Other little thing
 
 
 
