@@ -56,7 +56,7 @@ class Downloader_novelpia(Downloader):
         # Dirty but for clean filename
         ep_name.text.replace(ep_num.text, "")
 
-        self.filenames[f] = clean_title(f"{ep_num.text}: {ep_name.text}", "safe")
+        self.filenames[f] = clean_title(f"{ep_num.text}: {ep_name.text}.txt", "safe")
 
         # https://novelpia.com/viewer/:number:
         numbers: List[str] = []
