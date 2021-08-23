@@ -54,9 +54,9 @@ class Downloader_novelpia(Downloader):
         assert isinstance(ep_name, Tag)
 
         # Dirty but for clean filename
-        ep_name.text.replace(ep_num.text, "")
+        replaced_name = ep_name.text.replace(ep_num.text, "", 1)
 
-        self.filenames[f] = clean_title(f"{ep_num.text}: {ep_name.text}.txt", "safe")
+        self.filenames[f] = clean_title(f"[{ep_num.text}] {replaced_name}.txt", "safe")
 
         # https://novelpia.com/viewer/:number:
         numbers: List[str] = []
@@ -83,6 +83,7 @@ class Downloader_novelpia(Downloader):
                         filename = img.attrs["data-filename"]
                         f.write(f"[{filename}]".encode("UTF-8"))
                         self.urls.append(f"https:{src}")
+                        self.filenames[f"https:{src}"] = filename
                     else:
                         f.write(text_dict["text"].encode("UTF-8"))
                 f.seek(0)
