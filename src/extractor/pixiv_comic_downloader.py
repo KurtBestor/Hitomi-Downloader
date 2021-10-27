@@ -6,6 +6,7 @@ from timee import sleep
 import page_selector, clf2
 from hashlib import md5
 from datetime import datetime
+import errors
 SALT = 'mAtW1X8SzGS880fsjEXlM73QpS1i4kUMBhyhdaYySk8nWz533nrEunaSplg63fzT'
 
 
@@ -34,10 +35,7 @@ class Downloader_pixiv_comic(Downloader):
 
     def init(self):
         if '/viewer/' in self.url:
-            html = downloader.read_html(self.url)
-            id = re.find('/works/([0-9]+)', html, err='no id')
-            self.url = ('https://comic.pixiv.net/works/{}').format(id)
-            self.print_(('fix url: {}').format(self.url))
+            raise errors.Invalid(tr_('목록 주소를 입력해주세요: {}').format(self.url))
 
     @property
     def soup(self):
@@ -56,7 +54,7 @@ class Downloader_pixiv_comic(Downloader):
         else:
             artist = 'N/A'
         self.dirFormat = self.dirFormat.replace('0:id', '').replace('id', '').replace('()', '').replace('[]', '').strip()
-        self.print_((u'dirFormat: {}').format(self.dirFormat))
+        self.print_('dirFormat: {}'.format(self.dirFormat))
         title = self.format_title('N/A', 'id', title, artist, 'N/A', 'N/A', 'Japanese')
         while '  ' in title:
             title = title.replace('  ', ' ')
@@ -92,47 +90,52 @@ def get_artist(soup):
     artist = soup.find('div', class_='works-author')
     if not artist:
         artist = soup.find('div', class_=lambda c: c and c.startswith('Header_author'))
-    return artist.text.strip()
+    if artist:
+        return artist.text.strip()
+    else:
+        artist = re.find(r'"author" *: *(".+?")', soup.html)
+        if artist:
+            return json.loads(artist)
+        else:
+            return 'N/A'
 
 
 def get_pages(soup, url):
     pages = []
-    for a in soup.findAll('a', class_=lambda c: c and c.startswith('StoryListItem_container')):
-        href = a.attrs['href']
-        href = urljoin(url, href)
-        right = a.find('div', class_=lambda c: c and c.startswith('StoryListItem_right'))
-        number = right.findAll('span', class_=lambda c: c and c.startswith('jsx'))[0].text.strip()
-        title = right.findAll('span', class_=lambda c: c and c.startswith('jsx'))[1].text.strip()
+    hrefs = set()
+    titles = set()
+    for a in soup.findAll(lambda tag: tag.name == 'a' and '/viewer/stories/' in tag.get('href', ''))[::-1]:
+        href = urljoin(url, a.attrs['href'])
+        if href in hrefs:
+            continue
+        hrefs.add(href)
+        divs = a.findAll('div', recursive=False)
+        if len(divs) < 2:
+            continue
+        right = divs[1]
+        number = right.findAll('span')[0].text.strip()
+        title = right.findAll('span')[1].text.strip()
         title = ' - '.join(x for x in [number, title] if x)
+        if title in titles:
+            title0 = title
+            i = 2
+            while title in titles:
+                title = title0 + ' ({})'.format(i)
+                i += 1
+        titles.add(title)
         page = Page(href, title)
         pages.append(page)
+    if not pages:
+        raise Exception('no pages')
 
-    return pages[::-1]
-
-
-def get_pages_legacy(soup, url):
-    main = soup.find('div', class_='work-main-column')
-    view = main.find('div', class_='two-works')
-    pages = []
-    for a in view.findAll('a', class_='episode-list-item'):
-        href = a.attrs['href']
-        href = urljoin(url, href)
-        number = a.find('div', class_='episode-num').text.strip()
-        title = a.find('div', class_='episode-title').text.strip()
-        title = ' - '.join(x for x in [number, title] if x)
-        page = Page(href, title)
-        pages.append(page)
-
-    return pages[::-1]
+    return pages
 
 
 @page_selector.register('pixiv_comic')
 @try_n(4)
 def f(url):
     if '/viewer/' in url:
-        html = read_html(url)
-        id = re.find('/works/([0-9]+)', html)
-        url = ('https://comic.pixiv.net/works/{}').format(id)
+        raise Exception(tr_('목록 주소를 입력해주세요'))
     html = read_html(url)
     soup = Soup(html)
     pages = get_pages(soup, url)

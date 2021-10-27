@@ -8,6 +8,7 @@ import utils
 from nico_login import login, logout
 import ffmpeg
 import os
+import errors
 
 
 def get_id(url):
@@ -38,14 +39,6 @@ class Video(object):
         downloader.download(self.url_thumb, buffer=self.thumb)
 
     def pp(self, filename):
-        cw = self.cw
-        if cw:
-            with cw.convert(self):
-                return self._pp(filename)
-        else:
-            return self._pp(filename)
-
-    def _pp(self, filename):
         if self.format == 'mp4':
             return
         name, ext_old = os.path.splitext(filename)
@@ -98,7 +91,7 @@ class Downloader_nico(Downloader):
             session = login(username, password)
         except Exception as e:
             logout()
-            return self.Invalid(u'Failed to login: {}'.format(self.url), fail=True)
+            raise errors.Invalid(u'Failed to login: {}'.format(self.url), fail=True)
 
         self.session = session
         try:

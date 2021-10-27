@@ -2,7 +2,7 @@
 from __future__ import division, print_function, unicode_literals
 import downloader
 import ree as re
-from utils import Soup, urljoin, LazyUrl, Downloader, try_n, join
+from utils import Soup, urljoin, LazyUrl, Downloader, try_n, join, get_ext
 import os
 import json
 
@@ -63,12 +63,8 @@ class LazyUrl_nhentai(LazyUrl):
 class Image(object):
     def __init__(self, url_page, url_img, p):
         self.p = p
-        self.referer = url_page
-        self.filename = os.path.basename(url_img)
-        self.url_img = url_img
-        def f(_):
-            return self.url_img
-        self.url = LazyUrl_nhentai(url_page, f, self)
+        self.url = LazyUrl_nhentai(url_page, lambda _: url_img, self)
+        self.filename = '{:04}{}'.format(p, get_ext(url_img))
 
 
 class Info(object):
@@ -94,9 +90,7 @@ def get_info(id):
 
     data = html.split('JSON.parse(')[1].split(');')[0]
     gal = json.loads(json.loads(data))
-    host = re.find('''media_url: *['"]([^'"]+)''', html)
-    if not host:
-        raise Exception('no host')
+    host = 'https://i.nhentai.net'#re.find('''media_url: *['"]([^'"]+)''', html, err='no host')
     
     id = int(gal['id'])
     id_media = int(gal['media_id'])

@@ -8,6 +8,7 @@ from translator import tr_
 from timee import sleep
 from error_printer import print_error
 import clf2
+import errors
 
 
 @Downloader.register
@@ -18,7 +19,7 @@ class Downloader_bdsmlr(Downloader):
 
     def init(self):
         if u'bdsmlr.com/post/' in self.url:
-            return self.Invalid(tr_(u'개별 다운로드는 지원하지 않습니다: {}').format(self.url), fail=False)
+            raise errors.Invalid(tr_(u'개별 다운로드는 지원하지 않습니다: {}').format(self.url))
         
         self.url = 'https://{}.bdsmlr.com'.format(self.id_)
         self.session = Session()

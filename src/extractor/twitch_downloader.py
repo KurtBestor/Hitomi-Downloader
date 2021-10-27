@@ -1,7 +1,7 @@
 #coding: utf8
 import downloader
 import ytdl
-from utils import Downloader, get_outdir, Soup, LazyUrl, try_n, compatstr, format_filename, get_ext, clean_title, Session, cut_pair, json_loads, get_print
+from utils import Downloader, get_outdir, Soup, LazyUrl, try_n, compatstr, format_filename, get_ext, clean_title, Session, cut_pair, json_loads, get_print, get_resolution
 from io import BytesIO
 from m3u8_tools import M3u8_stream
 import ree as re
@@ -33,7 +33,7 @@ class Downloader_twitch(Downloader):
 
     def read(self):
         if '/directory/' in self.url.lower():
-            return self.Invalid('[twitch] Directory is unsupported: {}'.format(self.url))
+            raise errors.Invalid('[twitch] Directory is unsupported: {}'.format(self.url))
             
         if self.url.count('/') == 3:
             if 'www.twitch.tv' in self.url or '//twitch.tv' in self.url:
@@ -144,8 +144,28 @@ class Video(object):
                 vod_id = ex._match_id(url)
                 info = _download_info(vod_id)
                 print_(info)
+            if 'HTTPError 403' in str(e):
+                raise errors.LoginRequired()
             raise
-        video_best = info['formats'][-1]
+
+        def print_video(video):
+            print_('[{}] [{}] [{}] {}'.format(video['format_id'], video.get('height'), video.get('tbr'), video['url']))
+            
+        videos = [video for video in info['formats'] if video.get('height')]
+
+        videos = sorted(videos, key=lambda video:(video.get('height', 0), video.get('tbr', 0)), reverse=True)
+
+        for video in videos:
+            print_video(video)
+
+        for video in videos:
+            if video.get('height', 0) <= get_resolution(): #3723
+                video_best = video
+                break
+        else:
+            video_best = videos[-1]
+        print_video(video)
+        
         video = video_best['url']
         
         ext = get_ext(video)

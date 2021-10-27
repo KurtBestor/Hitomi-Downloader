@@ -14,10 +14,8 @@ import constants
 import requests
 import chardet
 import os
-import srt_converter
 from random import randrange
 import utils
-from PyQt import QtCore, QtGui
 from translator import tr_
 from m3u8_tools import dash2stream
 from datetime import datetime
@@ -173,7 +171,7 @@ class Video(object):
         self.audio = None
         self.thumb = None
         self.thumb_url = None
-        self.subtitles = yt.subtitles
+        self.subs = yt.subtitles
 
         if type == 'audio' and 'DASH' in self.stream.format:
             self.stream.setDashType('audio')
@@ -251,14 +249,6 @@ class Video(object):
 
     def pp(self, filename):
         cw = self.cw
-        if cw:
-            with cw.convert(self):
-                return self._pp(filename)
-        else:
-            return self._pp(filename)
-
-    def _pp(self, filename):
-        cw = self.cw
         print_ = get_print(cw)
         ui_setting = utils.ui_setting
         ext = os.path.splitext(filename)[1].lower()
@@ -305,23 +295,7 @@ class Video(object):
                 s = print_error(e)[-1]
                 print_(s)
 
-        if ui_setting and ui_setting.subtitle.isChecked():
-            lang = {'korean': 'ko', 'english': 'en', 'japanese': 'ja'}[compatstr(ui_setting.subtitleCombo.currentText()).lower()]
-            if lang in self.subtitles:
-                try:
-                    subtitle = self.subtitles[lang]
-                    filename_sub = '{}.vtt'.format(os.path.splitext(filename)[0])
-                    downloader.download(subtitle, os.path.dirname(filename_sub), fileName=os.path.basename(filename_sub), overwrite=True)
-                    filename_sub_new = '{}.srt'.format(os.path.splitext(filename_sub)[0])
-                    cw.imgs.append(filename_sub_new)
-                    cw.dones.add(os.path.realpath(filename_sub_new).replace('\\\\?\\', ''))
-                    srt_converter.convert(filename_sub, filename_sub_new)
-                    cw.setSubtitle(True)
-                finally:
-                    try:
-                        os.remove(filename_sub)
-                    except:
-                        pass
+        utils.pp_subtitle(self, filename, cw)
 
         return filename_new
 
@@ -399,6 +373,8 @@ class Downloader_youtube(Downloader):
         else:
             self.urls.append(video.url)
             self.title = video.title
+            if video.stream.live:
+                self.lock = False
             
         self.artist = video.username
         self.setIcon(video.thumb)
@@ -479,7 +455,7 @@ import selector
 @selector.register('youtube')
 def select():
     if utils.ui_setting.askYoutube.isChecked():
-        value = utils.messageBox(tr_('Youtube format?'), icon=QtGui.QMessageBox.Question, buttons=[tr_('MP4 (동영상)'), tr_('MP3 (음원)')])
+        value = utils.messageBox(tr_('Youtube format?'), icon=utils.QMessageBox.Question, buttons=[tr_('MP4 (동영상)'), tr_('MP3 (음원)')])
         format = ['mp4', 'mp3'][value]
         return format
 

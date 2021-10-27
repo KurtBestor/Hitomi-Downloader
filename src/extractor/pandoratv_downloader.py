@@ -3,6 +3,7 @@ from utils import Session, Soup, LazyUrl, get_print, Downloader, get_ext, try_n,
 import ree as re
 import json
 from io import BytesIO
+import errors
 
 
 
@@ -25,7 +26,7 @@ class Downloader_pandoratv(Downloader):
         try:
             video.url()#
         except EmbedUrlError as e:
-            return self.Invalid(e.args[0])
+            raise errors.Invalid(e.args[0])
 
         self.urls.append(video.url)
         self.setIcon(video.thumb)

@@ -35,7 +35,7 @@ class Video(object):
 
     def __init__(self, url, referer, id, p):
         ext = os.path.splitext(url.split('?')[0])[1]
-        self.filename = (u'{}.part{}{}').format(id, p, ext)
+        self.filename = '{}.part{}{}'.format(id, p, ext)
         self.url = LazyUrl(referer, lambda _: url, self, detect_local=False)
 
 
@@ -53,11 +53,11 @@ def fix_url(url, cw=None):
     if meta:
         url_new = meta.attrs['content']
         if tail:
-            url_new = u'{}?{}'.format(url_new, tail)
-        print_(u'redirect: {} -> {}'.format(url, url_new))
+            url_new = '{}?{}'.format(url_new, tail)
+        print_('redirect: {} -> {}'.format(url, url_new))
     else:
         url_new = url
-        print_(u'no redirect')
+        print_('no redirect')
     return url_new
 
 
@@ -97,10 +97,10 @@ class Downloader_bili(Downloader):
         self.setIcon(thumb)
         title = info['title']
         if page is not None:
-            title += (u'_p{}').format(page)
+            title += '_p{}'.format(page)
         title = format_filename(title, self.id_, '.mp4')[:-4]
         n = int(math.ceil(8.0 / len(videos)))
-        self.print_(('n_threads: {}').format(n))
+        self.print_('n_threads: {}'.format(n))
         self.enableSegment(n_threads=n, overwrite=True)
         self.title = title
 
@@ -201,7 +201,7 @@ def get_videos(url, cw=None, depth=0):
                 raise Exception(msg)
         quality = video_info['quality']
         resolution = get_resolution_(quality)
-        s = (u'resolution: {}').format(resolution)
+        s = 'resolution: {}'.format(resolution)
         print_(s)
 
         # 2184

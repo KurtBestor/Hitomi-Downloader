@@ -13,8 +13,10 @@ from utils import (Downloader, Soup, try_n, LazyUrl, urljoin, get_print,
 import clf2
 import utils
 from m3u8_tools import playlist2stream, M3u8_stream
-import ytdl
 import errors
+import json
+import functools
+import operator
 
 
 
@@ -59,6 +61,7 @@ class Video(object):
         self.cw = cw
         self.session = session
 
+    @try_n(2)
     def get(self, url):
         '''
         get
@@ -89,7 +92,7 @@ class Video(object):
             
         soup = Soup(html)
         soup = fix_soup(soup, url, session, cw)
-        html = str(soup)
+        html = soup.html
 
         # removed
         if soup.find('div', class_='removed'):
@@ -122,19 +125,151 @@ class Video(object):
             #title = j['video_title']
             title = soup.find('h1', class_='title').text.strip()
 
-            ydl = ytdl.YoutubeDL(cw=self.cw)
-            info = ydl.extract_info(url)
-            url_thumb = info['thumbnail']
+            video_urls = []
+            video_urls_set = set()
+
+            def int_or_none(s):
+                try:
+                    return int(s)
+                except:
+                    return None
+
+            def url_or_none(url):
+                if not url or not isinstance(url, str):
+                    return None
+                url = url.strip()
+                return url if re.match(r'^(?:(?:https?|rt(?:m(?:pt?[es]?|fp)|sp[su]?)|mms|ftps?):)?//', url) else None
+            
+            flashvars  = json.loads(re.find(r'var\s+flashvars_\d+\s*=\s*({.+?});', html, err='no flashvars'))
+            url_thumb = flashvars.get('image_url')
+            media_definitions = flashvars.get('mediaDefinitions')
+            if isinstance(media_definitions, list):
+                for definition in media_definitions:
+                    if not isinstance(definition, dict):
+                        continue
+                    video_url = definition.get('videoUrl')
+                    if not video_url or not isinstance(video_url, str):
+                        continue
+                    if video_url in video_urls_set:
+                        continue
+                    video_urls_set.add(video_url)
+                    video_urls.append(
+                        (video_url, int_or_none(definition.get('quality'))))
+
+            def extract_js_vars(webpage, pattern, default=object()):
+                assignments = re.find(pattern, webpage, default=default)
+                if not assignments:
+                    return {}
+
+                assignments = assignments.split(';')
+
+                js_vars = {}
+
+                def remove_quotes(s):
+                    if s is None or len(s) < 2:
+                        return s
+                    for quote in ('"', "'", ):
+                        if s[0] == quote and s[-1] == quote:
+                            return s[1:-1]
+                    return s
+
+                def parse_js_value(inp):
+                    inp = re.sub(r'/\*(?:(?!\*/).)*?\*/', '', inp)
+                    if '+' in inp:
+                        inps = inp.split('+')
+                        return functools.reduce(
+                            operator.concat, map(parse_js_value, inps))
+                    inp = inp.strip()
+                    if inp in js_vars:
+                        return js_vars[inp]
+                    return remove_quotes(inp)
+
+                for assn in assignments:
+                    assn = assn.strip()
+                    if not assn:
+                        continue
+                    assn = re.sub(r'var\s+', '', assn)
+                    vname, value = assn.split('=', 1)
+                    js_vars[vname] = parse_js_value(value)
+                return js_vars
+
+            def add_video_url(video_url):
+                v_url = url_or_none(video_url)
+                if not v_url:
+                    return
+                if v_url in video_urls_set:
+                    return
+                video_urls.append((v_url, None))
+                video_urls_set.add(v_url)
+
+            def parse_quality_items(quality_items):
+                q_items = json.loads(quality_items)
+                if not isinstance(q_items, list):
+                    return
+                for item in q_items:
+                    if isinstance(item, dict):
+                        add_video_url(item.get('url'))
+
+            if not video_urls:
+                print_('# extract video_urls 2')
+                FORMAT_PREFIXES = ('media', 'quality', 'qualityItems')
+                js_vars = extract_js_vars(
+                    html, r'(var\s+(?:%s)_.+)' % '|'.join(FORMAT_PREFIXES),
+                    default=None)
+                if js_vars:
+                    for key, format_url in js_vars.items():
+                        if key.startswith(FORMAT_PREFIXES[-1]):
+                            parse_quality_items(format_url)
+                        elif any(key.startswith(p) for p in FORMAT_PREFIXES[:2]):
+                            add_video_url(format_url)
+                if not video_urls and re.search(
+                        r'<[^>]+\bid=["\']lockedPlayer', html):
+                    raise Exception('Video is locked')
+
+##            if not video_urls:
+##                print_('# extract video_urls 3')
+##                js_vars = extract_js_vars(
+##                    dl_webpage('tv'), r'(var.+?mediastring.+?)</script>')
+##                add_video_url(js_vars['mediastring'])
+
+            for mobj in re.finditer(
+                    r'<a[^>]+\bclass=["\']downloadBtn\b[^>]+\bhref=(["\'])(?P<url>(?:(?!\1).)+)\1',
+                    html):
+                video_url = mobj.group('url')
+                if video_url not in video_urls_set:
+                    video_urls.append((video_url, None))
+                    video_urls_set.add(video_url)
+
+            video_urls_ = video_urls
+            video_urls = []
+            for video_url, height in video_urls_:
+                if '/video/get_media' in video_url:
+                    print_(video_url)
+                    medias = downloader.read_json(video_url, session=session)
+                    if isinstance(medias, list):
+                        for media in medias:
+                            if not isinstance(media, dict):
+                                continue
+                            video_url = url_or_none(media.get('videoUrl'))
+                            if not video_url:
+                                continue
+                            height = int_or_none(media.get('quality'))
+                            video_urls.append((video_url, height))
+                    continue
+                video_urls.append((video_url, height))
+                
+
             videos = []
-            for f in info['formats']:
+            for video_url, height in video_urls:
                 video = {}
-                video['height'] = f['height']
-                video['quality'] = f['height'] or 0
-                video['protocol'] = f['protocol']
-                video['videoUrl'] = f['url']
-                if f['protocol'] == 'm3u8':
+                video['height'] = height or int_or_none(re.find(r'(?P<height>\d+)[pP]?_\d+[kK]', video_url))
+                video['quality'] = video['height'] or 0
+                video['videoUrl'] = video_url
+                ext = get_ext(video_url)
+                video['ext'] = ext
+                if ext.lower() == '.m3u8':
                     video['quality'] -= 1
-                print_('[{}p] {} {}'.format(video['height'], video['protocol'], video['videoUrl']))
+                print_('[{}p] {} {}'.format(video['height'], video['ext'], video['videoUrl']))
                 videos.append(video)
 
             if not videos:
@@ -149,7 +284,7 @@ class Video(object):
                 video = videos_good[-1]
             else:
                 video = videos[0]
-            print_('\n[{}p] {} {}'.format(video['height'], video['protocol'], video['videoUrl']))
+            print_('\n[{}p] {} {}'.format(video['height'], video['ext'], video['videoUrl']))
 
             file = File(id_, title, video['videoUrl'].strip(), url_thumb)
         

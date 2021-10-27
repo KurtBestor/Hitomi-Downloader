@@ -201,13 +201,6 @@ class Video(object):
         self.filename = format_filename(title, self.id, ext, header=self.header)
 
     def pp(self, filename):
-        if self.cw:
-            with self.cw.convert(self):
-                return self._pp(filename)
-        else:
-            return self._pp(filename)
-
-    def _pp(self, filename):
         if self.f_audio:
             f = BytesIO()
             downloader.download(self.f_audio['url'], buffer=f, referer=self.referer, session=self.session)

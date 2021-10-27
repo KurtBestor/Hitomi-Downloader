@@ -170,7 +170,7 @@ def read_channel(url, session, cw=None):
         else:
             print(msg)
         return sd['count_empty'] > 4
-    res = clf2.solve(url, session, cw, f=f, timeout=1800, show=True)
+    res = clf2.solve(url, session, cw, f=f, timeout=1800, show=True, delay=0)
 
     if not info['items']:
         raise Exception('no items')

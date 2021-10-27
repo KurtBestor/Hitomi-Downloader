@@ -22,7 +22,7 @@ class Downloader_avgle(Downloader):
         if not self.cw.data_:
             link = 'https://github.com/KurtBestor/Hitomi-Downloader/wiki/Chrome-Extension'
             webbrowser.open(link)
-            return self.Invalid('No data; See: {}'.format(link))
+            raise errors.Invalid('No data; See: {}'.format(link))
 
     def read(self):
         video = get_video(self.url, cw=self.cw)

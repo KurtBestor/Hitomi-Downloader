@@ -1,10 +1,11 @@
 #coding:utf-8
 import downloader
 import re
-from utils import urljoin, Downloader, Soup, LazyUrl, clean_title
+from utils import urljoin, Downloader, Soup, LazyUrl, clean_title, get_ext
 import json
 from timee import sleep
 import collections
+import errors
 PATTERNS = ['.*blog.naver.com/(?P<username>.+)/(?P<pid>[0-9]+)',
             '.*blog.naver.com/.+?blogId=(?P<username>[^&]+).+?logNo=(?P<pid>[0-9]+)',
             '.*?(?P<username>[0-9a-zA-Z_-]+)\.blog\.me/(?P<pid>[0-9]+)']
@@ -38,7 +39,7 @@ class Downloader_naver(Downloader):
     def init(self):
         username, pid = get_id(self.url)
         if username is None:
-            return self.Invalid('Invalid format')
+            raise errors.Invalid('Invalid format: {}'.format(self.url))
         self.url = 'https://blog.naver.com/{}/{}'.format(username, pid)
         self.headers = {'User-Agent': downloader.hdr['User-Agent']}
 
@@ -52,6 +53,7 @@ class Downloader_naver(Downloader):
 
         imgs = get_imgs(self.url)
 
+        filenames = {}
         for img in imgs:
             self.urls.append(img.url)
 
@@ -59,8 +61,11 @@ class Downloader_naver(Downloader):
         
 
 class Image(object):
-    def __init__(self, url):
-        self.url = url
+    def __init__(self, url, referer, p):
+        self.url = LazyUrl(referer, lambda _: url, self)
+        #3788, #3817
+        ext = get_ext(url)
+        self.filename = '{:04}{}'.format(p, ext)
         
 
 class Video(object):
@@ -97,6 +102,7 @@ def read_page(url, depth=0):
 
 def get_imgs(url):
     url = url.replace('blog.naver', 'm.blog.naver')
+    referer = url
     url_frame, soup = read_page(url)
 
     imgs = []
@@ -137,7 +143,7 @@ def get_imgs(url):
         
         urls.add(url)
         #url = url.split('?type=')[0]
-        img = Image(url)
+        img = Image(url, referer, len(imgs))
         imgs.append(img)
 
     pairs = []

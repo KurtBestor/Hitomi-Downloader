@@ -6,6 +6,7 @@ import json
 import os
 from timee import sleep
 from io import BytesIO
+import errors
 TIMEOUT = 300
 
 
@@ -98,7 +99,7 @@ class Downloader_iwara(Downloader):
             file = files[0]
 
             if file.type == 'youtube':
-                return self.Invalid('[iwara] Youtube: {}'.format(self.url))
+                raise errors.Invalid('[iwara] Youtube: {}'.format(self.url))
             
             if file.type == 'image':
                 self.single = False

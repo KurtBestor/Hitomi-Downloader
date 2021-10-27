@@ -1,6 +1,6 @@
 import downloader
 import ree as re
-from utils import urljoin, Downloader, format_filename, Soup, LazyUrl, get_print
+from utils import urljoin, Downloader, format_filename, Soup, LazyUrl, get_print, Session
 from m3u8_tools import M3u8_stream
 from io import BytesIO
 PATTERN_ID = r'/content/([^/]+)'
@@ -23,7 +23,9 @@ class Downloader_fc2(Downloader):
         return re.find(PATTERN_ID, url) or url
 
     def read(self):
-        info = get_info(self.url, self.cw)
+        self.session = Session()
+        self.session.cookies.set('_ac', '1', domain='.video.fc2.com')
+        info = get_info(self.url, self.session, self.cw)
 
         video = info['videos'][0]
 
@@ -38,25 +40,26 @@ class Downloader_fc2(Downloader):
 
 class Video(object):
 
-    def __init__(self, url, url_thumb, referer, title, id_):
+    def __init__(self, url, url_thumb, referer, title, id_, session):
         self._url = url
         self.url = LazyUrl(referer, self.get, self)
         self.filename = format_filename(title, id_, '.mp4')
         self.url_thumb = url_thumb
+        self.session = session
 
     def get(self, referer):
-        ext = downloader.get_ext(self._url, referer=referer)
+        ext = downloader.get_ext(self._url, session=self.session, referer=referer)
         if ext == '.m3u8':
-            video = M3u8_stream(self._url, n_thread=4)
+            video = M3u8_stream(self._url, referer=referer, session=self.session, n_thread=4)
         else:
             video = self._url
         return video
 
 
-def get_info(url, cw=None):
+def get_info(url, session, cw=None):
     print_ = get_print(cw)
     info = {'videos': []}
-    html = downloader.read_html(url)
+    html = downloader.read_html(url, session=session)
     soup = Soup(html)
     info['title'] = soup.find('h2', class_='videoCnt_title').text.strip()
 
@@ -69,11 +72,12 @@ def get_info(url, cw=None):
     hdr = {
         'X-FC2-Video-Access-Token': token,
         }
-    data = downloader.read_json(url_api, url, headers=hdr)
+    data = downloader.read_json(url_api, url, session=session, headers=hdr)
 
-    url_video = urljoin(url, data['playlist'].get('nq') or data['playlist']['sample'])
+    pl = data['playlist']
+    url_video = urljoin(url, pl.get('hq') or pl.get('nq') or pl['sample']) #3784
     url_thumb = soup.find('meta', {'property':'og:image'})['content']
-    video = Video(url_video, url_thumb, url, info['title'], id_)
+    video = Video(url_video, url_thumb, url, info['title'], id_, session)
     info['videos'].append(video)
 
     return info

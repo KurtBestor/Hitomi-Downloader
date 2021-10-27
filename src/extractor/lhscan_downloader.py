@@ -7,7 +7,9 @@ import page_selector
 import clf2
 import utils
 import base64
-from image_reader import QPixmap
+import ree as re
+import errors
+##from image_reader import QPixmap
 
 
 class Image(object):
@@ -34,23 +36,31 @@ class Page(object):
         self.url = url
 
 
+def get_soup_session(url, cw=None):
+    print_ = get_print(cw)
+    session = Session()
+    res = clf2.solve(url, session=session, cw=cw)
+    print_('{} -> {}'.format(url, res['url']))
+    if res['url'].rstrip('/') == 'https://welovemanga.net':
+        raise errors.LoginRequired()
+    return Soup(res['html']), session
+
+
 @Downloader.register
 class Downloader_lhscan(Downloader):
     type = 'lhscan'
     URLS = [
         #'lhscan.net', 'loveheaven.net',
-        'lovehug.net', 'welovemanga.net', 'weloma.net',
+        'lovehug.net', 'welovemanga.net',
         ]
     MAX_CORE = 16
     display_name = 'LHScan'
     _soup = None
-    
+
     def init(self):
-        self.session = Session()
-        #clf2.solve(self.url, session=self.session, cw=self.cw)
-        soup = self.soup
-        if not soup.find('ul', class_='manga-info'):
-            self.Invalid(u'{}: {}'.format(tr_(u'목록 주소를 입력해주세요'), self.url))
+        self._soup, self.session = get_soup_session(self.url, self.cw)
+        if not self.soup.find('ul', class_='manga-info'):
+            raise errors.Invalid(u'{}: {}'.format(tr_(u'목록 주소를 입력해주세요'), self.url))
 
     @classmethod
     def fix_url(cls, url):
@@ -89,10 +99,14 @@ class Downloader_lhscan(Downloader):
 
 
 @try_n(8)
-def get_imgs_page(page, session, cw=None):
+def get_imgs_page(page, referer, session, cw=None):
     print_ = get_print(cw)
     print_(page.title)
-    html = downloader.read_html(page.url, session=session)
+    
+    html = downloader.read_html(page.url, referer, session=session)
+    if not html:
+        raise Exception('empty html')
+    html = html.replace('{}='.format(re.find(r"\$\(this\)\.attr\('(.+?)'", html, err='no cn')), 'data-src=')
     soup = Soup(html)
 
     view = soup.find('div', class_='chapter-content')
@@ -117,6 +131,8 @@ def get_imgs_page(page, session, cw=None):
         if 'LoveHug_600cfd96e98ff.jpg' in src:
             continue
         if 'image_5f0ecf23aed2e.png' in src:
+            continue
+        if '/uploads/lazy_loading.gif' in src:
             continue
         if not imgs:
             print_(src0)
@@ -150,9 +166,8 @@ def get_pages(url, session, soup=None, cw=None):
 @page_selector.register('lhscan')
 @try_n(4)
 def f(url):
-    session = Session()
-    #clf2.solve(url, session=session)
-    pages = get_pages(url, session)
+    soup, session = get_soup_session(url)
+    pages = get_pages(url, session, soup=soup)
     return pages
 
 
@@ -167,7 +182,7 @@ def get_imgs(url, title, session, soup=None, cw=None):
 
     imgs = []
     for i, page in enumerate(pages):
-        imgs += get_imgs_page(page, session, cw)
+        imgs += get_imgs_page(page, url, session, cw)
         s = u'{} {} / {}  ({} / {})'.format(tr_(u'읽는 중...'), title, page.title, i+1, len(pages))
         if cw is not None:
             if not cw.alive:

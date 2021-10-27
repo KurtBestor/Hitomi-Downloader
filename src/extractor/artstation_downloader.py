@@ -5,6 +5,7 @@ from error_printer import print_error
 from translator import tr_
 from timee import sleep
 from utils import Downloader, Soup, get_print, lazy, Session, try_n, LazyUrl, clean_title
+import clf2
 
 
 class Image(object):
@@ -34,8 +35,10 @@ class Downloader_artstation(Downloader):
             pass#raise NotImplementedError('Single post')
         else:
             self.url = self.url_main
-        
-        self.session = Session()
+
+        # 3849
+        self.session = Session('chrome')
+        #clf2.solve(self.url, session=self.session, cw=self.cw)
 
     @lazy
     def id(self):

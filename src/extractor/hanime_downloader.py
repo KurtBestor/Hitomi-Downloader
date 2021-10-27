@@ -1,5 +1,5 @@
 import downloader
-from utils import Session, Downloader, get_outdir, try_n, Soup, format_filename, clean_title
+from utils import Session, Downloader, get_outdir, try_n, Soup, format_filename, clean_title, get_print, get_resolution
 import ree as re, json
 from io import BytesIO
 import os
@@ -42,7 +42,7 @@ class Downloader_hanime(Downloader):
     display_name = 'hanime.tv'
 
     def read(self):
-        video, session = get_video(self.url)
+        video, session = get_video(self.url, cw=self.cw)
         self.video = video
         
         self.urls.append(video.url)
@@ -53,7 +53,8 @@ class Downloader_hanime(Downloader):
 
 
 @try_n(8)
-def get_video(url, session=None):
+def get_video(url, session=None, cw=None):
+    print_ = get_print(cw)
     if session is None:
         session = Session()
         session.headers['User-Agent'] = downloader.hdr['User-Agent']
@@ -94,15 +95,30 @@ def get_video(url, session=None):
         url_video = stream['url']
         if not url_video or 'deprecated.' in url_video:
             continue
+        stream['height'] = int(stream['height'])
         streams_good.append(stream)
 
     if not streams_good:
         raise Exception('No video available')
     print('len(streams_good):', len(streams_good))
-    for stream in streams_good:
-        print(stream['extension'], stream['width'], stream['filesize_mbs'], stream['url'])
+    res = get_resolution()
 
-    stream = streams_good[0]
+    def print_stream(stream):
+        print_([stream['extension'], stream['height'], stream['filesize_mbs'], stream['url']])
+
+    steams_filtered = []
+    for stream in streams_good:
+        print_stream(stream)
+        if stream['height'] <= res: #3712
+            steams_filtered.append(stream)
+
+    if steams_filtered:
+        stream = sorted(steams_filtered, key=lambda _: _['height'])[-1]
+    else:
+        stream = sorted(streams_good, key=lambda _: _['height'])[0]
+        
+    print_('Final stream:')
+    print_stream(stream)
     return Video(info, stream), session
 
 

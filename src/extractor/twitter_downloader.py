@@ -1,7 +1,7 @@
 #coding:utf8
 from __future__ import division, print_function, unicode_literals
 import downloader
-from utils import Downloader, Session, LazyUrl, get_ext, try_n, Soup, get_print, update_url_query, urljoin, try_n, get_max_range, get_outdir, clean_title, lock, check_alive
+from utils import Downloader, Session, LazyUrl, get_ext, try_n, Soup, get_print, update_url_query, urljoin, try_n, get_max_range, get_outdir, clean_title, lock, check_alive, check_alive_iter, SkipCounter
 from timee import time, sleep
 import hashlib
 import json
@@ -41,10 +41,18 @@ def get_session():
     return session
 
 
+def suitable(url):
+    if 'twitter.com' not in url.lower():
+        return False
+    if '/i/broadcasts/' in  url: # Etc
+        return False
+    return True
+
+
 @Downloader.register
 class Downloader_twitter(Downloader):
     type = 'twitter'
-    URLS = ['twitter.com']
+    URLS = [suitable]
     MAX_CORE = 12
 
     def init(self):
@@ -53,7 +61,7 @@ class Downloader_twitter(Downloader):
         self.artist, self.username = get_artist_username(self.url, self.session, self.cw)
         if self.username == 'home':
             raise Exception('No username: home')
-        
+
     @classmethod
     def fix_url(cls, url):
         username = re.find(r'twitter.com/([^/]+)/media', url)
@@ -71,16 +79,16 @@ class Downloader_twitter(Downloader):
 
     def read(self):
         ui_setting = self.ui_setting
-        
+
         title = '{} (@{})'.format(clean_title(self.artist), self.username)
-        
+
         types = {'img', 'video'}
         if ui_setting.exFile.isChecked():
             if ui_setting.exFileImg.isChecked():
                 types.remove('img')
             if ui_setting.exFileVideo.isChecked():
                 types.remove('video')
-                
+
         if '/status/' in self.url:
             self.print_('single tweet')
             imgs = get_imgs_single(self.url, self.session, types, cw=self.cw)
@@ -187,16 +195,16 @@ class TwitterAPI(object):
 
 ##    @sleep_and_retry
 ##    @limits(1, 36)
-    def search(self, query):
+    def search(self, query, f='live'):
         endpoint = "2/search/adaptive.json"
         params = self.params.copy()
         params["q"] = query
-        params["tweet_search_mode"] = "live"
+        params["tweet_search_mode"] = f
         params["query_source"] = "typed_query"
         params["pc"] = "1"
         params["spelling_corrections"] = "1"
         return self._pagination(endpoint, params, "sq-I-t-", "sq-cursor-bottom")
-    
+
     def user_by_screen_name(self, screen_name):
         url_api = "graphql/-xfUfZsnR_zqjFd-IfrN5A/UserByScreenName"
         params = {
@@ -227,7 +235,7 @@ class TwitterAPI(object):
             cursor = None
             if params.get("cursor"):
                 self.print_('cursor: {}'.format(params.get("cursor")))
-            
+
             # 2303
             n_try = RETRY_PAGINATION
             for try_ in range(n_try):
@@ -246,7 +254,7 @@ class TwitterAPI(object):
                         sleep(30, self.cw)
             else:
                 break#raise e_ #3392
-            
+
             users = data["globalObjects"]["users"]
             for instr in data["timeline"]["instructions"]:
                 for entry in instr.get("addEntries", {}).get("entries", []):
@@ -270,7 +278,7 @@ class TwitterAPI(object):
             if params.get("cursor") is None: # nothing
                 self.print_('no cursor')
                 break
-    
+
 
 def get_imgs_single(url, session, types, format='[%y-%m-%d] id_ppage', cw=None):
     print_ = get_print(cw)
@@ -281,6 +289,7 @@ def get_imgs_single(url, session, types, format='[%y-%m-%d] id_ppage', cw=None):
     data = TwitterAPI(session, cw).tweet(id, url)
 
     tweets = data["globalObjects"]["tweets"]
+    id = tweets[id].get('retweeted_status_id_str') or id
     tweet = tweets[id]
 
     time = get_time(tweet)
@@ -296,7 +305,7 @@ def get_imgs_single(url, session, types, format='[%y-%m-%d] id_ppage', cw=None):
 
 def get_imgs(username, session, title, types, n=0, format='[%y-%m-%d] id_ppage', cw=None):
     print_ = get_print(cw)
-    
+
     # Range
     n = max(n, get_max_range(cw))
 
@@ -324,7 +333,7 @@ def get_imgs(username, session, title, types, n=0, format='[%y-%m-%d] id_ppage',
                 names[id_] = [name]
     ids_sure = sorted(ids)[:-100]
     max_id = max(ids_sure) if ids_sure else 0 #3201
-    
+
     # 2303
     imgs_old = []
     for id_ in sorted(ids, reverse=True):
@@ -333,12 +342,13 @@ def get_imgs(username, session, title, types, n=0, format='[%y-%m-%d] id_ppage',
             img.url = LazyUrl_twitter(None, lambda _: file, img)
             img.filename = os.path.basename(file)
             imgs_old.append(img)
-    
+
     imgs_new = []
     enough = False
     c_old = 0
-    for tweet in TwitterAPI(session, cw).timeline_media(username):
-        check_alive(cw)
+    counter = SkipCounter(1)
+    msg = None
+    for tweet in check_alive_iter(cw, TwitterAPI(session, cw).timeline_media(username)):
         id_ = int(tweet['id_str'])
         if id_ < max_id:
             print_('enough')
@@ -356,7 +366,13 @@ def get_imgs(username, session, title, types, n=0, format='[%y-%m-%d] id_ppage',
         if len(imgs_new) + c_old >= n: #3201
             break
 
-        msg = '{}  {} - {}'.format(tr_('읽는 중...'), title, len(imgs_new))
+        if counter.next():
+            msg = '{}  {} - {}'.format(tr_('읽는 중...'), title, len(imgs_new))
+            if cw:
+                cw.setTitle(msg)
+            else:
+                print(msg)
+    if msg:
         if cw:
             cw.setTitle(msg)
         else:
@@ -379,22 +395,21 @@ def get_imgs_more(username, session, title, types, n=None, format='[%y-%m-%d] id
     print_('imgs: {}, types: {}'.format(len(imgs), ', '.join(types)))
 
     artist, username = get_artist_username(username, session, cw)#
-    
+
     # Range
     n = max(n or 0, get_max_range(cw))
 
     ids_set = set(img.id for img in imgs)
 
-    count_no_imgs = 0
+    count_no_tweets = 0
 
-    while len(imgs) < n:
-        check_alive(cw)
-        if options.get('experimental') or count_no_imgs: #2687, #3392
+    while check_alive(cw) or len(imgs) < n:
+        if options.get('experimental') or count_no_tweets: #2687, #3392
             filter_ = ''
         else:
             filter_ = ' filter:media'
-        cache_guest_token = bool(count_no_imgs)
-    
+        cache_guest_token = bool(count_no_tweets)
+
         if ids_set:
             max_id = min(ids_set) - 1
             q = 'from:{} max_id:{} exclude:retweets{} -filter:periscope'.format(username, max_id, filter_)
@@ -411,21 +426,16 @@ def get_imgs_more(username, session, title, types, n=None, format='[%y-%m-%d] id
             ids_set.add(id)
             tweets.append(tweet)
 
-        imgs_ = []
-        for tweet in tweets:
-            imgs_ += get_imgs_from_tweet(tweet, session, types, format, cw)
-            
-        if imgs_:
-            if count_no_imgs:
-                print_('reset count_no_imgs: {}'.format(len(imgs_)))
-            imgs += imgs_
-            count_no_imgs = 0
+        if tweets:
+            for tweet in tweets:
+                imgs += get_imgs_from_tweet(tweet, session, types, format, cw)
+            count_no_tweets = 0
         else:
-            count_no_imgs += 1
+            count_no_tweets += 1
             change_ua(session)
-            if count_no_imgs >= RETRY_MORE:
+            if count_no_tweets >= RETRY_MORE:
                 break
-            print_('retry... {}'.format(count_no_imgs))
+            print_('retry... {}'.format(count_no_tweets))
             continue
 
         msg = '{}  {} (@{}) - {}'.format(tr_('읽는 중...'), artist, username, len(imgs))
@@ -451,9 +461,11 @@ def get_time(tweet):
 def get_imgs_from_tweet(tweet, session, types, format, cw=None):
     print_ = get_print(cw)
     id = tweet['id_str']
-    
+
     if 'extended_entities' not in tweet:
         tweet['extended_entities'] = {'media': []}
+
+    media = tweet['extended_entities']['media']
 
     for url_ in tweet['entities'].get('urls', []):
         url_ = url_['expanded_url']
@@ -461,12 +473,10 @@ def get_imgs_from_tweet(tweet, session, types, format, cw=None):
             print_('twitpic: {}'.format(url_))
             try:
                 url_ = get_twitpic(url_, session)
-                tweet['extended_entities']['media'].append({'type': 'photo', 'media_url': url_, 'expanded_url': 'https://twitter.com'})
+                media.append({'type': 'photo', 'media_url': url_, 'expanded_url': 'https://twitter.com'})
             except Exception as e:
                 print_('Invalid twitpic')
                 print_(print_error(e)[-1])
-            
-    media = tweet['extended_entities']['media']
 
     time = get_time(tweet)
 
@@ -492,7 +502,7 @@ def get_imgs_from_tweet(tweet, session, types, format, cw=None):
         imgs.append(img)
 
     return imgs
-        
+
 
 @try_n(4)
 def get_twitpic(url, session):
@@ -540,11 +550,11 @@ class Url_alter(object):
     def __call__(self):
         self.count += 1
         return self.urls[self.count%len(self.urls)]
-        
-    
+
+
 class Image(object):
     _url_cache = None
-    
+
     def __init__(self, url, referer, id, time, p, format, cw=None, isVideo=False, try_n=4, n_thread=1):
         self._url = url
         self.referer = referer
@@ -582,7 +592,7 @@ class Image(object):
             try:
                 d = ytdl.YoutubeDL(cw=self.cw)
                 info = d.extract_info(self._url)
-                
+
                 url = info['url']
                 ext = get_ext(url)
                 self.ext = ext
@@ -620,4 +630,3 @@ def get_artist_username(url, session, cw=None):
     artist = data['legacy']['name']
     username = data['legacy']['screen_name']
     return artist, username
-

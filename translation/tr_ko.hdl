@@ -2,6 +2,7 @@
   "lang": "ko",
   "items": {
     "#Cancel#": "취소",
+    "#EB#": "{} EB",
     "#GB#": "{} GB",
     "#GIFs#": "GIF / WebP",
     "#KB#": "{} KB",

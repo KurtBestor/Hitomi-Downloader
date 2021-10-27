@@ -11,10 +11,11 @@ from io import BytesIO
 @Downloader.register
 class Downloader_xhamster(Downloader):
     type = 'xhamster'
+    __name = r'(xhamster|xhwebsite)[0-9]*' #3881
     URLS = [
-     'regex:xhamster[0-9]*\\.[a-z0-9]+/videos/',
-     'regex:xhamster[0-9]*\\.[a-z0-9]+/users/',
-     'regex:xhamster[0-9]*\\.[a-z0-9]+/photos/gallery/',
+     r'regex:{}\.[a-z0-9]+/videos/'.format(__name),
+     r'regex:{}\.[a-z0-9]+/users/'.format(__name),
+     r'regex:{}\.[a-z0-9]+/photos/gallery/'.format(__name),
      ]
     single = True
     display_name = 'xHamster'
@@ -22,14 +23,12 @@ class Downloader_xhamster(Downloader):
     def init(self):
         if re.search(r'xhamsterlive[0-9]*\.', self.url):
             raise Exception('xHamsterLive')
-        if not re.search(r'xhamster[0-9]*\.', self.url):
+        if not re.search(r'{}\.'.format(self.__name), self.url):
             self.url = 'https://xhamster.com/videos/{}'.format(self.url)
 
     @classmethod
     def fix_url(cls, url):
-        m = re.search('xhamster(?P<number>[0-9]*)\\.(?P<top>[a-z0-9]+)/', url)
-        number, top = m.groups()
-        return url.replace((u'xhamster{}.{}/').format(number, top), u'xhamster.com/')
+        return re.sub(cls.__name, r'\1', url)
 
     def read(self):
         cw = self.cw
@@ -145,7 +144,7 @@ def read_channel(url, cw=None):
     info = {}
     soup = downloader.read_soup(url)
     title = soup.find('div', class_='user-name').text.strip()
-    info['title'] = u'[Channel] {}'.format(title)
+    info['title'] = '[Channel] {}'.format(title)
     
     urls = []
     urls_set = set()

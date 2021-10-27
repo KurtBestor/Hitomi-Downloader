@@ -207,17 +207,16 @@ class Image():
 
     def pp(self, filename):
         if self.ugoira and self.ugoira['ext'] and not self.local:
-            with self.cw.convert(self):
-                if utils.ui_setting:
-                    dither = utils.ui_setting.checkDither.isChecked()
-                    quality = utils.ui_setting.ugoira_quality.value()
-                else:
-                    dither = True
-                    quality = 90
-                filename_new = '{}{}'.format(os.path.splitext(filename)[0], self.ugoira['ext'])
-                ffmpeg.gif(filename, filename_new, self.ugoira['delay'], dither=dither, quality=quality, cw=self.cw)
-                utils.removeDirList.append((filename, False))
-                return filename_new
+            if utils.ui_setting:
+                dither = utils.ui_setting.checkDither.isChecked()
+                quality = utils.ui_setting.ugoira_quality.value()
+            else:
+                dither = True
+                quality = 90
+            filename_new = '{}{}'.format(os.path.splitext(filename)[0], self.ugoira['ext'])
+            ffmpeg.gif(filename, filename_new, self.ugoira['delay'], dither=dither, quality=quality, cw=self.cw)
+            utils.removeDirList.append((filename, False))
+            return filename_new
 
 
 def pretty_tag(tag):

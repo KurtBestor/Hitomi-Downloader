@@ -24,16 +24,18 @@ class Downloader_file(Downloader):
                 name = qs[key][(-1)]
                 break
         else:
-            name = os.path.basename(self.url)
+            name = self.url
             for esc in ['?', '#']:
                 name = name.split(esc)[0]
+            name = os.path.basename(name.strip('/'))
 
-        ext = get_ext(name)
+        try:
+            ext = downloader.get_ext(self.url)
+        except:
+            ext = ''
         if not ext:
-            try:
-                ext = downloader.get_ext(self.url)
-            except:
-                ext = ''
+            ext = get_ext(name)
+            
         name = os.path.splitext(name)[0]
 
         self.urls.append(self.url)

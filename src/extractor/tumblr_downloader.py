@@ -38,7 +38,7 @@ class Downloader_tumblr(Downloader):
 
     def init(self):
         if u'tumblr.com/post/' in self.url:
-            return self.Invalid(tr_(u'개별 다운로드는 지원하지 않습니다: {}').format(self.url))        
+            raise errors.Invalid(tr_(u'개별 다운로드는 지원하지 않습니다: {}').format(self.url))        
         self.session = Session()
 
     @classmethod

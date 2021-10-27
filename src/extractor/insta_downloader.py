@@ -168,11 +168,14 @@ def get_sd(url, session=None, html=None, cw=None, wait=True):
     # Challenge
     challenge = j['entry_data'].get('Challenge')
     if challenge:
-        for cont in challenge[0]['extraData']['content']:
-            title = cont.get('title')
-            if title:
-                break
-        else:
+        try:
+            for cont in challenge[0]['extraData']['content']:
+                title = cont.get('title')
+                if title:
+                    break
+            else:
+                raise Exception('no title')
+        except:
             title = 'Err'
         raise errors.LoginRequired(title)
 

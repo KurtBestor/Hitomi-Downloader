@@ -81,11 +81,6 @@ class Audio(object):
         return self._url
 
     def pp(self, filename):
-        cw = self.cw
-        with cw.convert(self):
-            return self._pp(filename)
-
-    def _pp(self, filename):
         if self.thumb and self.album_art:
             self.thumb.seek(0)#
             ffmpeg.add_cover(filename, self.thumb, {'artist':self.username, 'title':self.info['title']}, cw=self.cw)
