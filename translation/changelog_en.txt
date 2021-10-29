@@ -1,144 +1,83 @@
-3.7a    【Oct 28, 2021】
-
-[버그 해결 / 사이트 변경에 의한 수정]
-
-- 폴더명 형식 "/" 인식 못 하는 문제 해결
-
-
+3.7a 2021-10-28
+[Bug Resolution / Fix due to site change]
+- Folder: fixed "\" in folder name not being recognized 
 
 --------------------------------------------------------------------------------------------------------------------------------------------
-3.7    【Oct 28, 2021】
+3.7 2021-10-28
 
-[버그 해결 / 사이트 변경에 의한 수정]
+[Bug Resolution / Fix due to site change]
 
-- Torrent 일부 마그넷 링크 읽지 못하는 문제 해결
+- Torrent: solving the problem of not being able to read some magnet links
+- Pixiv Comic: solving download errors (#3700, #3815, #3845)
+- Torent: solving various problems
+- Long adresses: solving download errors
+- Solving a problem where anime download cannot be checked in the search engine (#3714)
+- Anime: solving already donwloaded anime marks not working (#3714)
+- Bilibili: fixed some addresses not being downloaded (#3777)
+- Pixiv: fixed download error caused by "\" in folder name
+- LHScan: update response (#3809, #3815)
+- ArtStation: update response (#3849)
+- Twitter: solving stuttering when reading Twitter
+- YouTube: patched download speed issue (#3891)
+- nhentai: response to website update (#3930)
+- Other small things
 
-- Pixiv Comic 다운로드 안 되는 문제 해결 (#3700, #3815, #3845)
+[Changed/Added Features]
+- Twitter Broadcast support
+- KAKAO WEBTOON support (#3692)
+- hentai-cosplays.com support (#3661)
+- Nozomi.la support (#3841)
+- xhwebsite.com domain support (#3881)
+- Daum Webtoon support (#3692)
+- Torrent: file association implemented
+	Option - Settings - Torrent Settings - Torrent file association
+- Torrent: piece option
+	Option - Settings - Torrent Settings - Show piece
 
-- 여러 Torrent 관련 문제 해결
-
-- 너무 긴 주소 다운로드 안 되는 문제 해결
-
-- 검색기에서 anime 다운로드 체크 안 되는 문제 해결 (#3714)
-
-- Bilibili 일부 주소 다운로드 안 되는 문제 해결 (#3777)
-
-- Pixiv 폴더명에 "\" 들어가면 다운로드 안 되는 문제 해결 (#3797)
-
-- LHScan 업데이트 대응 (#3809, #3815)
-
-- ArtStation 업데이트 대응 (#3849)
-
-- Twitter 읽을 때 버벅이는 문제 해결
-
-- YouTube 다운로드 속도 문제 패치 (#3891)
-
-- nhentai 업데이트 대응 (#3930)
-
-- 기타 자잘한 것들
-
-
-[변경/추가된 기능]
-
-- Twitter Broadcast 지원
-
-- KAKAO WEBTOON 지원 (#3692)
-
-- #3661
-
-- Nozomi.la 지원 (#3841)
-
-- xhwebsite.com 도메인 지원 (#3881)
-
-- Daum Webtoon 지원 종료 (#3692)
-
-- Torrent 파일 연결 (#3696)
-    옵션 - 설정 - Torrent 설정 - 토렌트 파일 연결
-
-- Torrent 조각 표시
-    옵션 - 설정 - Torrent 설정 - 조각 표시
-
-- Custom URI 지원
-    예: hitomi://123
-
-- 동영상 썸네일 추출 최적화
-
-- Hanime.tv 해상도 YouTube 설정을 따르도록 수정 (#3712)
-
-- Twitch 해상도 YouTube 설정을 따르도록 수정 (#3723)
-
-- Torrent 동시 다운로드 3개 제한 해제
-
-- 작업 목록 필터링 "script:" 추가
-    예:
-        script:"item.type != 'twitter'"
+- Custom URI support
+	Example: hitomi://123
+- Video thumbnail extraction: optimised
+- Hanime.tv: resolution follow YT settings (#3712)
+- Twitch: resolution follow YT settings (#3723)
+- Torrent: no more limitation to concurrent download (used to be 3)
+- Task list filter: adding script
+	script:"item.type != 'twitter'"
         script:"item.filesize > 1024*1024*100"
-
-- 가능하면 최종 파일 크기 표시
-
-- 단일 파일 또는 Torrent 작업에서 가능하면 ETA 표시
-
-- 폴더명 형식 type==A?B:C; series==A?B:C; 등 지원
-
-- 썸네일 크기 조절 시 현재 선택된 작업으로 스크롤
-
-- UTF-8 with BOM 지원 (#3739)
-
-- 번역 업데이트 (#3739)
-
-- #3763
-
-- V LIVE 자막 다운로드 (#3778)
-
-- 플레이리스트 파일에 번호 매기기
-    옵션 - 설정 - 일반 설정 - 플레이리스트 파일에 번호 매기기
-
-- 네이버 블로그 중복 파일명 처리 (#3788, #3817)
-
-- 초기 구동 속도 & 저장 속도 최적화
-
-- 다크 모드 전환 속도 최적화
-
-- 테마 설정
-    옵션 - 설정 - 일반 설정 - 테마
-
-- 작업 목록 필터링에서 제목 검색 시 URL도 포함해서 검색
-
-- 단일 파일 작업 동영상 길이 표시
-
-- Torrent "최대 다운로드 속도" 제한 지원
-
-- Torrent 프록시 설정 지원
-
-- #3790
-
-- FC2 고화질 다운로드 (#3784)
-
-- 저사양 모드 (#3878)
-    옵션 - 설정 - 고급 설정 - 저사양 모드
-
-- Twitter 더 넓은 범위 다운로드 (#3812)
-
-- Hiyobi.io 지원 (#3861, #3862)
-
-- LHScan 로그인 쿠키 없으면 경고 (#3324, #3815, #3877)
-
-- 중복 이미지 찾기 유사도 범위 지정해서 자동 선택 (#3912)
-
-- 중복 이미지 찾기 최적화
-
-- Ctrl + 방향키 이동 그룹 지원 (#1336, #3867)
-
-- 미리보기 F5 눌러서 새로고침
-
-- 다운로드 목록에서 마우스 오른쪽 버튼으로 스와이프
-    왼쪽으로 스와이프해서 파일 삭제
-
-- 직접 다운로드 기능 (#3935)
-
-- 기타 자잘한 것들
-
-
+- Show download file's final size if possible
+- ETA: addind ETA for files or torrent download if possible
+- Folder name format type: type==A?B:C; series==A?B:C
+- When ajusting thumbnail size, scroll to current selected task
+- UTF-8 with BOM support (#3739)
+- Translation update (#3739)
+- Adding leading zero (#3763)
+- V LIVE support for caption (#3778)
+- Numbering playlist files 
+	 Option - Settings - General Settings - Number the playlist file
+- Naver blog: duplicate file names corrected (#3788, #3817)
+- Optimized initial driving speed and storage speed
+- Optimizing the speed of dark mode change
+- Theme setting
+	  Option - Settings - General Settings - Theme
+- Task list filtering : search include URL when searching for titles in task list filtering 
+- Display single file work video length
+- Torrent: maximum download speed support
+- Torrent: support for proxy settings
+- DPI bypass: turning off bug corrected (#3790)
+- FC2 support for high definition (#3784)
+- Low specification mode (#3878)
+	Option - Settings - Advanced Settings - Low specification mode
+- Twitter support for wider dates (previously some years weren't being donwloaded) 
+- Hiyobi.io support (#3861, #3862)
+- LHScan: if there isn't cookies login a warning now appear (#3324, #3815, #3877)
+- Fiding duplicate images: Specify the similarity range and automatically select it (#3912)
+- Optimized to find duplicate images
+- Ctrl + Arrow Key movement support (#1336, #3867)
+- Preview: F5 to refresh
+- Swipe methods:
+	Swipe right - to download
+	Swipe left - to delete file
+- Direct download without site support for some file, .mp3/4 and .jpeg can now be downloaded whatever the site (#3935)
+- Other small things
 
 --------------------------------------------------------------------------------------------------------------------------------------------
 3.6 2021-08-12
