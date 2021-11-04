@@ -44,9 +44,8 @@
 | **ComicWalker** | <https://comic-walker.com> |
 | **Coub** | <https://coub.com> |
 | **Danbooru** | <https://danbooru.donmai.us> |
-| **Daum Webtoon** | <http://webtoon.daum.net> |
+| **Kakao Webtoon** | <http://webtoon.kakao.com> |
 | **DeviantArt** | <https://deviantart.com> |
-| **Epio** | <https://epio.app> |
 | **E(x)Hentai Galleries** | <https://e-hentai.org><br><https://exhentai.org> |
 | **Facebook** | <https://facebook.com> |
 | **FC2 Video** | <https://video.fc2.com> |
