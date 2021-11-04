@@ -1,7 +1,7 @@
 #coding:utf8
 from __future__ import print_function
 import downloader
-from utils import Soup, cut_pair, LazyUrl, Downloader, get_print, get_max_range, try_n, clean_title
+from utils import Soup, cut_pair, LazyUrl, Downloader, get_print, get_max_range, try_n, clean_title, check_alive
 import json
 import ree as re
 import os
@@ -38,6 +38,13 @@ class Downloader_bcy(Downloader):
         self.artist = self.info['artist']
 
 
+def get_ssr_data(html):
+    s = html.split('window.__ssr_data = JSON.parse("')[1].replace('\\"', '"')
+    s = cut_pair(s).replace('"', '\\"')
+    data = json.loads(json.loads('"{}"'.format(s)))
+    return data
+
+
 @try_n(2)
 def get_imgs(url, html=None, cw=None):
     if '/detail/' not in url:
@@ -46,10 +53,7 @@ def get_imgs(url, html=None, cw=None):
     if html is None:
         html = downloader.read_html(url)
 
-    s = cut_pair(html.split('window.__ssr_data = JSON.parse("')[1])
-    s = json.loads(u'"{}"'.format(s))
-
-    data = json.loads(s)
+    data = get_ssr_data(html)
 
     multi = data['detail']['post_data']['multi']
 
@@ -103,9 +107,8 @@ def get_info(url, html):
     uname = soup.find('div', class_='user-name') or soup.find('p', class_='uname') or soup.find('div', class_='user-info-name')
 
     info['artist'] = uname.text.strip()
-    
-    s = cut_pair(html.split('window.__ssr_data = JSON.parse("')[1])
-    j = json.loads(json.loads(u'"{}"'.format(s)))
+
+    j = get_ssr_data(html)
     
     if '/detail/' in url:
         info['uid'] = j['detail']['detail_user']['uid']
@@ -137,11 +140,14 @@ def get_imgs_channel(url, html=None, cw=None):
         if not items:
             print('no items')
             break
+        c = 0
         for item in items:
+            check_alive(cw)
             id = item['item_detail']['item_id']
             if id in ids:
                 print('duplicate')
                 continue
+            c += 1
             ids.add(id)
             url_single = u'https://bcy.net/item/detail/{}'.format(id)
             imgs_single = get_imgs(url_single, cw=cw)
@@ -151,14 +157,15 @@ def get_imgs_channel(url, html=None, cw=None):
                 imgs.append(img)
             s = u'{} {} - {}'.format(tr_(u'읽는 중...'), info['artist'], min(len(imgs), max_pid))
             if cw:
-                if not cw.alive:
-                    return
                 cw.setTitle(s)
             else:
                 print(s)
 
             if len(imgs) >= max_pid:
                 break
+        if not c:
+            print('not c')
+            break
         if len(imgs) >= max_pid:
             print('over max_pid:', max_pid)
             break

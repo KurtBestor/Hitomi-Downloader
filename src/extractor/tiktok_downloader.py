@@ -1,19 +1,15 @@
 from __future__ import division, print_function, unicode_literals
 import downloader
 import ree as re
-from utils import urljoin, Soup, LazyUrl, Downloader, try_n, compatstr, get_print, clean_title, Session, get_max_range
-import os
-import json
-import ast
+from utils import Soup, LazyUrl, Downloader, try_n, compatstr, get_print, clean_title, Session, get_max_range, format_filename
 from io import BytesIO
-import random
 import clf2
 from translator import tr_
 from timee import sleep
 from error_printer import print_error
-import devtools
-HDR = {'User-Agent': downloader.hdr['User-Agent']}
+import ytdl
 PATTERN_VID = '/(v|video)/(?P<id>[0-9]+)'
+SHOW = True
 
 
 def is_captcha(soup):
@@ -79,23 +75,16 @@ class Video(object):
         id = m.group('id')
         ext = '.mp4'
         self.title = id#
-        self.filename = '{}{}'.format(clean_title(self.title, n=-len(ext)), ext)
+        self.filename = format_filename(self.title, id, ext)
 
-        html = downloader.read_html(url, session=self.session)
-        soup = Soup(html)
-        data = soup.find(id='__NEXT_DATA__')
-        props = data.contents[0]
-        data_encode = json.dumps(props)
-        ast_le = ast.literal_eval(data_encode)
-        data = json.loads(ast_le)
+        ydl = ytdl.YoutubeDL()
+        info = ydl.extract_info(url)
 
-        #info = data['props']['pageProps']['videoData']['itemInfos']
-        info = data['props']['pageProps']['itemInfo']['itemStruct']
-        self._url = info['video']['downloadAddr']
-
-        self.url_thumb = info['video']['cover']
+        self.url_thumb = info['thumbnail']
         self.thumb = BytesIO()
         downloader.download(self.url_thumb, referer=url, buffer=self.thumb)
+
+        self._url = info['url']
 
         return self._url
 
@@ -117,21 +106,30 @@ def read_channel(url, session, cw=None):
     
     def f(html, browser=None):
         soup = Soup(html)
-        if is_captcha(soup):
-            print('captcha')
-            browser.show()
-            sd['shown'] = True
-        elif sd['shown']:
-            browser.hide()
-            sd['shown'] = False
+        if not SHOW:
+            if is_captcha(soup):
+                print('captcha')
+                browser.show()
+                sd['shown'] = True
+            elif sd['shown']:
+                browser.hide()
+                sd['shown'] = False
         try:
-            info['uid'] = soup.find('h2', class_='share-title').text.strip()
-            info['nickname'] = soup.find('h1', class_='share-sub-title').text.strip()
+            st = soup.find('h2', class_='share-title')
+            if st is None:
+                st = soup.find('h2', class_=lambda c: c and 'ShareTitle' in c)
+            info['uid'] = st.text.strip()
+            st = soup.find('h1', class_='share-sub-title')
+            if st is None:
+                st = soup.find('h1', class_=lambda c: c and 'ShareSubTitle' in c)
+            info['nickname'] = st.text.strip()
         except Exception as e:
             print_(print_error(e)[0])
+        print_(info)
         c = 0
         ids_now = set()
-        for div in soup.findAll('div', class_='video-feed-item'):
+        items = soup.findAll('div', class_='video-feed-item') + soup.findAll('div', class_=lambda c: c and 'DivItemContainer' in c)
+        for div in items:
             a = div.find('a')
             if a is None:
                 continue
@@ -170,81 +168,10 @@ def read_channel(url, session, cw=None):
         else:
             print(msg)
         return sd['count_empty'] > 4
-    res = clf2.solve(url, session, cw, f=f, timeout=1800, show=True, delay=0)
+    res = clf2.solve(url, session, cw, f=f, timeout=1800, show=SHOW, delay=0)
 
     if not info['items']:
         raise Exception('no items')
 
     return info
     
-
-
-@try_n(2)
-def read_channel_legacy(url, session, cw=None):
-    print_ = get_print(cw)
-    html = downloader.read_html(url, session=session, headers=HDR)
-    uid = re.find('//user/profile/([0-9]+)', html, err='no uid')
-    secUid = re.find('"secUid" *: *"([^"]+?)"', html, err='no secUid')
-    verifyFp = ''.join(random.choice('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') for i in range(16))
-    maxCursor = 0
-
-    info = {}
-    info['items'] = []
-    ids = set()
-
-    for i in range(100):
-        url_api = 'https://t.tiktok.com/api/item_list/?count=30&id={uid}&type=1&secUid={secUid}&maxCursor={maxCursor}&minCursor=0&sourceType=8&appId=1180&region=US&language=en&verifyFp={verifyFp}'.format(uid=uid, secUid=secUid, verifyFp=verifyFp, maxCursor=maxCursor)
-        
-        js = 'window.byted_acrawler.sign({url:"{}"});'.replace('{}', url_api)
-        print(js)
-        for try_ in range(4):
-            try:
-                sign = devtools.eval_js(url, js, session)['output']
-                break
-            except Exception as e:
-                print(e)
-                e_ = e
-        else:
-            raise e_
-        url_api += '&_signature=' + sign
-        print_(url_api)
-
-        data_raw = downloader.read_html(url_api, url, session=session, headers=HDR)
-        data = json.loads(data_raw)
-        
-        items = []
-        for item in data.get('items', []):
-            id_video = item['id']
-            if id_video in ids:
-                print('duplicate:', id_video)
-                continue
-            ids.add(id_video)
-            items.append(item)
-
-        if not items:
-            print('no items')
-            break
-
-        info['items'] += items
-        
-        if i == 0:
-            info['uid'] = items[0]['author']['uniqueId']
-            info['nickname'] = items[0]['author']['nickname']
-
-        msg = '{}  {} (tiktok_{}) - {}'.format(tr_('읽는 중...'), info['nickname'], info['uid'], len(info['items']))
-        if cw:
-            if not cw.alive:
-                break
-            
-            cw.setTitle(msg)
-        else:
-            print(msg)
-
-        if not data['hasMore']:
-            break
-        maxCursor = data['maxCursor']
-
-    if not info['items']:
-        raise Exception('no items')
-
-    return info

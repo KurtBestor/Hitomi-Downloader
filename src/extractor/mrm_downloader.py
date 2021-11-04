@@ -1,6 +1,6 @@
 #coding:utf8
 import downloader
-from utils import Soup, urljoin, LazyUrl, Downloader, query_url, try_n, Session, get_print, clean_title
+from utils import Soup, urljoin, LazyUrl, Downloader, query_url, try_n, Session, get_print, clean_title, get_ext
 import os
 from translator import tr_
 from timee import sleep
@@ -10,16 +10,17 @@ import clf2#
 
 
 class Image(object):
-    def __init__(self, url, p, page):
-        ext = os.path.splitext(url)[1]
-        if ext.lower()[1:] not in ['jpg', 'jpeg', 'bmp', 'png', 'gif', 'webm', 'webp']:
-            ext = '.jpg'
-        self.filename = u'{:04}{}'.format(p, ext)
+    def __init__(self, url, p, page, cw):
+        self.cw = cw
+        ext = get_ext(url)
+        self.filename = '{:04}{}'.format(p, ext)
         if page.title is not None:
-            self.filename = u'{}/{}'.format(page.title, self.filename)
-        def f(_):
-            return url
-        self.url = LazyUrl(page.url, f, self)
+            self.filename = '{}/{}'.format(page.title, self.filename)
+        self._url = url
+        self.url = LazyUrl(page.url, self.get, self)
+
+    def get(self, _):
+        return self._url#'tmp://' + clf2.download(self._url, cw=self.cw)
 
 
 class Page(object):
@@ -36,7 +37,7 @@ class Downloader_mrm(Downloader):
     type = 'mrm'
     URLS = ['myreadingmanga.info']
     _soup = None
-    MAX_CORE = 16
+    MAX_CORE = 4
     display_name = 'MyReadingManga'
     
     def init(self):
@@ -67,7 +68,7 @@ class Downloader_mrm(Downloader):
         return title
 
     def read(self):
-        self.title = u'읽는 중... {}'.format(self.name)
+        self.title = '읽는 중... {}'.format(self.name)
 
         imgs = get_imgs(self.url, self.soup, self.session, self.cw)
 
@@ -95,12 +96,12 @@ def get_imgs(url, soup=None, session=None, cw=None):
 
     if pagination is None:
         page = Page(None, url, soup)
-        imgs = get_imgs_page(page, session=session)
+        imgs = get_imgs_page(page, session=session, cw=cw)
     else:
         pages = get_pages(url, soup, session=session)
         imgs = []
         for i, page in enumerate(pages):
-            s = u'{} {} / {}  ({} / {})'.format(tr_(u'읽는 중...'), title, page.title, i+1, len(pages))
+            s = '{} {} / {}  ({} / {})'.format(tr_('읽는 중...'), title, page.title, i+1, len(pages))
             
             if cw:
                 if not cw.alive:
@@ -109,7 +110,7 @@ def get_imgs(url, soup=None, session=None, cw=None):
             else:
                 print(s)
 
-            imgs += get_imgs_page(page, session=session)
+            imgs += get_imgs_page(page, session=session, cw=cw)
 
     if not imgs:
         raise Exception('no imgs')
@@ -149,7 +150,7 @@ def get_pages(url, soup=None, session=None):
 
 
 @try_n(4)
-def get_imgs_page(page, session=None):
+def get_imgs_page(page, session=None, cw=None):
     url = page.url
     soup = page.soup
     if soup is None:
@@ -165,7 +166,7 @@ def get_imgs_page(page, session=None):
         if img is None:
             continue
         img = urljoin(url, img)
-        img = Image(img, len(imgs), page)
+        img = Image(img, len(imgs), page, cw)
         imgs.append(img)
     print(page.title, len(imgs), page.url)
 

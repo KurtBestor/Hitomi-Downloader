@@ -3,7 +3,6 @@ from __future__ import division, print_function, unicode_literals
 import downloader
 from utils import Downloader, Session, LazyUrl, get_ext, try_n, Soup, get_print, update_url_query, urljoin, try_n, get_max_range, get_outdir, clean_title, lock, check_alive, check_alive_iter, SkipCounter
 from timee import time, sleep
-import hashlib
 import json
 import ree as re
 from datetime import datetime, timedelta
@@ -12,14 +11,7 @@ from error_printer import print_error
 import os
 import ytdl
 import ffmpeg
-import random
-from m3u8_tools import M3u8_stream
-import urllib
 from ratelimit import limits, sleep_and_retry
-try:
-    from urllib import quote # python2
-except:
-    from urllib.parse import quote # python3
 import options
 AUTH = "Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA"
 UA = "Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko"
@@ -593,12 +585,21 @@ class Image(object):
                 d = ytdl.YoutubeDL(cw=self.cw)
                 info = d.extract_info(self._url)
 
-                url = info['url']
+                fs = info['formats']
+                for f in fs:
+                    print_('{} {} - {}'.format(f['height'], f['protocol'], f['url']))
+                def key(f):
+                    h = f['height']
+                    if not f['protocol'].startswith('http'):
+                        h -= .1
+                    return h
+                f = sorted(fs, key=key)[-1]
+                url = f['url']
                 ext = get_ext(url)
                 self.ext = ext
                 print_('get_video: {} {}'.format(url, ext))
                 if ext.lower() == '.m3u8':
-                    url = M3u8_stream(url, n_thread=self.n_thread, post_processing=True)
+                    url = ffmpeg.Stream(url, cw=self.cw)
                 self._url_cache = url
                 return url
             except Exception as e:

@@ -33,19 +33,18 @@ class Downloader_weibo(Downloader):
     def fix_url(cls, url):
         url = url.replace('weibo.cn', 'weibo.com').split('?')[0]
         if 'weibo.com/p/' in url:
-            id = re.findall('weibo.com/p/([^/]+)', url)[0]
+            id = re.find(r'weibo.com/p/([^/]+)', url, err='no id')
             url = 'https://weibo.com/p/{}'.format(id)
         elif 'weibo.com/u/' in url:
-            id = re.findall('weibo.com/u/([^/]+)', url)[0]
+            id = re.find(r'weibo.com/u/([^/]+)', url, err='no id')
             url = 'https://weibo.com/u/{}'.format(id)
         elif 'weibo.com/' in url:
-            id = re.findall('weibo.com/([^/]+)', url)[0]
+            id = re.find(r'weibo.com/([^/]+)', url, err='no id')
             url = 'https://weibo.com/{}'.format(id)
         else:
             id = url
             url = 'https://weibo.com/u/{}'.format(id)
-        url = fix_protocol(url)
-        return url
+        return fix_protocol(url)
 
     def read(self):
         checkLogin(self.session)
@@ -84,8 +83,7 @@ class Image(object):
 
 
 def _get_page_id(html):
-    m = re.search("CONFIG\\['page_id'\\]='([0-9]+?)'", html)
-    return m
+    return re.find(r"CONFIG\['page_id'\]='([0-9]+)'", html) or re.find(r'/u/page/follow/([0-9]+)', html)
 
 
 def get_id(url, cw=None):
@@ -96,13 +94,14 @@ def get_id(url, cw=None):
             soup = Soup(html)
             if soup.find('div', class_='gn_login'):
                 raise errors.LoginRequired()
-            m = _get_page_id(html)
-            if not m:
+            oid = _get_page_id(html)
+            if not oid:
                 raise Exception('no page_id')
-            oid = m.groups()[0]
-            uids = re.findall('uid=([0-9]+)', html)
+            uids = re.findall(r'uid=([0-9]+)', html)
             uid = max(set(uids), key=uids.count)
-            name = re.findall("CONFIG\\['onick'\\]='(.+?)'", html)[0]
+            name = re.find(r"CONFIG\['onick'\]='(.+?)'", html) or soup.find('div', class_=lambda c:c and c.startswith('ProfileHeader_name')).text.strip()
+            if not name:
+                raise Exception('no name')
             break
         except errors.LoginRequired as e:
             raise
@@ -144,6 +143,7 @@ def get_imgs(uid, oid, title, session, cw=None, d=None, parent=None):
 
         return imgs
 
+    @try_n(2)
     def get_albums(page):
         url = 'https://photo.weibo.com/albums/get_all?uid={}&page={}&count=20&__rnd={}'.format(uid, page, int(time()*1000))
         referer = 'https://photo.weibo.com/{}/albums?rd=1'.format(uid)

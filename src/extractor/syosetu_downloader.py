@@ -68,7 +68,8 @@ class Downloader_syosetu(Downloader):
 
         title, self.artist = get_title_artist(soup)
         self.__title = title
-        title_dir = clean_title((u'[{}] {}').format(self.artist, title))
+        ncode = re.find(r'syosetu.com/([^/]+)', self.url, err='no ncode') #3938
+        title_dir = clean_title('[{}] {} ({})'.format(self.artist, title, ncode))
         ex = soup.find('div', id='novel_ex')
         self.novel_ex = ex.text.strip() if ex else None
         texts = []
