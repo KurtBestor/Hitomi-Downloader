@@ -13,10 +13,7 @@ import errors
 
 def get_id(url):
     if '/watch/' in url:
-        id = re.findall('/watch/([a-zA-Z0-9]+)', url)[0]
-    else:
-        id = url
-    return id
+        return re.find('/watch/([a-zA-Z0-9]+)', url)
 
 
 class Video(object):
@@ -55,22 +52,32 @@ class Video(object):
         return u'Video({})'.format(self.id)
 
 
+def suitable(url):
+    if 'live.nico' in url: #3986
+        return False
+    if 'nicovideo.jp' not in url.lower():
+        return False
+    return get_id(url) is not None
+
+
 @Downloader.register
 class Downloader_nico(Downloader):
     type = 'nico'
     single = True
-    URLS = ['nicovideo.jp']
+    URLS = [suitable]
     display_name = 'Niconico'
     _format = 'mp4'
-
-    @property
-    def id_(self):
-        return get_id(self.url)
 
     @classmethod
     def fix_url(cls, url):
         id_ = get_id(url)
-        return 'https://www.nicovideo.jp/watch/{}'.format(id_)
+        if re.find(r'^https?://', id_):
+            return url
+        if re.find(r'^https?://', url):
+            domain = utils.domain(url)
+        else:
+            domain = 'www.nicovideo.jp'
+        return 'https://{}/watch/{}'.format(domain, id_)
 
     def read(self):
         ui_setting = self.ui_setting
@@ -95,7 +102,7 @@ class Downloader_nico(Downloader):
 
         self.session = session
         try:
-            video = get_video(session, self.id_, self._format, self.cw)
+            video = get_video(session, self.url, self._format, self.cw)
         except Exception as e:
             logout()
             raise
@@ -109,13 +116,15 @@ class Downloader_nico(Downloader):
 
 
 @try_n(2)
-def get_video(session, id, format, cw=None):
+def get_video(session, url, format, cw=None):
     print_ = get_print(cw)
 
-    try:
+    id = get_id(url)
+    if 'live.nico' in url: #3986
+        raise NotImplementedError('nama')
+        #info = nndownload.request_nama(session, id)
+    else:
         info = nndownload.request_video(session, id)
-    except:
-        raise Exception('Err')
     video = Video(session, info, format, cw)
 
     return video
