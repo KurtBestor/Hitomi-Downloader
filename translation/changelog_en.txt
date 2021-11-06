@@ -19,13 +19,28 @@
 - Cookies: you can now use the Chrome extension to update the cookies (example: https://i.imgur.com/YsE2MZ9.gif)
 - Other small things
 
-3.7b 2021-10-21
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------
+3.7b 2021-10-29
 
 [Bug Resolution / Fix due to site change]
 - Fixed small error (#3946)
 - YouTube: fixed some naming errors (#3958)
 
-3.6a 2021-10-2
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------
+3.7a    【Oct 28, 2021】
+
+[버그 해결 / 사이트 변경에 의한 수정]
+
+- 폴더명 형식 "/" 인식 못 하는 문제 해결
+
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------
+3.7 2021-10-28
 
 [Bug Resolution / Fix due to site change]
 - Torrent: solving the problem of not being able to read some magnet links
@@ -99,6 +114,8 @@
 	Swipe left - to delete file
 - Direct download without site support for some file, .mp3/4 and .jpeg can now be downloaded whatever the site (#3935)
 - Other small things
+
+
 
 --------------------------------------------------------------------------------------------------------------------------------------------
 3.6 2021-08-12
