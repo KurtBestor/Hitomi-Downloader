@@ -1,61 +1,33 @@
-3.7c    【Nov 05, 2021】
-
-[버그 해결 / 사이트 변경에 의한 수정]
-
-- 일부 환경에서 특정 사이트 다운로드 안 되는 문제 해결 (#3944)
-
-- #3951
-
-- MyReadingManga 다운로드 안 되는 문제 해결 (#3965)
-
-- Twitter 영상 다운로드 안 되는 문제 해결 (#3970)
-
-- 필터 켜 놓은 상태에서 방향키, Home, End 제대로 작동하지 않는 문제 해결 (#3974)
-
-- Weibo 새로운 UI 지원 (#3508)
-
-- Tiktok 업데이트 대응 (#3978)
-
-- 半次元 다운로드 안 되는 문제 해결
-
-- 기타 자잘한 것들
-
-
-[변경/추가된 기능]
-
-- epio.app 지원 종료
-
-- M3U8 다운로드 속도 개선
-
-- 小説家になろう ncode 표시 (#3938)
-
-- 크롬 확장 프로그램에서 프로그램으로 쿠키 업데이트하는 기능 추가
-
-- 기타 자잘한 것들
-
-
-
---------------------------------------------------------------------------------------------------------------------------------------------
-3.7b    【Oct 29, 2021】
-
-[버그 해결 / 사이트 변경에 의한 수정]
-
-- #3946
-
-- #3958
-
-
-
---------------------------------------------------------------------------------------------------------------------------------------------
-3.7a 2021-10-28
-[Bug Resolution / Fix due to site change]
-- Folder: fixed "/" in folder name not being recognized 
-
---------------------------------------------------------------------------------------------------------------------------------------------
-3.7 2021-10-28
+3.7c 2021-11-05
 
 [Bug Resolution / Fix due to site change]
 
+- KissJav: solved download errors (#3944)
+- Folder: error in folder naming (#3951)
+- MyReadingProgram: solved download errors (#3965)
+- Twitter: solved download errors (#3970)
+- Navigation: solved navigation with arrows keys, Home, End, with filter on (#3974)
+- Weibo: support for the new UI (#3508)
+- TikTok: update compatibility (#3978)
+- bcy.net (半次元): solved download errors
+- Other small things
+
+[Changed/Added Features]
+- epio.app: removed support following its closure
+- M3U8: download speed improved
+- syosetu (小説家になろう): support for ncode (#3938)
+- Cookies: you can now use the Chrome extension to update the cookies (example: https://i.imgur.com/YsE2MZ9.gif)
+- Other small things
+
+3.7b 2021-10-21
+
+[Bug Resolution / Fix due to site change]
+- Fixed small error (#3946)
+- YouTube: fixed some naming errors (#3958)
+
+3.6a 2021-10-2
+
+[Bug Resolution / Fix due to site change]
 - Torrent: solving the problem of not being able to read some magnet links
 - Pixiv Comic: solving download errors (#3700, #3815, #3845)
 - Torent: solving various problems
