@@ -74,7 +74,7 @@ class Downloader_sankaku(Downloader):
         if self.type_sankaku == 'www':
             id = '[www] ' + self.soup.find('h1', class_='entry-title').text.strip()
         else:
-            if '/post/' in self.url:
+            if '/post/show/' in self.url:
                 id = get_id(self.url)
             else:
                 qs = query_url(self.url)
@@ -241,7 +241,7 @@ def get_imgs(url, title=None, cw=None, d=None, types=['img', 'gif', 'video'], se
     info = {}
     info['single'] = False
 
-    if '/post/' in url:
+    if '/post/show/' in url:
         info['single'] = True
         id = get_id(url)
         info['imgs'] = [Image(type, id, url, None, cw=cw, d=d)]

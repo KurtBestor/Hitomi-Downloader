@@ -55,9 +55,6 @@ class Downloader_tiktok(Downloader):
             self.urls.append(video.url)
             self.title = clean_title(video.title)
 
-        self.setIcon(video.thumb)
-
-        
 
 class Video(object):
     _url = None
@@ -80,10 +77,6 @@ class Video(object):
         ydl = ytdl.YoutubeDL()
         info = ydl.extract_info(url)
 
-        self.url_thumb = info['thumbnail']
-        self.thumb = BytesIO()
-        downloader.download(self.url_thumb, referer=url, buffer=self.thumb)
-
         self._url = info['url']
 
         return self._url
@@ -99,21 +92,20 @@ def read_channel(url, session, cw=None):
     info['items'] = []
     sd = {
         'count_empty': 0,
-        'shown': False,
+        'shown': SHOW,
         }
 
     max_pid = get_max_range(cw)
     
     def f(html, browser=None):
         soup = Soup(html)
-        if not SHOW:
-            if is_captcha(soup):
-                print('captcha')
-                browser.show()
-                sd['shown'] = True
-            elif sd['shown']:
-                browser.hide()
-                sd['shown'] = False
+        if is_captcha(soup):
+            print('captcha')
+            browser.show()
+            sd['shown'] = True
+        elif sd['shown'] and not SHOW:
+            browser.hide()
+            sd['shown'] = False
         try:
             st = soup.find('h2', class_='share-title')
             if st is None:
@@ -125,7 +117,6 @@ def read_channel(url, session, cw=None):
             info['nickname'] = st.text.strip()
         except Exception as e:
             print_(print_error(e)[0])
-        print_(info)
         c = 0
         ids_now = set()
         items = soup.findAll('div', class_='video-feed-item') + soup.findAll('div', class_=lambda c: c and 'DivItemContainer' in c)

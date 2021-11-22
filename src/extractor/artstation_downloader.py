@@ -12,7 +12,7 @@ class Image(object):
 
     def __init__(self, post_url, date, url, page):
         self.post_url = post_url
-        self.url = LazyUrl(post_url, lambda _: url, self)
+        self.url = LazyUrl(post_url, lambda _: url.replace('/large/', '/4k/'), self, url)
         self.page = page
         name = post_url.split('/')[(-1)]
         ext = os.path.splitext(url.split('?')[0])[1]
@@ -31,10 +31,11 @@ class Downloader_artstation(Downloader):
     def init(self):
         self.url_main = 'https://www.artstation.com/{}'.format(self.id.replace('artstation_', '', 1).replace('／', '/'))
         
-        if '/artwork/' in self.url:
+        if '/artwork/' in self.url or '/projects/' in self.url:
             pass#raise NotImplementedError('Single post')
         else:
             self.url = self.url_main
+        self.print_(self.url)
 
         # 3849
         self.session = Session('chrome')
@@ -61,7 +62,7 @@ class Downloader_artstation(Downloader):
             id = id.split('/')[0]
         else:
             type = None
-        if '/artwork/' in self.url:
+        if '/artwork/' in self.url or '/projects/' in self.url:
             id_art = get_id_art(self.url)
             imgs = get_imgs_page(id_art, self.session, cw=self.cw)
         else:
@@ -130,7 +131,7 @@ def get_imgs(id, title, session, type=None, cw=None):
 
 
 def get_id_art(post_url):
-    return post_url.split('/artwork/')[1].split('/')[0]
+    return post_url.split('/artwork/')[-1].split('/projects/')[-1].split('/')[0].split('?')[0].split('#')[0]
 
 
 def get_id(url, cw=None):

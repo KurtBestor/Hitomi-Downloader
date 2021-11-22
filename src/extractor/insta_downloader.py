@@ -117,6 +117,9 @@ def read_html(url, session, cw):
 
 def check_error(soup, cw, wait):
     print_ = get_print(cw)
+
+    if len(soup.html) < 1000: #4014
+        raise errors.LoginRequired(soup.html)
     
     err = soup.find('div', class_='error-container')
     if err:

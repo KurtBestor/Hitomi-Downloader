@@ -11,7 +11,7 @@ from io import BytesIO
 @Downloader.register
 class Downloader_xhamster(Downloader):
     type = 'xhamster'
-    __name = r'(xhamster|xhwebsite)[0-9]*' #3881
+    __name = r'(xhamster|xhwebsite|xhofficial|xhlocal|xhopen|xhtotal)[0-9]*' #3881
     URLS = [
      r'regex:{}\.[a-z0-9]+/videos/'.format(__name),
      r'regex:{}\.[a-z0-9]+/users/'.format(__name),
@@ -28,7 +28,11 @@ class Downloader_xhamster(Downloader):
 
     @classmethod
     def fix_url(cls, url):
-        return re.sub(cls.__name, r'\1', url)
+        return re.sub(cls.__name, r'\1', url, 1)
+
+    @classmethod
+    def key_id(cls, url):
+        return re.sub(cls.__name+r'\.[^/]+', 'domain', url, 1)
 
     def read(self):
         cw = self.cw
