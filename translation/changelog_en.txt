@@ -1,36 +1,22 @@
-3.7d    【Nov 23, 2021】
+3.7d 2021-11-23
 
-[버그 해결 / 사이트 변경에 의한 수정]
+[Bug Resolution / Fix due to site change]
+- SankakuComplexe: solved URLs misrecognition (#3990)
+- Torrent: troubleshooting torrents not working in some environments (#3998)
+- Folder: fixed weird folders' creationg (#3951)
+- Internal: troubleshooting and old setting file (.ini) (#4025)
+- KAKAO WEBTOON: stabilization (#4009)
+- Hitomi.la: support for website update (#4037, #4038)
+- Other small things
 
-- SankakuComplex 일부 URL 잘못 인식하는 문제 해결 (#3990)
-
-- 일부 환경에서 토렌트 다운로드 안 되는 문제 해결 (#3998)
-
-- #3951
-
-- 오래된 설정파일 (*.ini) 읽지 못하는 문제 해결 (#4025)
-
-- KAKAO WEBTOON 안정화 (#4009)
-
-- Hitomi.la 업데이트 대응 (#4037, #4038)
-
-- 기타 자잘한 것들
-
-
-[변경/추가된 기능]
-
-- E(x)Hentai "Always use the Multi-Page Viewer" 지원 (#3415)
-
-- HTTP API 지원
-    옵션 - 설정 - 고급 설정 - HTTP API
-
-- "브라우저로 보기" 수정
-
-- ArtStation 더 좋은 화질로 다운로드 (#2600, #4039)
-
-- Instagram 오래된 쿠키 경고 메시지 (#4014)
-
-- 기타 자잘한 것들
+[Changed/Added Features]
+- E(x)Hentai: support for "Always use the Multi-Page Viewer" (#3415)
+- HTTP API support
+	- Option -> Settings -> Advanced Settings -> HTTP API
+- "Watch it on your browser" fixed
+- ArtStation: support to download best resolution (#2600, #4039)
+- Instagram: added "old cookies" warning. Meaning you'll need to update cookies (#4014)
+- Other small things
 
 
 
@@ -38,7 +24,6 @@
 3.7c 2021-11-05
 
 [Bug Resolution / Fix due to site change]
-
 - KissJav: solved download errors (#3944)
 - Folder: error in folder naming (#3951)
 - MyReadingProgram: solved download errors (#3965)
