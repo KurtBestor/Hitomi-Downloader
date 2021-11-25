@@ -4,6 +4,7 @@ from typing import List, cast
 
 from requests.sessions import session
 
+from errors import LoginRequired
 from utils import Downloader, Soup, Session, clean_title
 
 from bs4.element import Tag
@@ -37,6 +38,10 @@ class Downloader_novelpia(Downloader):
         f = BytesIO()
 
         title_element = self.soup.find("b", {"class": "cut_line_one"})
+
+        if not title_element:
+            raise LoginRequired
+
         # Maybe NavigableString?
         assert isinstance(title_element, Tag)
         self.title = title_element.text
@@ -59,7 +64,7 @@ class Downloader_novelpia(Downloader):
         self.print_(ep_name.text)
         self.print_(ep_num.text)
 
-        self.filenames[f] = clean_title(f"{ep_num.text}: {ep_name.text}", "safe")
+        self.filenames[f] = clean_title(f"{ep_num.text}: {ep_name.text}.txt", "safe")
 
         # https://novelpia.com/viewer/:number:
         numbers: List[str] = []
@@ -91,4 +96,4 @@ class Downloader_novelpia(Downloader):
                 f.seek(0)
                 self.urls.append(f)
             else:
-                self.print_(f"{viewer_data} 해당 작품은 로그인이 필요합니다.")
+                raise LoginRequired
