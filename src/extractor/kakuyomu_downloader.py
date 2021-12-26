@@ -1,5 +1,6 @@
 #coding:utf8
 import downloader
+import utils
 from utils import Soup, urljoin, Downloader, LazyUrl, get_outdir, try_n, clean_title
 import os
 from timee import sleep
@@ -56,7 +57,7 @@ class Downloader_kakuyomu(Downloader):
         filename = clean_title(u'[merged] [{}] {}'.format(self.artist, self.info['title']), n=-4) + '.txt'
         filename = os.path.join(self.dir, filename)
         try:
-            with open(filename, 'wb') as f:
+            with utils.open(filename, 'wb') as f:
                 f.write(u'    {}\n\n    \u4f5c\u8005\uff1a{}\n\n\n'.format(self.info['title'], self.artist).encode('utf8'))
                 f.write(self.info['description'].encode('utf8'))
                 for i, file in enumerate(names):

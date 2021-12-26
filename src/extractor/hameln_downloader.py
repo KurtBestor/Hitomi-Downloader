@@ -2,6 +2,7 @@
 from __future__ import division, print_function, unicode_literals
 import downloader
 import os
+import utils
 from utils import Soup, urljoin, get_text, LazyUrl, try_n, Downloader, lazy, clean_title
 import ree as re
 from io import BytesIO
@@ -44,13 +45,13 @@ class Downloader_hameln(Downloader):
         names = self.cw.names
         filename = os.path.join(self.dir, '[merged] {}.txt'.format(self.title))
         try:
-            with open(filename, 'wb') as (f):
+            with utils.open(filename, 'wb') as f:
                 f.write('    {}\n\n    作者：{}\n\n\n'.format(self.info['title'], self.artist).encode('utf8'))
                 if self.info['novel_ex']:
                     f.write(self.info['novel_ex'].encode('utf8'))
                 for i, file in enumerate(names):
                     self.cw.pbar.setFormat('[%v/%m]  {} [{}/{}]'.format(tr_('병합...'), i, len(names)))
-                    with open(file, 'rb') as (f_):
+                    with open(file, 'rb') as f_:
                         text = f_.read()
                     f.write(b'\n\n\n\n')
                     f.write(text)

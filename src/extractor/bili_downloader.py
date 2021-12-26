@@ -173,7 +173,7 @@ def get_videos(url, cw=None, depth=0):
     print('page:', p)
     if p > 1:
         pages = get_pages(html)
-        cid = pages[(p - 1)]['cid']
+        cid = pages[p - 1]['cid']
     else:
         cid = re.findall('\\bcid(?:["\\\']:|=)(\\d+)', html)[0]
     print_('cid: {}'.format(cid))
@@ -236,7 +236,7 @@ def get_videos(url, cw=None, depth=0):
     videos = []
     for entry in entries:
         url_video = entry['formats'][0]['url']
-        video = Video(url_video, url, video_id, len(videos))
+        video = Video(url_video, url, cid, len(videos))
         videos.append(video)
 
     info = {'title': clean_title(title), 

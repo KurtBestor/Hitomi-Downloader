@@ -2,7 +2,7 @@
 import downloader
 import ree as re
 import os
-from utils import Downloader, get_max_range, Soup, clean_title, get_print
+from utils import Downloader, get_max_range, Soup, clean_title, get_print, try_n
 from translator import tr_
 try: # python2
     from urllib import quote
@@ -98,7 +98,7 @@ def get_imgs(url, title=None, range_=None, cw=None):
     max_pid = get_max_range(cw)
     
     if range_ is None:
-        range_ = range(1, 101)
+        range_ = range(1, 1001)
     print(range_)
     imgs = []
     i = 0
@@ -109,7 +109,7 @@ def get_imgs(url, title=None, range_=None, cw=None):
         p = range_[i]
         url = setPage(url, p)
         print_(url)
-        html = downloader.read_html(url)
+        html = try_n(4)(downloader.read_html)(url) #4103
         soup = Soup(html)
         articles = soup.findAll('article')
         if articles:
@@ -148,5 +148,6 @@ def get_imgs(url, title=None, range_=None, cw=None):
                 break
             cw.setTitle(u'{}  {} - {}'.format(tr_(u'읽는 중...'), title, len(imgs)))
         i += 1
-    return imgs
+        
+    return imgs[:max_pid]
 

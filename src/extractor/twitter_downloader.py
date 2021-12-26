@@ -18,6 +18,7 @@ UA = "Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko"
 #UA = downloader.hdr['User-Agent']#
 RETRY_PAGINATION = 21
 RETRY_MORE = 3
+RETRY_MORE_IMGS = 16
 TIMEOUT_GUEST_TOKEN = 3600
 CACHE_GUEST_TOKEN = None
 
@@ -45,7 +46,8 @@ def suitable(url):
 class Downloader_twitter(Downloader):
     type = 'twitter'
     URLS = [suitable]
-    MAX_CORE = 12
+    MAX_CORE = 8
+    MAX_SPEED = 4.0
 
     def init(self):
         self.session = get_session()
@@ -94,6 +96,7 @@ class Downloader_twitter(Downloader):
                 self.urls.append(img)
 
         self.title = title
+        #self.session = None#
 
 
 @lock
@@ -255,6 +258,7 @@ class TwitterAPI(object):
                         if tid not in tweets:
                             self.print_("Skipping unavailable Tweet {}".format(tid))
                             continue
+                        #print('tid:', tid)#
                         tweet = tweets[tid]
                         tweet["user"] = users[tweet["user_id_str"]]
 
@@ -394,6 +398,7 @@ def get_imgs_more(username, session, title, types, n=None, format='[%y-%m-%d] id
     ids_set = set(img.id for img in imgs)
 
     count_no_tweets = 0
+    count_no_imgs = 0
 
     while check_alive(cw) or len(imgs) < n:
         if options.get('experimental') or count_no_tweets: #2687, #3392
@@ -419,8 +424,18 @@ def get_imgs_more(username, session, title, types, n=None, format='[%y-%m-%d] id
             tweets.append(tweet)
 
         if tweets:
+            exists_more_imgs = False
             for tweet in tweets:
-                imgs += get_imgs_from_tweet(tweet, session, types, format, cw)
+                imgs_tweet = get_imgs_from_tweet(tweet, session, types, format, cw)
+                if imgs_tweet:
+                    imgs += imgs_tweet
+                    exists_more_imgs = True
+            if exists_more_imgs:
+                count_no_imgs = 0
+            else:
+                count_no_imgs += 1
+                if count_no_imgs >= RETRY_MORE_IMGS: #4130
+                    break
             count_no_tweets = 0
         else:
             count_no_tweets += 1

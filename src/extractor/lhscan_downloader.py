@@ -104,6 +104,8 @@ def get_imgs_page(page, referer, session, cw=None):
     print_(page.title)
     
     html = downloader.read_html(page.url, referer, session=session)
+    if clf2._is_captcha(Soup(html)): #4124
+        html = clf2.solve(page.url, session, cw)['html']
     if not html:
         raise Exception('empty html')
     html = html.replace('{}='.format(re.find(r"\$\(this\)\.attr\('(.+?)'", html, err='no cn')), 'data-src=')

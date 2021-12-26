@@ -1,5 +1,6 @@
 #coding:utf8
 import downloader
+import utils
 from utils import Soup, urljoin, LazyUrl, try_n, Downloader, get_outdir, get_print, clean_title, Session
 import ree as re
 from io import BytesIO
@@ -119,13 +120,13 @@ class Downloader_syosetu(Downloader):
         names = self.cw.names
         filename = os.path.join(self.dir, (u'[merged] {}.txt').format(self.title))
         try:
-            with open(filename, 'wb') as (f):
+            with utils.open(filename, 'wb') as f:
                 f.write(u'    {}\n\n    \u4f5c\u8005\uff1a{}\n\n\n'.format(self.__title, self.artist).encode('utf8'))
                 if self.novel_ex:
                     f.write(self.novel_ex.encode('utf8'))
                 for i, file in enumerate(names):
                     self.cw.pbar.setFormat(u"[%v/%m]  {} [{}/{}]".format(tr_(u'\ubcd1\ud569...'), i, len(names)))
-                    with open(file, 'rb') as (f_):
+                    with open(file, 'rb') as f_:
                         text = f_.read()
                     f.write(b'\n\n\n\n')
                     f.write(text)

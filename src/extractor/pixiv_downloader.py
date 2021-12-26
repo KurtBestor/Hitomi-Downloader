@@ -155,21 +155,12 @@ class PixivAPI():
             url += '&tool={}'.format(tool)
         return self.call(url)
 
-    @try_n(8)
-    def following(self, p, r18=False):
-        url = 'https://www.pixiv.net/bookmark_new_illust_r18.php' if r18 else 'https://www.pixiv.net/bookmark_new_illust.php'
-        if p > 1:
-            url += '?p={}'.format(p)
-        html = downloader.read_html(url, session=self.session)
-        ids = []
-        ids_set = set()
-        for id_ in re.findall('([0-9]+)_p0_master1200', html):
-            if id_ in ids_set:
-                continue
-            ids_set.add(id_)
-            ids.append(id_)
-        return ids
-
+    def following(self, p, r18=False): #4077
+        mode = 'r18' if r18 else 'all'
+        url = f'follow_latest/illust?p={p}&mode={mode}&lang=en'
+        return self.call(url)
+        
+        
 
 class Image():
     local = False
@@ -392,8 +383,9 @@ def get_info(url, cw=None, depth=0, tags_add=None):
         ids_set = set()
         p = 1
         while len(ids) < max_pid:
+            data = api.following(p, r18=r18)
             c = 0
-            for id in api.following(p, r18=r18):
+            for id in data['page']['ids']:
                 if id in ids_set:
                     continue
                 ids_set.add(id)

@@ -175,8 +175,5 @@ def get_imgs(url, title=None, cw=None):
             if not cw.alive:
                 break
             cw.setTitle(u'{}  {} - {}'.format(tr_(u'읽는 중...'), title, len(imgs)))
-
-    if not imgs:
-        raise Exception('no imgs')
             
-    return imgs
+    return imgs[:max_pid]

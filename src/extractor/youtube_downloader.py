@@ -17,7 +17,6 @@ import os
 from random import randrange
 import utils
 from translator import tr_
-from m3u8_tools import dash2stream
 from datetime import datetime
 
 
@@ -25,7 +24,7 @@ def print_streams(streams, cw):
     print_ = get_print(cw)
             
     for stream in streams:
-        print_('[{}][{}fps][{}{}][{}] {} [{} / {}] ─ {}'.format(stream.resolution, stream.fps, stream.abr_str, '(fixed)' if stream.abr_fixed else '', stream.tbr, stream.subtype, stream.video_codec, stream.audio_codec, stream.format))
+        print_('{}[{}][{}fps][{}{}][{}] {} [{} / {}] ─ {}'.format('LIVE ' if stream.live else '', stream.resolution, stream.fps, stream.abr_str, '(fixed)' if stream.abr_fixed else '', stream.tbr, stream.subtype, stream.video_codec, stream.audio_codec, stream.format))
     print_('')
 
 
@@ -257,7 +256,7 @@ class Video(object):
             return
         
         filename_new = None
-        if self.type == 'video' and (self.audio is not None or ext != '.mp4'): # UHD or non-mp4
+        if self.type == 'video' and (self.audio is not None or ext != '.mp4') and not self.stream.live: # UHD or non-mp4
             if self.audio is not None: # merge
                 print_('Download audio: {}'.format(self.audio))
                 hash = uuid()

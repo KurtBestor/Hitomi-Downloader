@@ -7,6 +7,7 @@ from m3u8_tools import M3u8_stream
 import ree as re
 from translator import tr_
 import errors
+import utils
 
 
 @Downloader.register
@@ -37,7 +38,7 @@ class Downloader_twitch(Downloader):
             
         if self.url.count('/') == 3:
             if 'www.twitch.tv' in self.url or '//twitch.tv' in self.url:
-                filter = 'videos'
+                filter = 'live'
             else:
                 filter = None
         elif self.url.count('/') == 4:
@@ -49,6 +50,11 @@ class Downloader_twitch(Downloader):
             
         if filter is None:
             video = Video(self.url, self.cw)
+            video.url()
+            self.urls.append(video.url)
+            self.title = video.title
+        elif filter == 'live':
+            video = Video(self.url, self.cw, live=True)
             video.url()
             self.urls.append(video.url)
             self.title = video.title
@@ -120,36 +126,43 @@ def alter(seg):
         segs.append(seg_)
     segs.append(seg)
     return segs
+
+
+def extract_info(url, cw=None):
+    ydl = ytdl.YoutubeDL(cw=cw)
+    try:
+        info = ydl.extract_info(url)
+    except Exception as e:
+        ex = type(ytdl.get_extractor(url))(ydl)
+        _download_info = getattr(ex, '_download_info', None)
+        if _download_info is not None:
+            vod_id = ex._match_id(url)
+            info = _download_info(vod_id)
+            print_(info)
+        if 'HTTPError 403' in str(e):
+            raise errors.LoginRequired()
+        raise
+    return info
     
 
 class Video(object):
     _url = None
 
-    def __init__(self, url, cw):
+    def __init__(self, url, cw, live=False):
         self.url = LazyUrl(url, self.get, self)
         self.cw = cw
+        self._live = live
 
     @try_n(4)
     def get(self, url):
         print_ = get_print(self.cw)
         if self._url:
             return self._url
-        ydl = ytdl.YoutubeDL(cw=self.cw)
-        try:
-            info = ydl.extract_info(url)
-        except Exception as e:
-            ex = type(ytdl.get_extractor(url))(ydl)
-            _download_info = getattr(ex, '_download_info', None)
-            if _download_info is not None:
-                vod_id = ex._match_id(url)
-                info = _download_info(vod_id)
-                print_(info)
-            if 'HTTPError 403' in str(e):
-                raise errors.LoginRequired()
-            raise
+        info = extract_info(url, self.cw)
 
         def print_video(video):
-            print_('[{}] [{}] [{}] {}'.format(video['format_id'], video.get('height'), video.get('tbr'), video['url']))
+            print_(video)#
+            print_('{}[{}] [{}] [{}] {}'.format('LIVE ', video['format_id'], video.get('height'), video.get('tbr'), video['url']))
             
         videos = [video for video in info['formats'] if video.get('height')]
 
@@ -172,9 +185,13 @@ class Video(object):
         self.title = info['title']
         id = info['display_id']
 
-        if ext.lower() == '.m3u8':
-            video = M3u8_stream(video, n_thread=4, alter=alter)
+        if self._live:
+            video = utils.LiveStream(video, headers=video_best.get('http_headers'))
             ext = '.mp4'
+        else:
+            if ext.lower() == '.m3u8':
+                video = M3u8_stream(video, n_thread=4, alter=alter)
+                ext = '.mp4'
         self.filename = format_filename(self.title, id, ext)
         self.url_thumb = info['thumbnail']
         self.thumb = BytesIO()

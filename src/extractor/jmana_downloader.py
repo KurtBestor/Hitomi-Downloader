@@ -7,6 +7,7 @@ import os
 from constants import try_n, clean_url
 import urllib, page_selector
 import bs4
+import clf2
 PATTERN = r'jmana[0-9]*.*/(comic_list_title|book)\?book'
 PATTERN_ALL = r'jmana[0-9]*.*/(comic_list_title|book|bookdetail)\?book'
 PATTERN_ID = '[?&]bookdetailid=([0-9]+)'
@@ -69,7 +70,8 @@ class Downloader_jmana(Downloader):
     @property
     def soup(self):
         if self._soup is None:
-            html = downloader.read_html(self.url, session=self.session)
+            res = clf2.solve(self.url, session=self.session) #4070
+            html = res['html']
             soup = Soup(html)
             self._soup = soup
         return self._soup

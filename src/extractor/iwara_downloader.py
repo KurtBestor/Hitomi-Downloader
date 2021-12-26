@@ -129,7 +129,7 @@ def read_channel(url, type_, session, cw=None):
     urls_set = set()
     for p in range(50):
         check_alive(cw)
-        url = 'https://ecchi.iwara.tv/users/{}/{}?page={}'.format(username, type_, p)
+        url = urljoin(url, '/users/{}/{}?page={}'.format(username, type_, p))
         print_(url)
         html = read_html(url, session=session)
         soup = Soup(html)
@@ -207,5 +207,3 @@ def get_files(url, session, multi_post=False, cw=None):
     else:
         raise NotImplementedError(type)
     return files
-
-
