@@ -1,59 +1,55 @@
-3.7e    【Dec 27, 2021】
+3.7e 2021-12-27
 
-[버그 해결 / 사이트 변경에 의한 수정]
+[Bug Resolution / Fix due to site change]
 
-- iwara 일부 채널 다운로드 안 되는 문제 해결 (#4030)
+- iwara: fixed un-downloaded channels (#4030)
 
-- Facebook 일부 영상 다운로드 안 되는 문제 해결 (#4064)
+- Facebook: fixed un-downloaded videos (#4064)
 
-- XVideos 일부 영상 다운로드 안 되는 문제 해결 (#4083)
+- XVideos: fixed un-downloaded videos (#4083)
 
-- Jmana 업데이트 대응 (#4070)
+- Jmana: support for website update (#4070)
 
-- Pixiv Newest works: Following 업데이트 대응 (#4077)
+- Pixiv Newest works ('Following'): support for website update (#4077)
 
-- Bilibili 플레이리스트 페이지만 다른 영상 동시에 다운로드할 때 생기는 문제 해결 (#4117)
+- Bilibili: fixed playlist download (#4117)
 
-- Mastodon 계열 문제 해결 (#4125)
+- Mastodon: fixed download error (#4125)
 
-- Hitomi.la 업데이트 대응 (#4126, #4152)
+- Hitomi.la: support for website update (#4126, #4152)
 
-- #4137
+- syosetu.com, kakuyomu.jp: fixed download error (#4137)
 
-- #4185
-
-- #4196
-
-- 기타 자잘한 것들
+- Other small things
 
 
-[변경/추가된 기능]
+[Changed/Added Features]
 
-- 4chan 지원 (#2085, #4116)
+- 4chan: support(#2085, #4116)
 
-- YouTube Live Stream 지원
+- YouTube Live Stream: support
 
-- Twitch Live Stream 지원
+- Twitch Live Stream: support
 
-- "브라우저로 보기" HTTP API 꺼도 보이게 수정 (#4060)
+- "View in browser":  fixed to work even if HTTP API is turned off (#4060)
 
-- 방향키로 화 이동 (#4060)
+- Move with with arrow keys (#4060)
 
-- 중북 이미지 찾기 "자동 선택": 완전히 같은 파일일 경우 최근 이미지 우선 선택 (#4085)
+- Deduplication: auto select the most recent (#4085)
 
-- 작업 목록 필터링 OR, NOT, 괄호 지원 (#4046)
-    예:
+- Task list filter: support for logical operator (OR, NOT, parentheses) (#4046)
+    Example:
         A OR B
         NOT type:youtube
         (A OR B) C
 
-- #4103
+- danbooru: support to download pages >100 (ex: danbooru.donmai.us/posts?page=101, danbooru.donmai.us/posts?page=102, etc.) #4103
 
-- #4110
+- (#4110)
 
-- #4130
+- Twitter: optimising download speed (#4130)
 
-- 기타 자잘한 것들
+- Other small things
 
 
 
