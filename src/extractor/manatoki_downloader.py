@@ -210,7 +210,7 @@ def get_imgs_page(page, title, referer, session, cw):
                 continue
             if '/img/blank.gif' in img:
                 continue
-            img = Image(img, page, len(imgs))   
+            img = Image(img, page, len(imgs))
             imgs.append(img)
 
 ##    if not imgs:

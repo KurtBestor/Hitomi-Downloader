@@ -47,7 +47,7 @@ class Downloader_twitter(Downloader):
     type = 'twitter'
     URLS = [suitable]
     MAX_CORE = 8
-    MAX_SPEED = 4.0
+    #MAX_SPEED = 4.0
 
     def init(self):
         self.session = get_session()
@@ -569,10 +569,10 @@ class Image(object):
         self.time = time
         self.p = p
         self.n_thread = n_thread
-        if not isVideo:
-            url_alter = Url_alter(url)
+        if isVideo:
+            url_alter = self.get #4185
         else:
-            url_alter = None
+            url_alter = Url_alter(url)
         if isVideo and get_ext(url).lower() not in ['.mp4', '.m3u8']:
             get = self.get
         else:
@@ -591,35 +591,42 @@ class Image(object):
 
     @sleep_and_retry
     @limits(1, 5)
-    def get(self, _):
+    def get(self, _=None):
         if self._url_cache:
             return self._url_cache
         print_ = get_print(self.cw)
         for try_ in range(self.try_n):
             try:
                 d = ytdl.YoutubeDL(cw=self.cw)
-                info = d.extract_info(self._url)
+                info = d.extract_info(self.referer)
 
                 fs = info['formats']
                 for f in fs:
-                    print_('{} {} - {}'.format(f['height'], f['protocol'], f['url']))
+                    print_('{} {} - {}'.format(f.get('height'), f['protocol'], f['url']))
                 def key(f):
-                    h = f['height']
+                    h = f.get('height', 0)
                     if not f['protocol'].startswith('http'):
                         h -= .1
                     return h
-                f = sorted(fs, key=key)[-1]
+                for f in sorted(fs, key=key, reverse=True):
+                    if downloader.ok_url(f['url'], self.referer): #4185
+                        break
+                    else:
+                        print_('invalid video: {}'.format(f['url']))
+                else:
+                    raise Exception('no valid videos')
                 url = f['url']
                 ext = get_ext(url)
                 self.ext = ext
                 print_('get_video: {} {}'.format(url, ext))
                 if ext.lower() == '.m3u8':
-                    url = ffmpeg.Stream(url, cw=self.cw)
+                    url = ffmpeg.Stream(url)
+                    url._live = False
                 self._url_cache = url
                 return url
             except Exception as e:
                 e_ = e
-                msg = print_error(e)[(-1)]
+                msg = print_error(e)[0]
                 print_('\nTwitter video Error:\n{}'.format(msg))
                 if try_ < self.try_n - 1:
                     sleep(10, self.cw)
