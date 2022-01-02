@@ -1,22 +1,19 @@
 #coding: utf-8
 import downloader
 import ree as re
-import os
-from utils import Downloader, get_max_range, Soup, clean_title, get_print, try_n
+from utils import Downloader, get_max_range, clean_title, get_print, try_n, urljoin, check_alive, LazyUrl, get_ext
 from translator import tr_
-try: # python2
-    from urllib import quote
-    from urlparse import urlparse, parse_qs
-except: # python3
-    from urllib.parse import quote
-    from urllib.parse import urlparse, parse_qs
-import sys
+from urllib.parse import quote
+from urllib.parse import urlparse, parse_qs
+from ratelimit import limits, sleep_and_retry
+
 
 
 @Downloader.register
 class Downloader_danbooru(Downloader):
     type='danbooru'
     URLS = ['danbooru.donmai.us']
+    MAX_CORE = 8
     _name = None
 
     @classmethod
@@ -27,7 +24,7 @@ class Downloader_danbooru(Downloader):
             url = url.replace(' ', '+')
             while '++' in url:
                 url = url.replace('++', '+')
-            url = u'https://danbooru.donmai.us/?tags={}'.format(quote(url))
+            url = 'https://danbooru.donmai.us/?tags={}'.format(quote(url))
         return url.strip('+')
 
     @property
@@ -37,15 +34,18 @@ class Downloader_danbooru(Downloader):
             qs = parse_qs(parsed_url.query)
             if 'donmai.us/favorites' in self.url:
                 id = qs.get('user_id', [''])[0]
-                print('len(id) =', len(id), u'"{}"'.format(id))
+                print('len(id) =', len(id), '"{}"'.format(id))
                 assert len(id) > 0, '[Fav] User id is not specified'
-                id = u'fav_{}'.format(id)
+                id = 'fav_{}'.format(id)
+            elif 'donmai.us/explore/posts/popular' in self.url: #4160
+                soup = read_soup(self.url, self.cw)
+                id = soup.find('h1').text
             else:
                 tags = qs.get('tags', [])
                 tags.sort()
-                id = u' '.join(tags)
+                id = ' '.join(tags)
             if not id:
-                id = u'N/A'
+                id = 'N/A'
             self._name = id
         return clean_title(self._name)
 
@@ -56,19 +56,36 @@ class Downloader_danbooru(Downloader):
 
         for img in imgs:
             self.urls.append(img.url)
-            self.filenames[img.url] = img.filename
             
         self.title = self.name
     
 
 class Image(object):
-    def __init__(self, id, url):
+    def __init__(self, id, url, cw):
+        self._cw = cw
         self.id = id
-        self.url = url
-        ext = os.path.splitext(url)[1]
-        self.filename = u'{}{}'.format(id, ext)
+        self.url = LazyUrl(url, self.get, self)
+
+    def get(self, url):
+        soup = read_soup(url, self._cw)
+        ori = soup.find('li', id='post-option-view-original')
+        if ori:
+            img = ori.find('a')['href']
+        else:
+            img = soup.find('li', id='post-info-size').find('a')['href']
+        img = urljoin(url, img)
+        ext = get_ext(img)
+        self.filename = '{}{}'.format(self.id, ext)
+        return img
 
 
+
+@sleep_and_retry
+@limits(2, 1)
+def wait(cw):
+    check_alive(cw)
+    
+    
 def setPage(url, page):
     # Always use HTTPS
     url = url.replace('http://', 'https://')
@@ -84,6 +101,13 @@ def setPage(url, page):
         url += '&page={}'.format(page)
         
     return url
+
+
+@try_n(4) #4103
+def read_soup(url, cw):
+    check_alive(cw)
+    wait(cw)
+    return downloader.read_soup(url)
 
 
 def get_imgs(url, title=None, range_=None, cw=None):
@@ -106,18 +130,18 @@ def get_imgs(url, title=None, range_=None, cw=None):
     empty_count_global = 0
     url_imgs = set()
     while i < len(range_):
+        check_alive(cw)
         p = range_[i]
         url = setPage(url, p)
         print_(url)
-        html = try_n(4)(downloader.read_html)(url) #4103
-        soup = Soup(html)
+        soup = read_soup(url, cw)
         articles = soup.findAll('article')
         if articles:
             empty_count_global = 0
         else:
             empty_count += 1
             if empty_count < 4:
-                s = u'empty page; retry... {}'.format(p)
+                s = 'empty page; retry... {}'.format(p)
                 print_(s)
                 continue
             else:
@@ -129,25 +153,21 @@ def get_imgs(url, title=None, range_=None, cw=None):
             
         for article in articles:
             id = article.attrs['data-id']
-            url_img = article.attrs['data-file-url'].strip()
-            if url_img.startswith('http://') or url_img.startswith('https://'):
-                pass
-            else:
-                url_img = 'https://{}donmai.us'.format('danbooru.' if 'danbooru.' in url else '') + url_img
+
+            #url_img = article.attrs['data-file-url'].strip()
+            url_img = urljoin(url, article.find('a', class_='post-preview-link')['href']) #4160
+            
             #print(url_img)
             if url_img not in url_imgs:
                 url_imgs.add(url_img)
-                img = Image(id, url_img)
+                img = Image(id, url_img, cw)
                 imgs.append(img)
 
         if len(imgs) >= max_pid:
             break
                 
         if cw is not None:
-            if not cw.alive:
-                break
-            cw.setTitle(u'{}  {} - {}'.format(tr_(u'읽는 중...'), title, len(imgs)))
+            cw.setTitle('{}  {} - {}'.format(tr_('읽는 중...'), title, len(imgs)))
         i += 1
         
     return imgs[:max_pid]
-

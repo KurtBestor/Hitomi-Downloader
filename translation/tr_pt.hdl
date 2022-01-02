@@ -207,6 +207,7 @@
     "로그인 실패: {}{}\n[옵션 - 설정 - Pixiv 설정 - 로그인] 에서 설정해주세요.": "Falha no login: {}{}\nPor favor veja [Opções - Preferências - Configurações Pixiv - Login].",
     "로그인 중...": "Realizando login...",
     "로그인 테스트": "Testar login",
+    "로컬 파일 감지": "Detect local files",
     "로컬 파일로부터 새 작업 만들기": "Criar uma nova tarefa a partir de arquivo local",
     "를 북마크에서 지웠습니다": "removido dos favoritos",
     "릴리즈 노트": "Nota de atualização",

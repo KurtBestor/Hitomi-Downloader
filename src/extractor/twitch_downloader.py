@@ -1,7 +1,7 @@
 #coding: utf8
 import downloader
 import ytdl
-from utils import Downloader, get_outdir, Soup, LazyUrl, try_n, compatstr, format_filename, get_ext, clean_title, Session, cut_pair, json_loads, get_print, get_resolution
+from utils import Downloader, get_outdir, Soup, LazyUrl, try_n, compatstr, format_filename, get_ext, clean_title, Session, get_print, get_resolution, get_max_range
 from io import BytesIO
 from m3u8_tools import M3u8_stream
 import ree as re
@@ -70,48 +70,21 @@ class Downloader_twitch(Downloader):
 @try_n(2)
 def get_videos(url, cw=None):
     print_ = get_print(cw)
+    print_(f'get_videos: {url}')
     info = {}
-    user_id = re.find(r'twitch.tv/([^/?]+)', url, err='no user_id')
-    print(user_id)
-    session = Session()
-    r = session.get(url)
-    s = cut_pair(re.find(r'headers *: *({.*)', r.text, err='no headers'))
-    print(s)
-    headers = json_loads(s)
-
-    payload = [
-        {
-            'operationName': 'ClipsCards__User',
-            'variables': {
-                'login': user_id,
-                'limit': 20,
-                'criteria': {'filter': 'ALL_TIME'}},
-            'extensions': {'persistedQuery': {'version': 1, 'sha256Hash': 'b73ad2bfaecfd30a9e6c28fada15bd97032c83ec77a0440766a56fe0bd632777'}},
+    options = {
+            'extract_flat': True,
+            'playlistend': get_max_range(cw),
             }
-        ]
     videos = []
-    cursor = None
-    cursor_new = None
-    while True:
-        if cursor:
-            payload[0]['variables']['cursor'] = cursor
-        r = session.post('https://gql.twitch.tv/gql', json=payload, headers=headers)
-        #print(r)
-        data = r.json()
-        for edge in data[0]['data']['user']['clips']['edges']:
-            url_video = edge['node']['url']
-            info['name'] = edge['node']['broadcaster']['displayName']
-            video = Video(url_video, cw)
-            video.id = int(edge['node']['id'])
-            videos.append(video)
-            cursor_new = edge['cursor']
-        print_('videos: {} / cursor: {}'.format(len(videos), cursor))
-        if cursor == cursor_new:
-            print_('same cursor')
-            break
-        if cursor_new is None:
-            break
-        cursor = cursor_new
+    ydl = ytdl.YoutubeDL(options, cw=cw)
+    info = ydl.extract_info(url)
+    for e in info['entries']:
+        video = Video(e['url'], cw)
+        video.id = int(e['id'])
+        videos.append(video)
+        if 'name' not in info:
+            info['name'] = ydl.extract_info(e['url'])['creator']
     if not videos:
         raise Exception('no videos')
     info['videos'] = sorted(videos, key=lambda video: video.id, reverse=True)
@@ -161,7 +134,7 @@ class Video(object):
         info = extract_info(url, self.cw)
 
         def print_video(video):
-            print_(video)#
+            #print_(video)#
             print_('{}[{}] [{}] [{}] {}'.format('LIVE ', video['format_id'], video.get('height'), video.get('tbr'), video['url']))
             
         videos = [video for video in info['formats'] if video.get('height')]

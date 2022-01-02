@@ -22,7 +22,7 @@ class Page(object):
     def __init__(self, title, url):
         self.title = clean_title(title)
         self.url = url
-        self.id = int(re.find('/(comic|webtoon)/([0-9]+)', url, err='no id')[1])
+        self.id = int(re.find(r'/(comic|webtoon)/([0-9]+)', url, err='no id')[1])
 
 
 @Downloader.register
@@ -97,7 +97,7 @@ class Downloader_manatoki(Downloader):
 def get_artist(soup):
     view = soup.find('div', class_='view-title')
     text = view.text.replace('\n', '#')
-    artist = re.find('작가[ #]*:[ #]*(.+?)#', text, default='N/A').strip()
+    artist = re.find(r'작가[ #]*:[ #]*(.+?)#', text, default='N/A').strip()
     return artist
 
 
@@ -115,17 +115,19 @@ def get_soup(url, session=None):
 def get_pages(url, soup):
     list = soup.find('ul', class_='list-body')
     pages = []
-    for item in list.findAll('div', 'wr-subject'):
+    titles = {}
+    for item in list.findAll('div', 'wr-subject')[::-1]:
         for span in item.a.findAll('span'):
             span.decompose()
         title = item.a.text.strip()
+        title = utils.fix_dup(title, titles) #4161
         href = item.a['href']
         href = urljoin(url, href)
         page = Page(title, href)
         pages.append(page)
     if not pages:
         raise Exception('no pages')
-    return pages[::-1]
+    return pages
 
 
 @page_selector.register('manatoki')
@@ -179,7 +181,7 @@ def get_imgs_page(page, title, referer, session, cw):
     # 2183
     session, soup, page.url = get_soup(page.url, session)
 
-    title_page = clean_title(soup.find('span', class_='page-desc').text.strip())
+    title_page = page.title#clean_title(soup.find('span', class_='page-desc').text.strip())
     if page.title != title_page:
         print_('{} -> {}'.format(page.title, title_page))
         page.title = title_page
@@ -221,7 +223,7 @@ def get_imgs_page(page, title, referer, session, cw):
 
 def isVisible(tag):
     while tag:
-        if re.search('display: *none', tag.get('style', ''), re.IGNORECASE):
+        if re.search(r'display: *none', tag.get('style', ''), re.IGNORECASE):
             return False
         tag = tag.parent
     return True

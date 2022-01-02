@@ -207,6 +207,7 @@
     "로그인 실패: {}{}\n[옵션 - 설정 - Pixiv 설정 - 로그인] 에서 설정해주세요.": "Error de inicio de sesión: {}{}\n Consulte [Opciones - Preferencias - Configuración de Pixiv - Inicio de sesión].",
     "로그인 중...": "Iniciar sesión",
     "로그인 테스트": "Probar el inicio de sesión",
+    "로컬 파일 감지": "Detect local files",
     "로컬 파일로부터 새 작업 만들기": "Create a new task from the local files",
     "를 북마크에서 지웠습니다": "se elimina de favoritos",
     "릴리즈 노트": "Notes de la versió",

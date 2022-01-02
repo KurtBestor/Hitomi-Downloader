@@ -1,12 +1,13 @@
-from urllib.parse import unquote
-from utils import Downloader, urljoin, clean_title, try_n
+from utils import Downloader, urljoin, clean_title, try_n, check_alive, LazyUrl, get_ext, get_max_range
 from translator import tr_
 import ree as re
-import os
 import downloader
+from ratelimit import limits, sleep_and_retry
 
 
 @try_n(4)
+@sleep_and_retry
+@limits(4, 1)
 def read_soup(url):
     return downloader.read_soup(url)
 
@@ -19,36 +20,34 @@ class Downloader_yandere(Downloader):
 
     @classmethod
     def fix_url(cls, url):
-        url = re.sub(r'\?page=[0-9]+&', '?', url)
-        url = re.sub(r'&page=[0-9]+', '', url)
+        url = re.sub(r'([?&])page=[0-9]+&?', r'\1', url).rstrip('?&')
         pool = re.find('/pool/show/([0-9]+)', url)
         if pool is not None:
             url = urljoin(url, '/post?tags=pool%3A{}'.format(pool))
         return url
 
     def read(self):
-        cw = self.cw
-
         title = self.get_title(self.url)
 
-        ids = set()
         url = self.url
+        n = get_max_range(self.cw)
+        ids = set()
         while True:
+            check_alive(self.cw)
             soup = read_soup(url)
-            tmp = soup.find_all(attrs={'class':'directlink'}, href=True)
-            for image_html in tmp:
-                image_url = image_html['href']
-                id_ = self.get_id(image_url)
+            for a in soup.find_all('a', class_='thumb'):
+                id_ = re.find(r'/show/([0-9]+)', a['href'], err='no id')
                 if id_ in ids:
-                    self.print_('duplicate: {}'.format(id_))
+                    self.print_(f'dup: {id_}')
                     continue
                 ids.add(id_)
-                self.urls.append(image_url)
-                self.filenames[image_url] = self.get_filename(image_url)
-
-            if not cw.alive:
+                img = Image(urljoin(url, a['href']), id_)
+                self.urls.append(img.url)
+            if len(self.urls) >= n:
+                del self.urls[n:]
                 break
-            cw.setTitle('{}  {} - {}'.format(tr_('읽는 중...'), title, len(self.urls)))
+
+            self.cw.setTitle('{}  {} - {}'.format(tr_('읽는 중...'), title, len(self.urls)))
 
             next_page = soup.find('a', attrs={'rel':'next'}, href=True)
             if not next_page:
@@ -62,14 +61,6 @@ class Downloader_yandere(Downloader):
         id_ = url.split('yande.re%20')[1].split('%20')[0]
         return int(id_)
 
-    def get_filename(self, url:str) -> str:
-        url_unquote = unquote(url)
-        id_tags_extension = url_unquote.split("yande.re")[-1].split(" ")[1:]
-        filename = "_".join(id_tags_extension)
-        name, ext = os.path.splitext(filename)
-        name = str(self.get_id(url))#
-        return clean_title(name, n=-len(ext)) + ext
-
     def get_title(self, url:str) -> str:
         if "tags=" not in url:
             raise NotImplementedError('no tags')
@@ -77,3 +68,18 @@ class Downloader_yandere(Downloader):
         url_tags = url.split("tags=")[-1].split('+')
 
         return clean_title(" ".join(url_tags))
+
+
+class Image:
+
+    def __init__(self, url, id_):
+        self._id = id_
+        self.url = LazyUrl(url, self.get, self)
+
+    def get(self, url):
+        soup = read_soup(url)
+        img = soup.find('a', class_='original-file-unchanged') or soup.find('a', class_='original-file-changed')
+        img = urljoin(url, img['href'])
+        ext = get_ext(img)
+        self.filename = clean_title(self._id, n=-len(ext)) + ext
+        return img
