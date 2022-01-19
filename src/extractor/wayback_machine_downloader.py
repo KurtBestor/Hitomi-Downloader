@@ -3,14 +3,15 @@
 # comment: https://archive.org
 # author: bog_4t
 
-import downloader
-from utils import Downloader, Session, get_print, update_url_query
+import downloader, os
+from utils import Downloader, Session, get_print, clean_title, update_url_query
 from ratelimit import limits, sleep_and_retry
 import ree as re
 import json
 import datetime
 import errors
 from error_printer import print_error
+from hashlib import md5
 
 
 @Downloader.register
@@ -24,9 +25,16 @@ class Downloader_wayback_machine(Downloader):
         self.session = Session()
 
     def read(self):
-        query = WaybackMachineAPI.get_query(self.url)
-        self.urls.extend(get_imgs(query, self.session, cw=self.cw))
-        self.title = '{:%Y%m%d%H%M%S}'.format(datetime.datetime.now())
+        url_for_query = WaybackMachineAPI.get_query(self.url)
+        snapshots = WaybackMachineAPI(self.session, self.cw).snapshots(url_for_query)
+        domain_code = get_domain_code(url_for_query)
+        self.urls.extend(get_imgs(snapshots, domain_code, self.cw))
+        name = self.url
+        for esc in ['?', '#']:
+            name = name.split(esc)[0]
+        name = os.path.basename(name.strip('/'))
+        tail = ' ({})'.format(md5(self.url.encode('utf8')).hexdigest()[:8])
+        self.title = clean_title(name, n=-len(tail)) + tail
 
 
 class WaybackMachineAPI(object):
@@ -39,6 +47,7 @@ class WaybackMachineAPI(object):
             'filter': 'mimetype:text/html',
             'fastLatest': 'true',
             'collapse': 'urlkey',
+            'fl': 'timestamp,original',
             'output': 'json'
         }
 
@@ -52,53 +61,50 @@ class WaybackMachineAPI(object):
 
     @classmethod
     def get_query(cls, url):
-        return re.findall(r'archive.org\/(?:(?:web/)?)(?:(?:[0-9]{4})?(?:\*/)?)(.*)', url)[0]
+        return re.findall(r'archive.org\/(?:(?:web/)?)(?:(?:[0-9]+)?(?:\*)?/?)(.*)', url)[0]
 
     def snapshots(self, url_for_query):
-        snapshots = set()
         data = self.call(url_for_query)
         if not data:
-            raise Exception('No archive found')
-        for snapshot in data[1:]:
-            snapshots.add('https://web.archive.org/web/{}/{}'.format(snapshot[1], snapshot[2]))
-        return snapshots
+            raise Exception('No archives found')
+        return data[1:]
 
 
-def default(img):
-    if img.has_attr('src'):
-        return True
-    return False
+def get_imgs(snapshots, domain_code, cw=None):
+    print_ = get_print(cw)
+    imgs = []
+    for snapshot in snapshots:
+        try:
+            soup = downloader.read_soup('https://web.archive.org/web/{}id_/{}'.format(snapshot[0], snapshot[1]))
+        except Exception as e:
+            print_(print_error(e)[0])
+            continue
+        for url in img_extractor[domain_code](soup, print_):
+            imgs.append('https://web.archive.org/web/{}im_/{}'.format(snapshot[0], url))
+    return imgs
 
 
-def twitter(img):
-    if default(img) and '/media/' in img['src']:
-        return True
-    return False
-
-
-filter_ = [
-    default,
-    twitter,
-]
-
-
-def get_filter_code(query):
+def get_domain_code(query):
     if 'twitter.com' in query.lower():
         return 1
     return 0
 
 
-def get_imgs(query, session, cw):
-    imgs = []
-    img_elements = None
-    snapshots = WaybackMachineAPI(session, cw).snapshots(query)
-    filter_code = get_filter_code(query)
-    for url in snapshots:
-        soup = downloader.read_soup(url)
-        img_elements = soup.find_all('img')
-        for img in img_elements:
-            if filter_[filter_code](img):
-                imgs.append(img['src'])
-    return imgs
+def default(soup):
+    urls = []
+    for img in soup.find_all('img', src=True):
+        urls.append(img['src'])
+    return urls
 
 
+def twitter(soup, print_):
+    urls = []
+    for div in soup.find_all('div', {'data-image-url': True}):
+        urls.append(div['data-image-url'])
+    return urls
+
+
+img_extractor = [
+    default,
+    twitter,
+]
