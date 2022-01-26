@@ -11,7 +11,7 @@ from io import BytesIO
 @Downloader.register
 class Downloader_xhamster(Downloader):
     type = 'xhamster'
-    __name = r'(xhamster|xhwebsite|xhofficial|xhlocal|xhopen|xhtotal)[0-9]*' #3881
+    __name = r'(xhamster|xhwebsite|xhofficial|xhlocal|xhopen|xhtotal|megaxh)[0-9]*' #3881, #4332
     URLS = [
      r'regex:{}\.[a-z0-9]+/videos/'.format(__name),
      r'regex:{}\.[a-z0-9]+/users/'.format(__name),

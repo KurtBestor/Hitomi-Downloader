@@ -73,7 +73,6 @@ class Downloader_insta(Downloader):
     def read(self):
         cw = self.cw
         title = self.id_
-        self.title = title
         self.artist = self.name
         ui_setting = self.ui_setting
 
@@ -205,7 +204,11 @@ def get_id(url):
 def get_username(url):
     j = get_sd(url, wait=False)
     if '/p/' in url:
-        id = j['entry_data']['PostPage'][0]['graphql']['shortcode_media']['owner']['username']
+        post = j['entry_data']['PostPage'][0]
+        if 'graphql' in post:
+            id = post['graphql']['shortcode_media']['owner']['full_name']
+        else:
+            id = post['items'][0]['user']['username'] #4336
     elif '/stories/' in url:
         id = j['entry_data']['StoriesPage'][0]['user']['username']
     else:
@@ -216,7 +219,11 @@ def get_username(url):
 def get_name(url):
     j = get_sd(url)
     if '/p/' in url:
-        name = j['entry_data']['PostPage'][0]['graphql']['shortcode_media']['owner']['full_name']
+        post = j['entry_data']['PostPage'][0]
+        if 'graphql' in post:
+            name = post['graphql']['shortcode_media']['owner']['full_name']
+        else:
+            name = post['items'][0]['user']['full_name'] #4336
     elif '/stories/' in url:
         id = get_id(url)
         url = 'https://www.instagram.com/{}/'.format(id)
@@ -364,7 +371,7 @@ def get_imgs(url, n_max=2000, title=None, cw=None, session=None):
 
         edges += edges_new
 
-        s = u'{} {}  ({}/{})'.format(tr_(u'읽는 중...'), title, len(edges), n)
+        s = u'{} {} - {} / {}'.format(tr_(u'읽는 중...'), title, len(edges), n)
         if cw is not None:
             cw.setTitle(s)
             if not cw.alive:
@@ -525,7 +532,7 @@ def get_stories(url, title=None, cw=None, session=None):
         except Exception as e:
             print_(u'Failed to get stories: {}'.format(hid))
             print(e)
-        msg = u'{} {}  ({}/{})'.format(tr_(u'스토리 읽는 중...'), title, i+1, len(edges))
+        msg = u'{} {} - {} / {}'.format(tr_(u'스토리 읽는 중...'), title, i+1, len(edges))
         if cw:
             if not cw.alive:
                 return

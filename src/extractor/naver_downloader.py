@@ -1,6 +1,6 @@
 #coding:utf-8
 import downloader
-import re
+import ree as re
 from utils import urljoin, Downloader, Soup, LazyUrl, clean_title, get_ext
 import json
 from timee import sleep
@@ -81,11 +81,8 @@ def read_page(url, depth=0):
     html = downloader.read_html(url, header=HDR)
 
     if len(html) < 5000:
-        id = re.findall('logNo=([0-9]+)', html)[0]
-        usernames = re.findall('blog.naver.com/([0-9a-zA-Z]+)', url)
-        if not usernames:
-            usernames = re.findall('blogId=([0-9a-zA-Z]+)', url)
-        username = usernames[0]
+        id = re.find('logNo=([0-9]+)', html, err='no id')
+        username = re.find('blog.naver.com/([0-9a-zA-Z]+)', url) or re.find('blogId=([0-9a-zA-Z]+)', url, err='no username')
         url = 'https://m.blog.naver.com/PostView.nhn?blogId={}&logNo={}&proxyReferer='.format(username, id)
         print('###', username, id, url)
 

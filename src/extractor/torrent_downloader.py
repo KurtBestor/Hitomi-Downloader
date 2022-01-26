@@ -1,4 +1,4 @@
-from utils import Downloader, clean_title
+from utils import Downloader, clean_title, lock
 import constants, os, downloader
 from size import Size
 try:
@@ -28,10 +28,11 @@ class Downloader_torrent(Downloader):
     _state = None
     _h = None
     _dn = None
-    MAX_PARALLEL = 14
+    MAX_PARALLEL = 16
     skip_convert_imgs = True
     _filesize_init = False
 
+    @lock
     def init(self):
         global torrent
         if torrent is None:

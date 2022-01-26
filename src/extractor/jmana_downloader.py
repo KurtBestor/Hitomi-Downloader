@@ -149,8 +149,8 @@ def get_imgs_page(page, referer, session, cw=None):
 
 def get_pages(url, session=None, soup=None):
     if soup is None:
-        html = downloader.read_html(url, session=session)
-        soup = Soup(html)
+        res = clf2.solve(url, session=session) #4070
+        soup = Soup(res['html'])
     pages = []
     for inner in soup.findAll('div', class_='inner'):
         a = inner.find('a')

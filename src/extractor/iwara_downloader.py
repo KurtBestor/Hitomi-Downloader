@@ -1,6 +1,6 @@
 from __future__ import division, print_function, unicode_literals
 import downloader
-from utils import Soup, urljoin, Downloader, LazyUrl, get_print, clean_url, clean_title, check_alive, Session, try_n
+from utils import Soup, urljoin, Downloader, LazyUrl, get_print, clean_url, clean_title, check_alive, Session, try_n, format_filename
 import ree as re
 import json
 import os
@@ -8,6 +8,7 @@ from timee import sleep
 from io import BytesIO
 import errors
 TIMEOUT = 300
+PATTERN_ID = r'videos/([0-9a-zA-Z_-]+)'
 
 
 
@@ -15,13 +16,14 @@ class File(object):
     thumb = None
 
     def __init__(self, type, url, title, referer, p=0, multi_post=False):
+        id_ = re.find('videos/([0-9a-zA-Z_-]+)', referer, err='no video id')
         self.type = type
         self.url = LazyUrl(referer, lambda _: url, self)
         ext = os.path.splitext(url.split('?')[0])[1]
         if ext.lower() == '.php':
             ext = '.mp4'
         if type == 'video':
-            self.filename = clean_title('{}{}'.format(title, ext))
+            self.filename = format_filename(title, id_, ext) #4287
         elif type == 'image':
             name = '{}_p{}'.format(clean_title(title), p) if multi_post else p
             self.filename = '{}{}'.format(name, ext)
@@ -103,7 +105,10 @@ class Downloader_iwara(Downloader):
             
             if file.type == 'image':
                 self.single = False
-            self.title = clean_title(title or file.title)
+            title = title or file.title
+            if not self.single:
+                title = clean_title(title)
+            self.title = title
             
         if file.thumb is not None:
             self.setIcon(file.thumb)
@@ -156,6 +161,7 @@ def read_channel(url, type_, session, cw=None):
     return info
 
 
+@try_n(4)
 def get_files(url, session, multi_post=False, cw=None):
     print_ = get_print(cw)
     html = read_html(url, session=session)
@@ -193,12 +199,15 @@ def get_files(url, session, multi_post=False, cw=None):
     elif type == 'video':
         url_thumb = urljoin(url, video.attrs['poster'])
         print('url_thumb:', url_thumb)
-        id = re.find('videos/([0-9a-zA-Z_-]+)', url, err='no video id')
+        id = re.find(PATTERN_ID, url, err='no video id')
         url_data = urljoin(url, '/api/video/{}'.format(id))
         s_json = read_html(url_data, url, session=session)
         data = json.loads(s_json)
         video = data[0]
         url_video = urljoin(url, video['uri'])
+        if not downloader.ok_url(url_video, url): #4287
+            print_('invalid video')
+            raise Exception('Invalid video')
         file = File(type, url_video, title, url)
         file.url_thumb = url_thumb
         file.thumb = BytesIO()

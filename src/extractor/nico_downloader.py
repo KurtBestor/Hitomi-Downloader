@@ -67,6 +67,7 @@ class Downloader_nico(Downloader):
     URLS = [suitable]
     display_name = 'Niconico'
     _format = 'mp4'
+    MAX_SPEED = 2.0
 
     @classmethod
     def fix_url(cls, url):

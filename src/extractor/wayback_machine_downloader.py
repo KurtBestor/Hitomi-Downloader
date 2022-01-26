@@ -1,4 +1,4 @@
-# coding: cp1252
+# coding: utf8
 # title: Wayback Machine Downloader
 # author: bog_4t
 import concurrent.futures
@@ -14,7 +14,6 @@ from ratelimit import limits, sleep_and_retry
 class Downloader_wayback_machine(Downloader):
     type = 'waybackmachine'
     URLS = ['archive.org', 'web.archive.org']
-    icon = 'https://archive.org/offshoot_assets/favicon.ico'
     display_name = 'Wayback Machine'
 
     def read(self):

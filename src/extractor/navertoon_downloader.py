@@ -1,5 +1,5 @@
 import downloader
-from utils import Soup, urljoin, Downloader, LazyUrl, get_imgs_already, clean_title, get_ext, get_print
+from utils import Soup, urljoin, Downloader, LazyUrl, get_imgs_already, clean_title, get_ext, get_print, errors
 from constants import try_n
 import ree as re, os
 from timee import sleep
@@ -99,6 +99,8 @@ def get_pages(url, cw=None):
     print(url)
     html = downloader.read_html(url)
     soup = Soup(html)
+    if soup.find('button', class_='btn_check'):
+        raise errors.LoginRequired()
     try:
         info = soup.find('div', class_='area_info')
         artist = info.find('span', class_='author').text.strip()

@@ -14,19 +14,19 @@ class Downloader_kissjav(Downloader):
     display_name = 'KissJAV'
 
     def read(self):
-        video = get_video(self.url)
+        self.session = None#get_session(self.url, cw=self.cw)
+        
+        video = get_video(self.url, self.session)
         self.urls.append(video.url)
         self.setIcon(video.thumb)
-
-        self.session = get_session(self.url, cw=self.cw)
         self.enableSegment(1024*1024//2)
         
         self.title = video.title
 
 
-def get_video(url):
-    html = downloader.read_html(url)
-    soup = Soup(html)
+@try_n(2)
+def get_video(url, session):
+    soup = downloader.read_soup(url, session=session)
 
     view = soup.find('div', id='player-container-fluid')
     src_best = None
@@ -49,19 +49,19 @@ def get_video(url):
 
     #src_best = downloader.real_url(src_best)
 
-    video = Video(src_best, url_thumb, url, title, id)
+    video = Video(src_best, url_thumb, url, title, id, session)
     return video
 
 
 class Video(object):
-    def __init__(self, url, url_thumb, referer, title, id):
+    def __init__(self, url, url_thumb, referer, title, id, session):
         self.title = title
         self.filename = format_filename(title, id, '.mp4')
         self.url = LazyUrl(referer, lambda x: url, self)
 
         self.thumb = BytesIO()
         self.url_thumb = url_thumb
-        downloader.download(url_thumb, buffer=self.thumb)
+        downloader.download(url_thumb, buffer=self.thumb, session=session)
 
 
 @try_n(2)

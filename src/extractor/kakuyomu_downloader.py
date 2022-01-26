@@ -1,7 +1,7 @@
 #coding:utf8
 import downloader
 import utils
-from utils import Soup, urljoin, Downloader, LazyUrl, get_outdir, try_n, clean_title
+from utils import Soup, urljoin, Downloader, LazyUrl, get_outdir, try_n, clean_title, get_print
 import os
 from timee import sleep
 from io import BytesIO
@@ -35,7 +35,7 @@ class Downloader_kakuyomu(Downloader):
     display_name = 'カクヨム'
 
     def init(self):
-        self.info = get_info(self.url)
+        self.info = get_info(self.url, cw=self.cw)
     
     def read(self):
         outdir = get_outdir('kakuyomu')
@@ -87,7 +87,8 @@ def get_text(page):
     return text
         
 
-def get_info(url, soup=None):
+def get_info(url, soup=None, cw=None):
+    print_ = get_print(cw)
     if soup is None:
         html = downloader.read_html(url)
         soup = Soup(html)
@@ -103,8 +104,13 @@ def get_info(url, soup=None):
         print('decompose button')
         button.decompose()
     catch = desc.find('span', id='catchphrase-body').text.strip()
-    intro = desc.find('p', id='introduction').text.strip()
-    desc = u'  {}\n\n\n{}'.format(catch, intro)
+    intro = desc.find('p', id='introduction')
+    if intro is None: #4262
+        print_('no intro')
+        intro = ''
+    else:
+        intro = intro.text.strip()
+    desc = u'  {}{}'.format(catch, ('\n\n\n'+intro) if intro else '')
     info['description'] = desc
     
     pages = []

@@ -1,5 +1,5 @@
 import downloader
-from utils import Downloader, Soup, LazyUrl, urljoin, format_filename, clean_title, Session, get_ext, get_print, get_max_range
+from utils import Downloader, Soup, LazyUrl, urljoin, format_filename, Session, get_ext, get_print, get_max_range, html_unescape
 from io import BytesIO
 from constants import try_n
 import ree as re
@@ -26,8 +26,8 @@ class Video(object):
         if not self._url:
             id = get_id(url_page)
             html = downloader.read_html(url_page)
-            soup = Soup(html, unescape=True)
-            self.title = soup.find('title').text.replace('- XVIDEOS.COM', '').strip()
+            soup = Soup(html)
+            self.title = html_unescape(soup.find('title').text).replace('- XVIDEOS.COM', '').strip()
             url = re.find(r'''.setVideoHLS\(['"](.+?)['"]\)''', html)
             ext = get_ext(url)
             if ext.lower() == '.m3u8':

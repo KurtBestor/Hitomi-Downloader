@@ -19,7 +19,7 @@
 ## Features
 - 🍰 Simple and clear user interface
 - 🚀 Download acceleration
-- 💻 Supports 32 threads in a single task
+- 💻 Supports 24 threads in a single task
 - 🚥 Supports speed limit
 - 📜 Supports user scripts
 - 🧲 Supports BitTorrent & Magnet
@@ -32,6 +32,7 @@
 ## Supported Sites
 | Site | URL |
 | :--: | -- |
+| **4chan** | <https://4chan.org> |
 | **AfreecaTV** | <https://afreecatv.com> |
 | **ArtStation** | <https://artstation.com> |
 | **AsianSister** | <https://asiansister.com> |
@@ -66,6 +67,7 @@
 | **Luscious** | <https://luscious.net> |
 | **MyReadingManga** | <https://myreadingmanga.info> |
 | **Naver Blog** | <https://blog.naver.com> |
+| **Naver Cafe** | <https://cafe.naver.com> |
 | **Naver Post** | <https://post.naver.com> |
 | **Naver Webtoon** | <https://comic.naver.com> |
 | **Naver TV** | <https://tv.naver.com> |
@@ -73,6 +75,7 @@
 | **nhentai.com** | <https://nhentai.com> |
 | **Niconico** | <http://nicovideo.jp> |
 | **ニジエ** | <https://nijie.info> |
+| **Nozomi.la** | <https://nozomi.la> |
 | **Pawoo** | <https://pawoo.net> |
 | **Pinterest** | <https://pinterest.com> |
 | **Pixiv** | <https://pixiv.net> |
@@ -88,6 +91,7 @@
 | **Twitter** | <https://twitter.com> |
 | **Vimeo** | <https://vimeo.com> |
 | **V LIVE** | <https://vlive.tv> |
+| **Wayback Machine** | <https://archive.org> |
 | **Weibo** | <https://weibo.com> |
 | **WikiArt** | <https://www.wikiart.org> |
 | **xHamster** | <https://xhamster.com> |

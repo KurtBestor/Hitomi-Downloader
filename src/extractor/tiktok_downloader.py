@@ -27,6 +27,7 @@ class Downloader_tiktok(Downloader):
         cw = self.cw
         self.session = Session()
         res = clf2.solve(self.url, self.session, cw)
+        self.url = self.fix_url(res['url']) #4324
         soup = Soup(res['html'])
         if is_captcha(soup):
             def f(html):

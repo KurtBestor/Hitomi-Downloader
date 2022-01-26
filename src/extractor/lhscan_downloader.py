@@ -41,7 +41,7 @@ def get_soup_session(url, cw=None):
     session = Session()
     res = clf2.solve(url, session=session, cw=cw)
     print_('{} -> {}'.format(url, res['url']))
-    if res['url'].rstrip('/') == 'https://welovemanga.net':
+    if res['url'].rstrip('/') == 'https://welovemanga.one':
         raise errors.LoginRequired()
     return Soup(res['html']), session
 
@@ -51,7 +51,7 @@ class Downloader_lhscan(Downloader):
     type = 'lhscan'
     URLS = [
         #'lhscan.net', 'loveheaven.net',
-        'lovehug.net', 'welovemanga.net',
+        'lovehug.net', 'welovemanga.',
         ]
     MAX_CORE = 16
     display_name = 'LHScan'
@@ -64,7 +64,8 @@ class Downloader_lhscan(Downloader):
 
     @classmethod
     def fix_url(cls, url):
-        url = url.replace('lovehug.net', 'welovemanga.net')
+        url = url.replace('lovehug.net', 'welovemanga.one')
+        url = url.replace('welovemanga.net', 'welovemanga.one') #4298
         return url
 
     @property
@@ -124,7 +125,7 @@ def get_imgs_page(page, referer, session, cw=None):
         except:
             pass
         src0 = src
-        src = src.replace('welovemanga.net', '1')#
+        src = src.replace('welovemanga.one', '1')#
         src = urljoin(page.url, src).strip()
         if 'Credit_LHScan_' in src or '5e1ad960d67b2_5e1ad962338c7' in src:
             continue

@@ -92,7 +92,7 @@ def get_id(url, cw=None):
             res = clf2.solve(url, cw=cw, f=_get_page_id)
             html = res['html']
             soup = Soup(html)
-            if soup.find('div', class_='gn_login'):
+            if soup.find('div', class_='gn_login') or soup.find('a', class_=lambda c: c and c.startswith('LoginBtn')):
                 raise errors.LoginRequired()
             oid = _get_page_id(html)
             if not oid:
@@ -148,6 +148,8 @@ def get_imgs(uid, oid, title, session, cw=None, d=None, parent=None):
         url = 'https://photo.weibo.com/albums/get_all?uid={}&page={}&count=20&__rnd={}'.format(uid, page, int(time()*1000))
         referer = 'https://photo.weibo.com/{}/albums?rd=1'.format(uid)
         html = downloader.read_html(url, referer, session=session)
+        if '<title>新浪通行证</title>' in html:
+            raise errors.LoginRequired()
         j = json.loads(html)
         data = j['data']
         albums = []
