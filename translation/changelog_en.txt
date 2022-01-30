@@ -1,49 +1,49 @@
-3.7i    【Jan 27, 2022】
+3.7i    2022-01-27
 
-[버그 해결 / 사이트 변경에 의한 수정]
+[Bug Resolution / Fix due to site change]
 
-- 일부 사이트에서 일시 정지 후 다시 시작 안 되는 문제 해결
+- Fixed an issue where some sites should not pause and then resume
 
-- カクヨム 일부 작품 다운로드 안 되는 문제 해결 (#4262)
+- Kakuyomu (カクヨム): download error resolved (#4262)
 
-- Facebook 일부 계정 다운로드 안 되는 문제 해결 (#2417)
+- Facebook: account download error resolved (#2417)
 
-- xHamster 새로운 도메인 지원 (#4332)
+- xHamster: support (#4332)
 
-- Hitomi.la 업데이트 대응 (#4351, #4352)
+- Hitomi.la: update response (#4351, #4352)
 
-- KAKAO WEBTOON 업데이트 대응 (#4360)
+- KAKAO WEBTOON: update response (#4360)
 
-- #4267
+- Hitomi.la: fixed some title bug (#4267)
 
-- #4288
+- Iwara: fixed download error (#4288)
 
-- #4298
+- welovemanga: new domain support (#4298)
 
-- #4316
+- Search: multiple bugs corrected (#4316)
 
-- Weibo 오래된 쿠키 업데이트 메시지 안 나오는 문제 해결
+- Weibo: fixed "warning: old cookies" messages
 
-- Tiktok 모바일 주소 다운로드 안 되는 문제 해결 (#4324)
+- Tiktok: fixed download error (#4324)
 
-- Instagram 업데이트 대응 (#4336)
+- Instagram: update response (#4336)
 
-- XVideos 일부 제목 잘못 읽는 문제 해결 (#4359)
+- XVideos: fixed title errors (#4359)
 
-- Twitter 업데이트 대응
+- Twitter: update response 
 
-- 기타 자잘한 것들
+- Other small things
 
 
-[변경/추가된 기능]
+[Changed/Added Features]
 
-- Naver Cafe 지원 (#2090)
+- Naver Cafe: support (#2090)
 
-- 폴더 열기 단축키
+- Open folder shortcut
 
-- #4287
+- Iwara: same videos title (but different url) are not treated as the same videos anymore (#4287)
 
-- 기타 자잘한 것들
+- Other small things
 
 
 
