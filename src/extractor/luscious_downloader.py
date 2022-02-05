@@ -1,5 +1,6 @@
 #coding:utf8
 import downloader
+import requests
 from utils import Soup, Downloader, LazyUrl, urljoin, try_n, get_outdir, clean_title
 import ree as re
 import os
@@ -49,7 +50,7 @@ class Downloader_luscious(Downloader):
         url = fix_url(self.url)
         for try_ in range(8):
             try:
-                html = downloader.read_html(url)
+                html = requests.get(url).text
                 break
             except Exception as e:
                 print(e)
