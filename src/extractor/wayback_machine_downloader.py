@@ -14,6 +14,7 @@ from ratelimit import limits, sleep_and_retry
 class Downloader_wayback_machine(Downloader):
     type = 'waybackmachine'
     URLS = ['archive.org', 'web.archive.org']
+    icon = 'https://archive.org/offshoot_assets/favicon.ico'
     display_name = 'Wayback Machine'
 
     def read(self):
@@ -62,7 +63,7 @@ class Filter(object):
         self.title = self.__get_title()
 
     def __get_mode(self):
-        for mode in [mode for mode, domain in enumerate(self.domains, start=1) if domain in self.url]:
+        for mode in (mode for mode, domain in enumerate(self.domains, start=1) if domain in self.url):
             return mode
         return 0
 
@@ -72,7 +73,7 @@ class Filter(object):
             return clean_title(os.path.basename(self.base_url), n=-len(tail)) + tail
 
         def twitter():
-            return '@' + re.findall('twitter.[^/]+/([^/?]+)', self.url)[0]
+            return '@' + re.findall('twitter.[^/]+/([^/*?]+)', self.url)[0]
 
         return [
             default,

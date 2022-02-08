@@ -113,7 +113,7 @@ class TumblrAPI(object):
             if self.cw and not self.cw.alive:
                 break
             data = self.call(path, qs, default_qs=default_qs)
-            for post in data['posts']:
+            for post in (post for post in data['posts'] if post['object_type'] != 'backfill_ad'):
                 id_ = post['id']
                 if id_ in ids:
                     self.print_('duplicate: {}'.format(id_))
