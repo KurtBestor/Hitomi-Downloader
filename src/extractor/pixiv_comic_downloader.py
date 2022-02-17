@@ -93,11 +93,10 @@ def get_artist(soup):
     if artist:
         return artist.text.strip()
     else:
-        artist = re.find(r'"author" *: *(".+?")', soup.html)
+        artist = re.find(r'"author" *: *(".*?")', soup.html) # 4389
         if artist:
-            return json.loads(artist)
-        else:
-            return 'N/A'
+            artist = json.loads(artist)
+        return artist or None
 
 
 def get_pages(soup, url):

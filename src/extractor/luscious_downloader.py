@@ -1,6 +1,5 @@
 #coding:utf8
 import downloader
-import requests
 from utils import Soup, Downloader, LazyUrl, urljoin, try_n, get_outdir, clean_title
 import ree as re
 import os
@@ -47,27 +46,27 @@ class Downloader_luscious(Downloader):
         return url
 
     def read(self):
-        url = fix_url(self.url)
         for try_ in range(8):
             try:
-                html = requests.get(url).text
+                html = downloader.read_html(self.url)
                 break
             except Exception as e:
-                print(e)
+                e_ = e
+                self.print_error(e)
                 self.print_('retry...')
         else:
-            raise
+            raise e_
         soup = Soup(html)
         title = clean_title(get_title(soup))
         
         self.title = tr_(u'읽는 중... {}').format(title)
 
-        if '/videos/' in url:
-            video = get_video(url, soup)
+        if '/videos/' in self.url:
+            video = get_video(self.url, soup)
             imgs = [video]
             self.setIcon(video.thumb)
         else:
-            imgs = get_imgs(url, soup, self.cw)
+            imgs = get_imgs(self.url, soup, self.cw)
 
         dir = os.path.join(get_outdir(self.type), title)
         names = {}
@@ -89,18 +88,13 @@ class Downloader_luscious(Downloader):
 
 
 def update(cw, title, imgs):
-    s = u'{} {}  ({})'.format(tr_(u'읽는 중...'), title, len(imgs))
+    s = u'{} {} - {}'.format(tr_(u'읽는 중...'), title, len(imgs))
     if cw is not None:
         cw.setTitle(s)
     else:
         print(s)
 
-def fix_url(url):
-    url = re.sub(r'[^./]+\.luscious', 'legacy.luscious', url)
-    return url
-
 def get_imgs(url, soup=None, cw=None):
-    url = fix_url(url)
     if soup is None:
         html = downloader.read_html(url)
         soup = Soup(html)
@@ -143,4 +137,4 @@ def get_video(url, soup):
 
 
 def get_title(soup):
-    return soup.find('h2').text.strip()
+    return soup.find('h1').text.strip()

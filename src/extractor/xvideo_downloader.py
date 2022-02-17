@@ -5,6 +5,9 @@ from constants import try_n
 import ree as re
 from m3u8_tools import playlist2stream
 from translator import tr_
+import json
+from timee import sleep
+from ratelimit import limits, sleep_and_retry
 CHANNEL_PATTERN = r'/(profiles|[^/]*channels)/([0-9a-zA-Z_]+)'
 
 
@@ -19,25 +22,38 @@ class Video(object):
     _url = None
 
     def __init__(self, url_page):
+        url_page = Downloader_xvideo.fix_url(url_page)
         self.url = LazyUrl(url_page, self.get, self)
 
-    @try_n(4)
     def get(self, url_page):
         if not self._url:
-            id = get_id(url_page)
-            html = downloader.read_html(url_page)
-            soup = Soup(html)
-            self.title = html_unescape(soup.find('title').text).replace('- XVIDEOS.COM', '').strip()
-            url = re.find(r'''.setVideoHLS\(['"](.+?)['"]\)''', html)
-            ext = get_ext(url)
-            if ext.lower() == '.m3u8':
-                url = playlist2stream(url, n_thread=5)
-            url_thumb = soup.find('meta', {'property': 'og:image'}).attrs['content']
-            self.thumb = BytesIO()
-            downloader.download(url_thumb, buffer=self.thumb)
-            self.filename = format_filename(self.title, id, '.mp4')
-            self._url= url
+            self._get(url_page)
         return self._url
+
+    @try_n(4)
+    @sleep_and_retry
+    @limits(1, 2)
+    def _get(self, url_page):
+        id = get_id(url_page)
+        html = downloader.read_html(url_page)
+        soup = Soup(html)
+        self.title = html_unescape(soup.find('title').text).replace('- XVIDEOS.COM', '').strip()
+        url = re.find(r'''.setVideoHLS\(['"](.+?)['"]\)''', html) or re.find(r'''.setVideoUrlLow\(['"](.+?)['"]\)''', html) #https://www.xvideos.com/video65390539/party_night
+        if not url:
+            raise Exception('no video url')
+        ext = get_ext(url)
+        if ext.lower() == '.m3u8':
+            url = playlist2stream(url, n_thread=5)
+        self.url_thumb = soup.find('meta', {'property': 'og:image'}).attrs['content']
+        self.filename = format_filename(self.title, id, '.mp4')
+        self._url= url
+
+    @property
+    def thumb(self):
+        self.url()
+        f = BytesIO()
+        downloader.download(self.url_thumb, buffer=f)
+        return f
 
 
 
@@ -57,6 +73,7 @@ class Downloader_xvideo(Downloader):
     @classmethod
     def fix_url(cls, url):
         url = re.sub(r'[^/]*xvideos[0-9]*\.[^/]+', 'www.xvideos.com', url).replace('http://', 'https://')
+        url = url.replace('/THUMBNUM/', '/')
         return url
 
     @classmethod
@@ -77,9 +94,9 @@ class Downloader_xvideo(Downloader):
             video = Video(self.url)
             video.url()
             self.title = video.title
+            self.urls.append(video.url)
             
         self.setIcon(video.thumb)
-        self.urls.append(video.url)
 
 
 def read_channel(url_page, cw=None):
@@ -95,38 +112,41 @@ def read_channel(url_page, cw=None):
     info['username'] = username
     session = Session()
     urls = []
-    urls_set = set()
+    ids = set()
     for p in range(100):
         url_api = urljoin(url_page, '/{}/{}/videos/best/{}'.format(header, username, p))
-        print(url_api)
-        r = session.post(url_api, data='main_cats=false')
-        soup = Soup(r.text)
-        thumbs = soup.findAll('div', class_='thumb-block')
-        if not thumbs:
+        print_(url_api)
+        r = session.post(url_api)
+        data = json.loads(r.text)
+        
+        videos = data['videos']
+        if not videos:
             print_('empty')
             break
-        for thumb in thumbs:
-            info['name'] = thumb.find('span', class_='name').text.strip()
-            href = thumb.find('a')['href']
-            href = urljoin(url_page, href)
-            if href in urls_set:
-                print_('duplicate: {}'.format(href))
+        
+        for video in videos:
+            id_ = video['id']
+            if id_ in ids:
+                print_('duplicate: {}'.format(id_))
                 continue
-            urls_set.add(href)
-            urls.append(href)
+            ids.add(id_)
+            info['name'] = video['pn']
+            urls.append(urljoin(url_page, video['u']))
         
         if len(urls) >= max_pid:
             break
+
+        n = data['nb_videos']
         
         s = '{} {} - {}'.format(tr_('읽는 중...'), info['name'], len(urls))
         if cw:
-            if not cw.alive:
-                return
             cw.setTitle(s)
         else:
             print(s)
+        if len(ids) >= n:
+            break
+        sleep(1, cw)
     if not urls:
         raise Exception('no videos')
     info['urls'] = urls[:max_pid]
     return info
-        

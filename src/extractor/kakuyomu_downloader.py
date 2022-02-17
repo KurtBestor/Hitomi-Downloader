@@ -103,7 +103,12 @@ def get_info(url, soup=None, cw=None):
     if button:
         print('decompose button')
         button.decompose()
-    catch = desc.find('span', id='catchphrase-body').text.strip()
+    catch = desc.find('span', id='catchphrase-body')
+    if catch is None: #4445
+        print_('no catch')
+        catch = ''
+    else:
+        catch = catch.text.strip()
     intro = desc.find('p', id='introduction')
     if intro is None: #4262
         print_('no intro')

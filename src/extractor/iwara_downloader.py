@@ -16,13 +16,13 @@ class File(object):
     thumb = None
 
     def __init__(self, type, url, title, referer, p=0, multi_post=False):
-        id_ = re.find('videos/([0-9a-zA-Z_-]+)', referer, err='no video id')
         self.type = type
         self.url = LazyUrl(referer, lambda _: url, self)
         ext = os.path.splitext(url.split('?')[0])[1]
         if ext.lower() == '.php':
             ext = '.mp4'
         if type == 'video':
+            id_ = re.find('videos/([0-9a-zA-Z_-]+)', referer, err='no video id')
             self.filename = format_filename(title, id_, ext) #4287
         elif type == 'image':
             name = '{}_p{}'.format(clean_title(title), p) if multi_post else p
