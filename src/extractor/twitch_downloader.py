@@ -102,6 +102,7 @@ def alter(seg):
 
 
 def extract_info(url, cw=None):
+    print_ = get_print(cw)
     ydl = ytdl.YoutubeDL(cw=cw)
     try:
         info = ydl.extract_info(url)
