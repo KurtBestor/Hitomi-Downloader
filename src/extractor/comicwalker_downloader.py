@@ -134,7 +134,7 @@ def f(url):
 def get_imgs(url, soup=None, cw=None):
     if soup is None:
         html = downloader.read_html(url)
-        soup = Soup(hrml)
+        soup = Soup(html)
 
     title = get_title(soup, cw)
 
