@@ -13,7 +13,7 @@ import requests
 
 @Downloader.register
 class Downloader_novelpia(Downloader):
-    type = "test_novelpia"
+    type = "novelpia"
     URLS = ["novelpia.com"]
 
     def __get_number(self, url: str) -> str:
