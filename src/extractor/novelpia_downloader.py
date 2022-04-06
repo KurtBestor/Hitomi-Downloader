@@ -13,7 +13,7 @@ import requests
 
 @Downloader.register
 class Downloader_novelpia(Downloader):
-    type = "novelpia"
+    type = "test_novelpia"
     URLS = ["novelpia.com"]
 
     def __get_number(self, url: str) -> str:
@@ -88,7 +88,7 @@ class Downloader_novelpia(Downloader):
                         # Maybe NavigableString here too?
                         assert isinstance(img, Tag)
                         src = img.attrs["src"]
-                        filename = img.attrs["data-filename"]
+                        filename = img.get("data-filename") or "cover.jpg"
                         f.write(f"[{filename}]".encode("UTF-8"))
                         self.urls.append(f"https:{src}")
                     else:
