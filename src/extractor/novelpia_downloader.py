@@ -67,7 +67,7 @@ class Downloader_novelpia(Downloader):
         matched = regex.match(last_episode)
         assert matched
         total_episode_page = matched.group(1)
-        self.title = tr_("{} 개 찾음".format(total_episode_page))
+        self.title = tr_("{} 개 찾음").format(total_episode_page)
         return int(total_episode_page), html
 
     def __get_all_viewer_numbers(self):
