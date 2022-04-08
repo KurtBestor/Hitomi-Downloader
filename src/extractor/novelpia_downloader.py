@@ -1,11 +1,11 @@
 from io import BytesIO
 from urllib.parse import urlparse
-from typing import List, cast
+from typing import List, Tuple, cast
 
 from requests.sessions import session
-
+import re
 from errors import LoginRequired
-from utils import Downloader, Soup, Session, clean_title
+from utils import Downloader, Soup, Session, clean_title, urljoin
 
 from bs4.element import Tag
 import requests
@@ -20,7 +20,7 @@ class Downloader_novelpia(Downloader):
         self.parsed_url = urlparse(self.url)  # url 나눔
 
     @property
-    def is_novel(self) -> bool:
+    def is_novel(self):
         return "novel" in self.url
 
     @property
@@ -44,10 +44,10 @@ class Downloader_novelpia(Downloader):
             session.cookies.set("LOGINKEY", login_key, domain=".novelpia.com")
         return session
 
-    def __proc_episoe_list_url_request(self, session: Session, page: int):
+    def __proc_episoe_list_url_request(self, session: Session, page_no: int):
         r = session.post(
             self.proc_episode_list_url,
-            data={"novel_no": self.number, "page": page},
+            data={"novel_no": self.number, "page_no": page_no},
         )
         return r.text
 
@@ -66,7 +66,7 @@ class Downloader_novelpia(Downloader):
 
     def __get_all_viewer_numbers(self):
         htmls: List[str] = []
-        viewer_numbers: List[int] = []
+        novel_numbers: List[int] = []
         session = self.__get_session_with_set_cookies()
         total_episode_page, html = self.__get_total_episode_list(session)
         htmls.append(html)
@@ -78,55 +78,62 @@ class Downloader_novelpia(Downloader):
         for html in htmls:
             soup = Soup(html)
             for element in soup.find_all("i", {"class": "icon ion-bookmark"}):
-                viewer_numbers.append(int(element["id"]))
+                novel_numbers.append(int(element["id"]))
 
-        return viewer_numbers
+        return novel_numbers
 
     def read(self):
-        session = self.__get_cookie()
-        f = BytesIO()
+        viewer_numbers: list[int] = []
+        session = self.__get_session_with_set_cookies()
 
-        title_element = self.soup.find("b", {"class": "cut_line_one"})
+        if self.is_novel:
+            viewer_numbers.extend(self.__get_all_viewer_numbers())
+        else:
+            viewer_numbers.append(int(self.number))
 
-        if not title_element:
-            raise LoginRequired
+        for viewer_number in viewer_numbers:
+            r = session.get(urljoin(self.url, f"/viewer/{viewer_number}"))
+            soup = Soup(r.text)
+            f = BytesIO()
 
-        # Maybe NavigableString?
-        assert isinstance(title_element, Tag)
-        self.title = title_element.text
+            title_element = soup.find("b", {"class": "cut_line_one"})
 
-        # css selecter is not working :(
-        ep_num = self.soup.find(
-            "span",
-            {
-                "style": "background-color:rgba(155,155,155,0.5);padding: 1px 6px;border-radius: 3px;font-size: 11px; margin-right: 3px;"
-            },
-        )
-        assert isinstance(ep_num, Tag)
+            if not title_element:
+                raise LoginRequired
 
-        ep_name = self.soup.find("span", {"class": "cut_line_one"})
-        assert isinstance(ep_name, Tag)
+            # Maybe NavigableString?
+            assert isinstance(title_element, Tag)
+            self.title = title_element.text
 
-        # Dirty but for clean filename
-        self.print_(ep_name.text)
-        ep_name.text.replace(ep_num.text, "")
-        self.print_(ep_name.text)
-        self.print_(ep_num.text)
+            # css selecter is not working :(
+            ep_num = soup.find(
+                "span",
+                {
+                    "style": "background-color:rgba(155,155,155,0.5);padding: 1px 6px;border-radius: 3px;font-size: 11px; margin-right: 3px;"
+                },
+            )
+            assert isinstance(ep_num, Tag)
 
-        self.filenames[f] = clean_title(f"{ep_num.text}: {ep_name.text}.txt", "safe")
+            ep_name = soup.find("span", {"class": "cut_line_one"})
+            assert isinstance(ep_name, Tag)
 
-        # https://novelpia.com/viewer/:number:
-        numbers: List[str] = []
-        numbers.append(self.__get_number(self.parsed_url[2]))
+            # Dirty but for clean filename
+            self.print_(ep_name.text)
+            ep_name.text.replace(ep_num.text, "")
+            self.print_(ep_name.text)
+            self.print_(ep_num.text)
 
-        # Get real contents
-        # https://novelpia.com/proc/viewer_data/:number:
-        # {"s": [{"text": ""}]}
-        viewer_datas = map(
-            lambda number: f"https://novelpia.com/proc/viewer_data/{number}", numbers
-        )
-        for viewer_data in viewer_datas:
-            response = session.get(viewer_data)
+            self.filenames[f] = clean_title(
+                f"{ep_num.text}: {ep_name.text}.txt", "safe"
+            )
+
+            # Get real contents
+            # https://novelpia.com/proc/viewer_data/:number:
+            # {"s": [{"text": ""}]}
+
+            response = session.get(
+                f"https://novelpia.com/proc/viewer_data/{viewer_number}"
+            )
             if response.text:
                 response = response.json()
                 for text_dict in response["s"]:
