@@ -53,7 +53,7 @@ class Downloader_novelpia(Downloader):
 
     def __get_total_episode_list(self, session: Session) -> Tuple[int, str]:
         regex = re.compile(
-            rf"localStorage\['novel_page_{self.number}'\] = '(1)'; episode_list\(\);"
+            rf"localStorage\['novel_page_{self.number}'\] = '(.+?)'; episode_list\(\);"
         )
         html = self.__proc_episoe_list_url_request(session, 0)
         soup = Soup(html, "lxml")
