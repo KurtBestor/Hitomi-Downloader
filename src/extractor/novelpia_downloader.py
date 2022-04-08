@@ -44,10 +44,10 @@ class Downloader_novelpia(Downloader):
             session.cookies.set("LOGINKEY", login_key, domain=".novelpia.com")
         return session
 
-    def __proc_episoe_list_url_request(self, session: Session, page_no: int):
+    def __proc_episoe_list_url_request(self, session: Session, page: int):
         r = session.post(
             self.proc_episode_list_url,
-            data={"novel_no": self.number, "page_no": page_no},
+            data={"novel_no": self.number, "page": page},
         )
         return r.text
 
