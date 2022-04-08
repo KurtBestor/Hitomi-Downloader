@@ -18,7 +18,7 @@ class SoupInfo:
 
 @Downloader.register
 class Downloader_novelpia(Downloader):
-    type = "test_novelpia"
+    type = "novelpia"
     URLS = ["novelpia.com"]
 
     def init(self) -> None:
