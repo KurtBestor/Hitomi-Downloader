@@ -16,10 +16,25 @@ class Downloader_novelpia(Downloader):
     type = "novelpia"
     URLS = ["novelpia.com"]
 
-    def __get_number(self, url: str) -> str:
-        return url.replace("/viewer/", "")
+    def init(self) -> None:
+        self.parsed_url = urlparse(self.url)  # url 나눔
 
-    def __get_cookie(self) -> Session:
+    @property
+    def is_novel(self) -> bool:
+        return "novel" in self.url
+
+    @property
+    def number(self) -> str:
+        path = self.parsed_url[2]
+        if self.is_novel:
+            return path.replace("/novel/", "")
+        return path.replace("/viewer/", "")
+
+    @property
+    def proc_episode_list_url(self) -> str:
+        return urljoin(self.url, "/proc/episode_list")
+
+    def __get_session_with_set_cookies(self) -> Session:
         session = requests.Session()
         user_key = Session().cookies.get("USERKEY", domain=".novelpia.com")
         login_key = Session().cookies.get("LOGINKEY", domain=".novelpia.com")
@@ -29,9 +44,43 @@ class Downloader_novelpia(Downloader):
             session.cookies.set("LOGINKEY", login_key, domain=".novelpia.com")
         return session
 
-    def init(self) -> None:
-        self.parsed_url = urlparse(self.url)  # url 나눔
-        self.soup = Soup(requests.get(self.url).text)
+    def __proc_episoe_list_url_request(self, session: Session, page_no: int):
+        r = session.post(
+            self.proc_episode_list_url,
+            data={"novel_no": self.number, "page_no": page_no},
+        )
+        return r.text
+
+    def __get_total_episode_list(self, session: Session) -> Tuple[int, str]:
+        regex = re.compile(
+            rf"localStorage\['novel_page_{self.number}'\] = '(1)'; episode_list\(\);"
+        )
+        html = self.__proc_episoe_list_url_request(session, 0)
+        soup = Soup(html, "lxml")
+        page_link_element = soup.find_all("div", {"class": "page-link"})
+        last_episode = page_link_element[::-1][0]["onclick"]
+        matched = regex.match(last_episode)
+        assert matched
+        total_episode_page = matched.group(1)
+        return int(total_episode_page), html
+
+    def __get_all_viewer_numbers(self):
+        htmls: List[str] = []
+        viewer_numbers: List[int] = []
+        session = self.__get_session_with_set_cookies()
+        total_episode_page, html = self.__get_total_episode_list(session)
+        htmls.append(html)
+
+        for i in range(1, total_episode_page - 1):
+            html = self.__proc_episoe_list_url_request(session, i)
+            htmls.append(html)
+
+        for html in htmls:
+            soup = Soup(html)
+            for element in soup.find_all("i", {"class": "icon ion-bookmark"}):
+                viewer_numbers.append(int(element["id"]))
+
+        return viewer_numbers
 
     def read(self):
         session = self.__get_cookie()
