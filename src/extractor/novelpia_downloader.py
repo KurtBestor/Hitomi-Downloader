@@ -49,7 +49,7 @@ class Downloader_novelpia(Downloader):
             session.cookies.set("LOGINKEY", login_key, domain=".novelpia.com")
         return session
 
-    def __proc_episoe_list_url_request(self, session: Session, page: int):
+    def __proc_episode_list_url_request(self, session: Session, page: int):
         r = session.post(
             self.proc_episode_list_url,
             data={"novel_no": self.number, "page": page},
@@ -60,7 +60,7 @@ class Downloader_novelpia(Downloader):
         regex = re.compile(
             rf"localStorage\['novel_page_{self.number}'\] = '(.+?)'; episode_list\(\);"
         )
-        html = self.__proc_episoe_list_url_request(session, 0)
+        html = self.__proc_episode_list_url_request(session, 0)
         soup = Soup(html, "lxml")
         page_link_element = soup.find_all("div", {"class": "page-link"})
         last_episode = page_link_element[::-1][0]["onclick"]
@@ -78,7 +78,7 @@ class Downloader_novelpia(Downloader):
         htmls.append(html)
 
         for i in range(1, total_episode_page - 1):
-            html = self.__proc_episoe_list_url_request(session, i)
+            html = self.__proc_episode_list_url_request(session, i)
             self.title = f"{tr_('페이지 읽는 중...')} {i + 1}/{total_episode_page}"
             htmls.append(html)
 
