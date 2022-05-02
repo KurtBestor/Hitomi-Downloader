@@ -28,7 +28,7 @@ class NovelpiaParser:
     def __init__(
         self, url: str, downloader: Optional["Downloader_novelpia"] = None
     ) -> None:
-        self.parsed_url = urlparse(url.replace("test_novelpia_", ""))
+        self.parsed_url = urlparse(url.replace("novelpia_", ""))
         self.downloader = downloader
         self.session = self.get_session_with_set_cookies()
 
@@ -161,7 +161,7 @@ class NovelpiaParser:
         return parsed_info
 
 
-@page_selector.register("test_novelpia")
+@page_selector.register("novelpia")
 def _(url: str):
     novelpia_parser = NovelpiaParser(url)
     if not novelpia_parser.is_novel:
@@ -173,7 +173,7 @@ def _(url: str):
 
 @Downloader.register
 class Downloader_novelpia(Downloader):
-    type = "test_novelpia"
+    type = "novelpia"
     URLS = ["novelpia.com"]
 
     def init(self) -> None:
