@@ -62,6 +62,8 @@ class NovelpiaParser:
             self.proc_episode_list_url,
             data={"novel_no": self.number, "page": page},
         )
+        if not r.text:
+            raise Exception("Rate limit")
         return r.text
 
     def get_total_episode_list(self) -> Tuple[int, str]:
