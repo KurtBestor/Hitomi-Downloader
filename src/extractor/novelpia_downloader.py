@@ -167,7 +167,7 @@ def _(url: str):
     if not novelpia_parser.is_novel:
         raise Exception(tr_("목록 주소를 입력해주세요"))
     parsed = novelpia_parser.parse()
-    NovelpiaParser.cache = parsed
+    NovelpiaParser.cache.extend(parsed)
     return parsed
 
 
