@@ -16,7 +16,8 @@ class SoupInfo:
 
 
 class Page:
-    def __init__(self, title: str, number: int):
+    def __init__(self, main_title:str, title: str, number: int):
+        self.main_title = main_title
         self.title = title
         self.number = number
         self.url = f"https://novelpia.com/viewer/{number}"
@@ -49,6 +50,7 @@ class NovelpiaParser:
 
     def get_session_with_set_cookies(self) -> Session:
         session = requests.Session()
+        session.headers.update({"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36"})
         user_key = Session().cookies.get("USERKEY", domain=".novelpia.com")
         login_key = Session().cookies.get("LOGINKEY", domain=".novelpia.com")
 
@@ -136,9 +138,6 @@ class NovelpiaParser:
                     continue
                 raise LoginRequired
 
-            if self.downloader:
-                self.downloader.title = title_element.text
-
             # css selecter is not working :(
             ep_num = soup.find(
                 "span",
@@ -154,6 +153,7 @@ class NovelpiaParser:
 
             parsed_info.append(
                 Page(
+                    title_element.text,
                     clean_title(f"{ep_num.text}: {ep_name.text}.txt", "safe"),
                     soup_info.number,
                 )
@@ -191,6 +191,7 @@ class Downloader_novelpia(Downloader):
             # https://novelpia.com/proc/viewer_data/:number:
             # {"s": [{"text": ""}]}
             f = BytesIO()
+            self.title = page.main_title
             self.filenames[f] = page.title
             response = self.novelpia_parser.session.get(
                 f"https://novelpia.com/proc/viewer_data/{page.number}"
