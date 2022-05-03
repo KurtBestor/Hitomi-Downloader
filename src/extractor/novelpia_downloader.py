@@ -31,7 +31,7 @@ class NovelpiaParser:
     ) -> None:
         self.parsed_url = urlparse(url.replace("novelpia_", ""))
         self.downloader = downloader
-        self.session = self.get_session_with_set_cookies()
+        self.session = Session()
 
     @property
     def is_novel(self):
@@ -47,17 +47,6 @@ class NovelpiaParser:
     @property
     def proc_episode_list_url(self) -> str:
         return urljoin(self.parsed_url.geturl(), "/proc/episode_list")
-
-    def get_session_with_set_cookies(self) -> Session:
-        session = requests.Session()
-        session.headers.update({"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36"})
-        user_key = Session().cookies.get("USERKEY", domain=".novelpia.com")
-        login_key = Session().cookies.get("LOGINKEY", domain=".novelpia.com")
-
-        if user_key and login_key:
-            session.cookies.set("USERKEY", user_key, domain=".novelpia.com")
-            session.cookies.set("LOGINKEY", login_key, domain=".novelpia.com")
-        return session
 
     def proc_episode_list_url_request(self, page: int):
         r = self.session.post(
