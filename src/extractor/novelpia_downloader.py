@@ -1,12 +1,11 @@
 import re
 from io import BytesIO
-from typing import List, Tuple, cast
+from typing import List, Optional, Tuple
 from urllib.parse import urlparse
 
 import requests
-from bs4.element import Tag
+import page_selector
 from errors import LoginRequired
-from requests.sessions import session
 from utils import Downloader, Session, Soup, clean_title, tr_, urljoin
 
 
@@ -16,13 +15,23 @@ class SoupInfo:
         self.number: int = number
 
 
-@Downloader.register
-class Downloader_novelpia(Downloader):
-    type = "novelpia"
-    URLS = ["novelpia.com"]
+class Page:
+    def __init__(self, main_title:str, title: str, number: int):
+        self.main_title = main_title
+        self.title = title
+        self.number = number
+        self.url = f"https://novelpia.com/viewer/{number}"
 
-    def init(self) -> None:
-        self.parsed_url = urlparse(self.url)  # url 나눔
+
+class NovelpiaParser:
+    cache: List[Page] = []
+
+    def __init__(
+        self, url: str, downloader: Optional["Downloader_novelpia"] = None
+    ) -> None:
+        self.parsed_url = urlparse(url.replace("novelpia_", ""))
+        self.downloader = downloader
+        self.session = Session()
 
     @property
     def is_novel(self):
@@ -37,49 +46,44 @@ class Downloader_novelpia(Downloader):
 
     @property
     def proc_episode_list_url(self) -> str:
-        return urljoin(self.url, "/proc/episode_list")
+        return urljoin(self.parsed_url.geturl(), "/proc/episode_list")
 
-    def __get_session_with_set_cookies(self) -> Session:
-        session = requests.Session()
-        user_key = Session().cookies.get("USERKEY", domain=".novelpia.com")
-        login_key = Session().cookies.get("LOGINKEY", domain=".novelpia.com")
-
-        if user_key and login_key:
-            session.cookies.set("USERKEY", user_key, domain=".novelpia.com")
-            session.cookies.set("LOGINKEY", login_key, domain=".novelpia.com")
-        return session
-
-    def __proc_episode_list_url_request(self, session: Session, page: int):
-        r = session.post(
+    def proc_episode_list_url_request(self, page: int):
+        r = self.session.post(
             self.proc_episode_list_url,
             data={"novel_no": self.number, "page": page},
         )
+        if not r.text:
+            raise Exception("Rate limit")
         return r.text
 
-    def __get_total_episode_list(self, session: Session) -> Tuple[int, str]:
+    def get_total_episode_list(self) -> Tuple[int, str]:
         regex = re.compile(
             rf"localStorage\['novel_page_{self.number}'\] = '(.+?)'; episode_list\(\);"
         )
-        html = self.__proc_episode_list_url_request(session, 0)
+        html = self.proc_episode_list_url_request(0)
         soup = Soup(html, "lxml")
         page_link_element = soup.find_all("div", {"class": "page-link"})
         last_episode = page_link_element[::-1][0]["onclick"]
         matched = regex.match(last_episode)
         assert matched
         total_episode_page = matched.group(1)
-        self.title = tr_("{} 개 찾음").format(total_episode_page)
+        if self.downloader:
+            self.downloader.title = tr_("{} 개 찾음").format(total_episode_page)
         return int(total_episode_page), html
 
-    def __get_all_viewer_numbers(self):
+    def get_all_viewer_numbers(self):
         htmls: List[str] = []
         novel_numbers: List[int] = []
-        session = self.__get_session_with_set_cookies()
-        total_episode_page, html = self.__get_total_episode_list(session)
+        total_episode_page, html = self.get_total_episode_list()
         htmls.append(html)
 
-        for i in range(1, total_episode_page - 1):
-            html = self.__proc_episode_list_url_request(session, i)
-            self.title = f"{tr_('페이지 읽는 중...')} {i + 1}/{total_episode_page}"
+        for i in range(1, total_episode_page + 1):
+            html = self.proc_episode_list_url_request(i)
+            if self.downloader:
+                self.downloader.title = (
+                    f"{tr_('페이지 읽는 중...')} {i + 1}/{total_episode_page+ 1}"
+                )
             htmls.append(html)
 
         for html in htmls:
@@ -87,43 +91,41 @@ class Downloader_novelpia(Downloader):
             for element in soup.find_all("i", {"class": "icon ion-bookmark"}):
                 novel_numbers.append(int(element["id"].replace("bookmark_", "")))
 
-        self.title = tr_("{} 개 찾음").format(len(novel_numbers))
+        if self.downloader:
+            self.downloader.title = tr_("{} 개 찾음").format(len(novel_numbers))
         return novel_numbers
 
-    def read(self):
-        viewer_numbers: list[int] = []
-        session = self.__get_session_with_set_cookies()
+    def parse(self) -> List[Page]:
+        viewer_numbers: List[int] = []
 
         if self.is_novel:
-            viewer_numbers.extend(self.__get_all_viewer_numbers())
+            viewer_numbers.extend(self.get_all_viewer_numbers())
         else:
             viewer_numbers.append(int(self.number))
 
-        i = 0
         soups: List[SoupInfo] = []
-        for viewer_number in viewer_numbers:
-            i += 1
-            self.title = f"{tr_('읽는 중...')} {i} / {len(viewer_numbers)}"
-            r = session.get(urljoin(self.url, f"/viewer/{viewer_number}"))
+        for i, viewer_number in enumerate(viewer_numbers, 0):
+            if self.downloader:
+                self.downloader.title = f"{tr_('읽는 중...')} {i} / {len(viewer_numbers)}"
+            r = self.session.get(
+                urljoin(self.parsed_url.geturl(), f"/viewer/{viewer_number}")
+            )
             soup = Soup(r.text)
             soups.append(SoupInfo(soup, viewer_number))
 
+        parsed_info: List[Page] = []
         for soup_info in soups:
             soup = soup_info.soup
-            f = BytesIO()
 
             title_element = soup.find("b", {"class": "cut_line_one"})
             if not title_element:
                 if self.is_novel:
-                    self.print_(
-                        f"Ignored because the next item could not be fetched because there was no logged in cookie: {soup_info.number}"
-                    )
+                    if self.downloader:
+                        self.downloader.print_(
+                            f"Ignored because the next item could not be fetched because there was no logged in cookie: {soup_info.number}"
+                        )
                     continue
                 raise LoginRequired
-
-            self.title = title_element.text
-            # Maybe NavigableString?
-            assert isinstance(title_element, Tag)
 
             # css selecter is not working :(
             ep_num = soup.find(
@@ -132,27 +134,56 @@ class Downloader_novelpia(Downloader):
                     "style": "background-color:rgba(155,155,155,0.5);padding: 1px 6px;border-radius: 3px;font-size: 11px; margin-right: 3px;"
                 },
             )
-            assert isinstance(ep_num, Tag)
 
             ep_name = soup.find("span", {"class": "cut_line_one"})
-            assert isinstance(ep_name, Tag)
 
             # Dirty but for clean filename
-            self.print_(ep_name.text)
             ep_name.text.replace(ep_num.text, "")
-            self.print_(ep_name.text)
-            self.print_(ep_num.text)
 
-            self.filenames[f] = clean_title(
-                f"{ep_num.text}: {ep_name.text}.txt", "safe"
+            parsed_info.append(
+                Page(
+                    title_element.text,
+                    clean_title(f"{ep_num.text}: {ep_name.text}.txt", "safe"),
+                    soup_info.number,
+                )
             )
+        return parsed_info
 
+
+@page_selector.register("novelpia")
+def _(url: str):
+    novelpia_parser = NovelpiaParser(url)
+    if not novelpia_parser.is_novel:
+        raise Exception(tr_("목록 주소를 입력해주세요"))
+    parsed = novelpia_parser.parse()
+    NovelpiaParser.cache.extend(parsed)
+    return parsed
+
+
+@Downloader.register
+class Downloader_novelpia(Downloader):
+    type = "novelpia"
+    URLS = ["novelpia.com"]
+
+    def init(self) -> None:
+        self.novelpia_parser = NovelpiaParser(self.url, self)
+
+    def read(self):
+        if NovelpiaParser.cache:
+            pages = page_selector.filter(NovelpiaParser.cache, self.cw)
+            NovelpiaParser.cache.clear()
+        else:
+            pages = self.novelpia_parser.parse()
+
+        for page in pages:
             # Get real contents
             # https://novelpia.com/proc/viewer_data/:number:
             # {"s": [{"text": ""}]}
-
-            response = session.get(
-                f"https://novelpia.com/proc/viewer_data/{soup_info.number}"
+            f = BytesIO()
+            self.title = page.main_title
+            self.filenames[f] = page.title
+            response = self.novelpia_parser.session.get(
+                f"https://novelpia.com/proc/viewer_data/{page.number}"
             )
             if response.text:
                 response = response.json()
@@ -161,8 +192,6 @@ class Downloader_novelpia(Downloader):
                     if "img" in text:
                         soup = Soup(text)
                         img = soup.find("img")
-                        # Maybe NavigableString here too?
-                        assert isinstance(img, Tag)
                         src = img.attrs["src"]
                         filename = img.get("data-filename") or "cover.jpg"
                         f.write(f"[{filename}]".encode("UTF-8"))
