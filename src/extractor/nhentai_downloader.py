@@ -5,6 +5,14 @@ import ree as re
 from utils import Soup, urljoin, LazyUrl, Downloader, try_n, join, get_ext
 import os
 import json
+import clf2
+
+
+def get_id(url):
+    try:
+        return int(url)
+    except:
+        return int(re.find('/g/([0-9]+)', url))
 
 
 @Downloader.register
@@ -15,17 +23,14 @@ class Downloader_nhentai(Downloader):
     display_name = 'nhentai'
     
     def init(self):
-        self.url = 'https://nhentai.net/g/{}/'.format(self.id_)
+        self.session = clf2.solve(self.url)['session'] #4541
 
-    @property
-    def id_(self):
-        try:
-            return int(self.url)
-        except:
-            return int(re.find('/g/([0-9]+)', self.url))
+    @classmethod
+    def fix_url(cls, url):
+        return 'https://nhentai.net/g/{}/'.format(get_id(url))
 
     def read(self):
-        info, imgs = get_imgs(self.id_)
+        info, imgs = get_imgs(get_id(self.url), self.session)
 
         # 1225
         artist = join(info.artists)
@@ -83,10 +88,10 @@ class Info(object):
 
 
 @try_n(4)
-def get_info(id):
+def get_info(id, session):
     url = 'https://nhentai.net/g/{}/1/'.format(id)
     referer = 'https://nhentai.net/g/{}/'.format(id)
-    html = downloader.read_html(url, referer=referer)
+    html = downloader.read_html(url, referer=referer, session=session)
 
     data = html.split('JSON.parse(')[1].split(');')[0]
     gal = json.loads(json.loads(data))
@@ -120,8 +125,8 @@ def get_info(id):
     return info
 
 
-def get_imgs(id):
-    info = get_info(id)
+def get_imgs(id, session):
+    info = get_info(id, session)
 
     imgs = []
     for p in range(1, info.p+1):
@@ -132,5 +137,3 @@ def get_imgs(id):
         imgs.append(img)
 
     return info, imgs
-
-

@@ -35,7 +35,8 @@ class Downloader_danbooru(Downloader):
             if 'donmai.us/favorites' in self.url:
                 id = qs.get('user_id', [''])[0]
                 print('len(id) =', len(id), '"{}"'.format(id))
-                assert len(id) > 0, '[Fav] User id is not specified'
+                if not id:
+                    raise AssertionError('[Fav] User id is not specified')
                 id = 'fav_{}'.format(id)
             elif 'donmai.us/explore/posts/popular' in self.url: #4160
                 soup = read_soup(self.url, self.cw)
@@ -73,8 +74,13 @@ class Image(object):
             img = ori.find('a')['href']
         else:
             img = soup.find('li', id='post-info-size').find('a')['href']
+
+        if get_ext(img) == '.zip': #4635
+            img = soup.find('section', id='content').find('video')['src']
+            
         img = urljoin(url, img)
         ext = get_ext(img)
+            
         self.filename = '{}{}'.format(self.id, ext)
         return img
 

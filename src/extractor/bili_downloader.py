@@ -64,7 +64,7 @@ def fix_url(url, cw=None):
 @Downloader.register
 class Downloader_bili(Downloader):
     type = 'bili'
-    URLS = ['bilibili.com', 'bilibili.tv']
+    URLS = [r'regex:'+_VALID_URL]
     lock = True
     detect_removed = False
     detect_local_lazy = False
@@ -154,6 +154,7 @@ def get_resolution_(quality):
     return RESOLS[quality]
 
 
+@try_n(4)
 def get_videos(url, cw=None, depth=0):
     print_ = get_print(cw)
     res = get_resolution()

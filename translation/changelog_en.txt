@@ -1,3 +1,77 @@
+3.7j    【】
+
+[버그 해결 / 사이트 변경에 의한 수정]
+
+- Pawoo 일부 다운로드 안 되는 문제 해결 (#4381)
+
+- Luscious 업데이트 대응 (#4386)
+
+- Pixiv Comic 일부 작품 다운로드 안 되는 문제 해결 (#4389)
+
+- XVideos 업데이트 대응 (#4401, #4410, #4530)
+
+- "브라우저로 보기"에서 WebP 파일 안 보이는 문제 해결 (#4424)
+
+- 일부 단일 트윗 다운로드 안 되는 문제 해결 (#4438)
+
+- Hitomi.la 애니메이션 다운로드 안 되는 문제 해결
+
+- カクヨム 일부 다운로드 안 되는 문제 해결 (#4445)
+
+- Iwara 이미지 다운로드 안 되는 문제 해결 (#4450)
+
+- Iwara 채널 다운로드 시 첫 이미지만 다운로드 되는 문제 해결 (#4499)
+
+- nhentai 업데이트 대응 (#4541)
+
+- DeviantArt 업데이트 대응 (#4515)
+
+- #4534
+
+- Tumblr 업데이트 대응(#4645)
+
+- Manatoki 업데이트 대응(#4660, #4664)
+
+- 불완전하게 받아진 화 다시 시작 시 완료되는 문제 해결 (#4633, #4676)
+
+- DeviantArt 업데이트 대응 (#4671)
+
+- #4713
+
+- #4728
+
+- 기타 자잘한 것들
+
+
+[변경/추가된 기능]
+
+- PNG 변환 (#4420)
+
+- #4451
+
+- #4385
+
+- #4524
+
+- Twitter 로그인 필요할 경우 경고 (#4549)
+
+- 통계 총 용량 표시 (#4328)
+
+- Danbooru Ugoira 비디오 형식으로 다운로드 하도록 수정 (#4635)
+
+- YouTube 8K 다운로드 (#4593)
+
+- "로컬 파일로 부터 새 작업 만들기" - "단일 파일" 여러 개 선택 가능 (#4682)
+
+- 도중에 하드드라이브 연결이 끊어졌을 때 다시 DB 연결 (#4712)
+
+- 동영상 파일 미리보기
+
+- 기타 자잘한 것들
+
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------
 3.7i    2022-01-27
 
 [Bug Resolution / Fix due to site change]
@@ -30,7 +104,7 @@
 
 - XVideos: fixed title errors (#4359)
 
-- Twitter: update response 
+- Twitter: update response
 
 - Other small things
 
@@ -246,14 +320,14 @@
 - Translation update (#3739)
 - Adding leading zero (#3763)
 - V LIVE support for caption (#3778)
-- Numbering playlist files 
+- Numbering playlist files
 	 Option - Settings - General Settings - Number the playlist file
 - Naver blog: duplicate file names corrected (#3788, #3817)
 - Optimized initial driving speed and storage speed
 - Optimizing the speed of dark mode change
 - Theme setting
 	  Option - Settings - General Settings - Theme
-- Task list filtering : search include URL when searching for titles in task list filtering 
+- Task list filtering : search include URL when searching for titles in task list filtering
 - Display single file work video length
 - Torrent: maximum download speed support
 - Torrent: support for proxy settings
@@ -261,7 +335,7 @@
 - FC2 support for high definition (#3784)
 - Low specification mode (#3878)
 	Option - Settings - Advanced Settings - Low specification mode
-- Twitter support for wider dates (previously some years weren't being donwloaded) 
+- Twitter support for wider dates (previously some years weren't being donwloaded)
 - Hiyobi.io support (#3861, #3862)
 - LHScan: if there isn't cookies login a warning now appear (#3324, #3815, #3877)
 - Fiding duplicate images: Specify the similarity range and automatically select it (#3912)

@@ -191,7 +191,7 @@ class Image():
         if self.ugoira and self.ugoira['ext']: #3355
             filename_local = os.path.join(self.cw.dir, self.filename)
             filename_local = '{}{}'.format(os.path.splitext(filename_local)[0], self.ugoira['ext'])
-            if os.path.exists(filename_local):
+            if os.path.realpath(filename_local) in self.cw.names_old or os.path.exists(filename_local): #4534
                 self.filename = os.path.basename(filename_local)
                 self.local = True
         return self._url

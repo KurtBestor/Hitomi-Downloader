@@ -1,10 +1,8 @@
 from __future__ import division, print_function, unicode_literals
 import downloader
-from utils import Soup, urljoin, Downloader, LazyUrl, get_print, clean_url, clean_title, check_alive, Session, try_n, format_filename
+from utils import Soup, urljoin, Downloader, LazyUrl, get_print, clean_url, clean_title, check_alive, Session, try_n, format_filename, tr_, get_ext
 import ree as re
 import json
-import os
-from timee import sleep
 from io import BytesIO
 import errors
 TIMEOUT = 300
@@ -18,7 +16,7 @@ class File(object):
     def __init__(self, type, url, title, referer, p=0, multi_post=False):
         self.type = type
         self.url = LazyUrl(referer, lambda _: url, self)
-        ext = os.path.splitext(url.split('?')[0])[1]
+        ext = get_ext(url)
         if ext.lower() == '.php':
             ext = '.mp4'
         if type == 'video':
@@ -87,8 +85,12 @@ class Downloader_iwara(Downloader):
             if type_ == 'videos':
                 files = [LazyFile(url, type_, self.session) for url in urls]
                 file = self.process_playlist('[Channel] [{}] {}'.format(type_.capitalize(), title), files)
-            elif type_ == 'images':
-                files = [LazyFile(url, type_, self.session) for url in urls]
+            elif type_ == 'images': #4499
+                files = []
+                for i, url in enumerate(urls):
+                    check_alive(self.cw)
+                    files += get_files(url, self.session, multi_post=True, cw=self.cw) #4728
+                    self.title = '{} {} - {} / {}'.format(tr_('읽는 중...'), title, i, len(urls))
                 title = '[Channel] [{}] {}'.format(type_.capitalize(), title)
             else:
                 raise NotImplementedError(type_)

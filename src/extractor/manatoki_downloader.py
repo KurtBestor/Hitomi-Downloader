@@ -15,7 +15,13 @@ class Image(object):
         if ext.lower()[1:] not in ['jpg', 'jpeg', 'bmp', 'png', 'gif', 'webm', 'webp']:
             ext = '.jpg'
         self.filename = '{}/{:04}{}'.format(page.title, p, ext)
-        self.url = LazyUrl(page.url, lambda _: url, self)
+        self._url = url
+        self.url = LazyUrl(page.url, self.get, self)
+
+    @sleep_and_retry
+    @limits(2, 1)
+    def get(self, _):
+        return self._url
 
 
 class Page(object):
@@ -106,7 +112,14 @@ def get_artist(soup):
 def get_soup(url, session=None):
     if session is None:
         session = Session()
-    res = clf2.solve(url, session=session)
+    def f(html, browser=None):
+        soup = Soup(html)
+        if soup.find('form', {'name':'fcaptcha'}): #4660
+            browser.show()
+            return False
+        browser.hide()
+        return True
+    res = clf2.solve(url, session=session, f=f)
     soup = Soup(res['html'], apply_css=True)
     
     return session, soup, res['url']
@@ -191,7 +204,7 @@ def get_imgs_page(page, title, referer, session, cw):
     if not views:
         raise Exception('no views')
 
-    hash = re.find(r'''data_attribute *: *['"](.+?)['"]''', soup.html)
+    hash = re.find(r'''data_attribute\s*:\s*['"](.+?)['"]''', soup.html)
     print_('hash: {}'.format(hash))
     if hash is None:
         raise Exception('no hash')
@@ -223,7 +236,7 @@ def get_imgs_page(page, title, referer, session, cw):
 
 def isVisible(tag):
     while tag:
-        if re.search(r'display: *none', tag.get('style', ''), re.IGNORECASE):
+        if re.search(r'display:\s*none', tag.get('style', ''), re.IGNORECASE):
             return False
         tag = tag.parent
     return True

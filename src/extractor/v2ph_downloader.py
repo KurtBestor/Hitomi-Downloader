@@ -32,6 +32,7 @@ class Downloader_v2ph(Downloader):
     type = 'v2ph'
     URLS = ['v2ph.com/album/']
     MAX_CORE = 4
+    MAX_PARALLEL = 1
     display_name = 'V2PH'
     
     @classmethod

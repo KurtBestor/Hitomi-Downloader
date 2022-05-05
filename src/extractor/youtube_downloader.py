@@ -440,7 +440,7 @@ def read_playlist(url, n, cw=None):
         urls.append(href)
     info['urls'] = urls
 
-    if 'uploader' not in info:
+    if not info.get('uploader'):
         title = info['title']
         if title.lower().endswith(' - videos'):
             title = title[:-len(' - videos')]

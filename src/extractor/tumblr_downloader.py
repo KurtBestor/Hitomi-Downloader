@@ -10,21 +10,23 @@ from error_printer import print_error
 
 class Image(object):
 
-    def __init__(self, url, id, p=0, cw=None):
+    def __init__(self, url, id, referer, p, cw=None):
         self._url = url
         self.id_ = id
         self.p = p
         self.cw = cw
-        self.url = LazyUrl(url, self.get, self)
+        self.url = LazyUrl(referer, self.get, self)
 
+    @sleep_and_retry
+    @limits(4, 1)
     def get(self, _):
         print_ = get_print(self.cw)
         url = self._url
         ext = get_ext(url)
-        if ext.lower() == '.gif':
+        if ext.lower()[1:] not in ['jpg', 'png', 'mp4']: #4645
             print_('get_ext: {}, {}'.format(self.id_, url))
             try:
-                ext = downloader.get_ext(url)
+                ext = downloader.get_ext(url, referer=_)
             except Exception as e: #3235
                 print_('Err: {}, {}\n'.format(self.id_, url)+print_error(e)[0])
         self.filename = '{}_p{}{}'.format(self.id_, self.p, ext)
@@ -35,6 +37,7 @@ class Image(object):
 class Downloader_tumblr(Downloader):
     type = 'tumblr'
     URLS = ['tumblr.com']
+    MAX_CORE = 4
 
     def init(self):
         if u'tumblr.com/post/' in self.url:
@@ -119,7 +122,8 @@ class TumblrAPI(object):
                     self.print_('duplicate: {}'.format(id_))
                     continue
                 ids.add(id_)
-                yield Post(post, self.cw)
+                url = 'https://{}.tumblr.com/post/{}'.format(username, id_)
+                yield Post(post, url, self.cw)
             try:
                 links = data.get('links') or data['_links']
                 path_next = links['next']['href']
@@ -134,7 +138,7 @@ class TumblrAPI(object):
 
 class Post(object):
 
-    def __init__(self, data, cw=None):
+    def __init__(self, data, url, cw=None):
         id_ = data['id']
         self.imgs = []
         
@@ -150,7 +154,7 @@ class Post(object):
                 if isinstance(media, list):
                     media = media[0]
                 img = media['url']
-                self.imgs.append(Image(img, id_, len(self.imgs), cw))
+                self.imgs.append(Image(img, id_, url, len(self.imgs), cw))
             elif c['type'] in ['text', 'link', 'audio']:
                 continue
             else:

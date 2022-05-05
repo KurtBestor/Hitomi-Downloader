@@ -8,7 +8,7 @@ from translator import tr_
 import json
 from timee import sleep
 from ratelimit import limits, sleep_and_retry
-CHANNEL_PATTERN = r'/(profiles|[^/]*channels)/([0-9a-zA-Z_]+)'
+CHANNEL_PATTERN = r'/(profiles|[^/]*channels)/([0-9a-zA-Z_-]+)'
 
 
 def get_id(url):
@@ -119,7 +119,7 @@ def read_channel(url_page, cw=None):
         r = session.post(url_api)
         data = json.loads(r.text)
         
-        videos = data['videos']
+        videos = data.get('videos') #4530
         if not videos:
             print_('empty')
             break

@@ -146,6 +146,7 @@
     "그룹 이름": "Group name",
     "그룹 합쳐서 불러오기": "Load all groups together",
     "그룹명 복사 (&G)": "Copy group names (&G)",
+    "그룹으로 이동": "Move to group",
     "그룹을 포함하는 그룹은 만들 수 없습니다.": "Groups can't contain groups.",
     "그룹이 없습니다": "No groups",
     "기본": "Default",

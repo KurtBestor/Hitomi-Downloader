@@ -1,18 +1,16 @@
 from utils import Downloader, clean_title, lock
 import constants, os, downloader
 from size import Size
-try:
-    import torrent
-except Exception as e:
-    torrent = None
 from timee import sleep
 from translator import tr_
 import utils
 import filesize as fs
 from datetime import datetime
 import errors
+torrent = None
 TIMEOUT = 600
 CACHE_INFO = True
+TOO_MANY = 1000
     
 
 @Downloader.register
@@ -33,7 +31,7 @@ class Downloader_torrent(Downloader):
     _filesize_init = False
 
     @lock
-    def init(self):
+    def __init(self):
         global torrent
         if torrent is None:
             import torrent
@@ -52,13 +50,18 @@ class Downloader_torrent(Downloader):
             self._name = clean_title(self._info.name())
         return self._name
 
+    @classmethod
+    def get_dn(cls, url):
+        if url.startswith('magnet:'):
+            qs = utils.query_url(url)
+            if 'dn' in qs:
+                return utils.html_unescape(qs['dn'][0])
+
     def read(self):
+        self.__init()
         cw = self.cw
         title = self.url
-        if self.url.startswith('magnet:'):
-            qs = utils.query_url(self.url)
-            if 'dn' in qs:
-                self._dn = qs['dn'][0]
+        self._dn = self.get_dn(self.url)
         info = getattr(cw, 'info?', None)
         if info is not None:
             self.print_('cached info')
@@ -145,6 +148,7 @@ class Downloader_torrent(Downloader):
             cw.pbar.setMaximum(self._info.total_size())
             cw.setColor('downloading')
             torrent.download(self._info, save_path=self.dir, callback=self.callback)
+            self.update_progress(self._h, False)
             cw.setSpeed(0.0)
             cw.setUploadSpeed(0.0)
         if not cw.alive:
@@ -165,6 +169,34 @@ class Downloader_torrent(Downloader):
             if cw.setIcon(cw.imgs[0], icon=try_==n-1):
                 break
             sleep(.5)
+
+    def update_progress(self, h, fast):
+        if self._info is None:
+            return
+        cw = self.cw
+        
+        if not cw.imgs: #???
+            self.print_('???')
+            self.update_files()
+    
+        sizes = torrent.get_file_progress(h, self._info, fast)
+        for i, (file, size) in enumerate(zip(cw.names, sizes)):
+            if i > 0 and fast:
+                break#
+            file = os.path.realpath(file.replace('\\\\?\\', ''))
+            if file in cw.dones:
+                continue
+            if size[0] == size[1]:
+                cw.dones.add(file)
+                file = constants.compact(file).replace('\\', '/')
+                files = file.split('/')
+                file = ' / '.join(files[1:])
+                msg = 'Completed: {} | {}'.format(file, fs.size(size[1]))
+                self.print_(msg)
+                if i == 0 and size[0]:
+                    self._updateIcon()
+
+        cw.setPieces(torrent.pieces(h, self._info))
 
     def callback(self, h, s, alerts):
         try:
@@ -187,27 +219,8 @@ class Downloader_torrent(Downloader):
         title = (self._dn or self.url) if self._info is None else self.name
 
         if cw.alive and cw.valid and not cw.pause_lock:
-            if self._info is not None:
-                if not cw.imgs: #???
-                    self.print_('???')
-                    self.update_files()
-            
-                sizes = torrent.get_file_progress(h, self._info)
-                for i, (file, size) in enumerate(zip(cw.names, sizes)):
-                    file = os.path.realpath(file.replace('\\\\?\\', ''))
-                    if file in cw.dones:
-                        continue
-                    if size[0] == size[1]:
-                        cw.dones.add(file)
-                        file = constants.compact(file).replace('\\', '/')
-                        files = file.split('/')
-                        file = ' / '.join(files[1:])
-                        msg = 'Completed: {}'.format(file)
-                        self.print_(msg)
-                        if i == 0:
-                            self._updateIcon()
-
-                cw.setPieces(torrent.pieces(h, self._info))
+            fast = len(cw.imgs) > TOO_MANY
+            self.update_progress(h, fast)
 
             filesize = s.total_done
             upload = s.total_upload
@@ -249,4 +262,5 @@ class Downloader_torrent(Downloader):
                 title_ = '{}... {}'.format(s.state_str.capitalize(), title)
             cw.setTitle(title_, update_filter=False)
         else:
+            self.print_('abort')
             return 'abort'
