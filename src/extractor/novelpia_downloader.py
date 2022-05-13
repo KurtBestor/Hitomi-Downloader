@@ -204,6 +204,6 @@ class Downloader_novelpia(Downloader):
                 f.seek(0)
                 self.urls.append(f)
             else:
-                 self.print_(
-                      f"Ignoring the work as it seems that PLUS membership is required: {soup_info.number}"
-                 )
+                self.print_(
+                    f"Ignoring the work as it seems that PLUS membership is required: {soup_info.number}"
+                )
