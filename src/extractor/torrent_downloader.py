@@ -29,16 +29,48 @@ class Downloader_torrent(Downloader):
     MAX_PARALLEL = 16
     skip_convert_imgs = True
     _filesize_init = False
+    _max_speed = None
+    _anon = False
+    _proxy = '', '', 0, '', ''
+
+    @classmethod
+    def set_max_speed(cls, speed):
+        cls._max_speed = speed
+        cls.updateSettings()
+
+    @classmethod
+    def set_anon(cls, flag):
+        cls._anon = flag
+        cls.updateSettings()
+
+    @classmethod
+    def set_proxy(cls, protocol, host, port, username, password):
+        cls._proxy = protocol, host, port, username, password
+        cls.updateSettings()
+
+    @classmethod
+    @lock
+    def updateSettings(cls):
+        if torrent is None:
+            print('torrent is None')
+            return
+        torrent.set_max_speed(cls._max_speed)
+        torrent.set_anon(cls._anon)
+        torrent.set_proxy(*cls._proxy)
 
     @lock
     def __init(self):
         global torrent
         if torrent is None:
             import torrent
+        Downloader_torrent.updateSettings()
         self.cw.pbar.hide()
 
     @classmethod
     def key_id(cls, url):
+        if torrent is None:
+            print('torrent is None')
+            return url
         id_, e = torrent.key_id(url)
         if e:
             print(e)
@@ -99,6 +131,9 @@ class Downloader_torrent(Downloader):
         self.urls = [self.url]
         self.title = self.name
         self.update_files()
+
+        if not self.single and not os.path.isdir(self.dir): #4698
+            downloader.makedir_event(self.dir, cw)
         
         cw.pbar.show()
 
@@ -147,7 +182,7 @@ class Downloader_torrent(Downloader):
             self.size_upload = Size()
             cw.pbar.setMaximum(self._info.total_size())
             cw.setColor('downloading')
-            torrent.download(self._info, save_path=self.dir, callback=self.callback)
+            torrent.download(self._info, save_path=self.dir, callback=self.callback, cw=cw)
             self.update_progress(self._h, False)
             cw.setSpeed(0.0)
             cw.setUploadSpeed(0.0)

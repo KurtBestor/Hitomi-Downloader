@@ -1,5 +1,5 @@
 import downloader, ree as re
-from utils import Downloader, get_outdir, Soup, LazyUrl, get_print, cut_pair, get_ext, try_n, format_filename, clean_title
+from utils import Downloader, get_outdir, Soup, LazyUrl, get_print, cut_pair, get_ext, try_n, format_filename, clean_title, get_resolution
 from timee import sleep
 from error_printer import print_error
 import os
@@ -77,8 +77,13 @@ class Video(object):
 
             self.title = self.info['title']
             id = self.info['id']
+
+            #4773
+            fs = self.info['formats']
+            res = max(get_resolution(), min(f['height'] for f in fs))
+            fs = [f for f in fs if f['height'] <= res]
             
-            video_best = self.info['formats'][(-1)]
+            video_best = fs[-1]
             self._url = video_best['url']
             ext = get_ext(self._url)
             self.filename = format_filename(self.title, id, ext)

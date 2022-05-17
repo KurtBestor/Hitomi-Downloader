@@ -1,6 +1,6 @@
 import downloader
 import ytdl
-from utils import Downloader, Session, try_n, LazyUrl, get_ext, format_filename, clean_title, get_print
+from utils import Downloader, Session, try_n, LazyUrl, get_ext, format_filename, clean_title, get_print, get_resolution
 from io import BytesIO
 import ree as re
 from m3u8_tools import playlist2stream, M3u8_stream
@@ -110,6 +110,11 @@ def _get_video(url, session, cw, ie_key=None, allow_m3u8=True):
         print_(format_(f))
         fs.append(f)
 
+    #4773
+    res = max(get_resolution(), min(f['_resolution'] for f in fs))
+    print_(f'res: {res}')
+    fs = [f for f in fs if f['_resolution'] <= res]
+
     if not fs:
         raise Exception('No videos')
 
@@ -190,8 +195,9 @@ class Video(object):
                 ext = '.mp3'
 
         if ext.lower() == '.m3u8':
+            res = get_resolution() #4773
             try:
-                url = playlist2stream(self.url, referer, session=session, n_thread=4)
+                url = playlist2stream(self.url, referer, session=session, n_thread=4, res=res)
             except:
                 url = M3u8_stream(self.url, referer=referer, session=session, n_thread=4)
             ext = '.mp4'

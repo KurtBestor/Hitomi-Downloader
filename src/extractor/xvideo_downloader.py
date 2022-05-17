@@ -1,5 +1,5 @@
 import downloader
-from utils import Downloader, Soup, LazyUrl, urljoin, format_filename, Session, get_ext, get_print, get_max_range, html_unescape
+from utils import Downloader, Soup, LazyUrl, urljoin, format_filename, Session, get_ext, get_print, get_max_range, html_unescape, get_resolution
 from io import BytesIO
 from constants import try_n
 import ree as re
@@ -38,12 +38,12 @@ class Video(object):
         html = downloader.read_html(url_page)
         soup = Soup(html)
         self.title = html_unescape(soup.find('title').text).replace('- XVIDEOS.COM', '').strip()
-        url = re.find(r'''.setVideoHLS\(['"](.+?)['"]\)''', html) or re.find(r'''.setVideoUrlLow\(['"](.+?)['"]\)''', html) #https://www.xvideos.com/video65390539/party_night
+        url = re.find(r'''.setVideoHLS\(['"](.+?)['"]\)''', html) or re.find(r'''.setVideoUrlHigh\(['"](.+?)['"]\)''', html) or re.find(r'''.setVideoUrlLow\(['"](.+?)['"]\)''', html) #https://www.xvideos.com/video65390539/party_night
         if not url:
             raise Exception('no video url')
         ext = get_ext(url)
         if ext.lower() == '.m3u8':
-            url = playlist2stream(url, n_thread=5)
+            url = playlist2stream(url, n_thread=5, res=get_resolution()) #4773
         self.url_thumb = soup.find('meta', {'property': 'og:image'}).attrs['content']
         self.filename = format_filename(self.title, id, '.mp4')
         self._url= url
