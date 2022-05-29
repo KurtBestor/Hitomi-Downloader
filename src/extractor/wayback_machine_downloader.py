@@ -1,13 +1,14 @@
 # coding: utf8
 # title: Wayback Machine Downloader
 # author: bog_4t
+import downloader
+import json
 import concurrent.futures
-
-import downloader, json, os
-from utils import Downloader, Session, clean_title, get_print, update_url_query, print_error
+import os
 import ree as re
 from hashlib import md5
 from ratelimit import limits, sleep_and_retry
+from utils import Downloader, Session, clean_title, get_print, print_error
 
 
 @Downloader.register
@@ -15,6 +16,7 @@ class Downloader_wayback_machine(Downloader):
     type = 'waybackmachine'
     URLS = ['archive.org', 'web.archive.org']
     display_name = 'Wayback Machine'
+    MAX_CORE = 1
 
     def read(self):
         filter_ = Filter(self.url, self.cw)
@@ -31,20 +33,20 @@ class WaybackMachineAPI(object):
         self.params = {
             'output': 'json',
             'fl': 'timestamp,original',
-            'filter': 'mimetype:text/html',
-            'statuscode': '200',
+            'filter': 'mimetype:text/html&filter=statuscode:200',
             'collapse': 'urlkey'
         }
 
     @sleep_and_retry
     @limits(1, 5)
     def call(self, url):
-        url = update_url_query(url, self.params)
+        for (key, value) in self.params.items():
+            url += f'&{key}={value}'
         return downloader.read_json(url, session=self.session)
 
     def snapshots(self, url):
         data = self.call(url)
-        return data[1:] or None
+        return data[1:]
 
 
 class Filter(object):
@@ -54,9 +56,8 @@ class Filter(object):
 
     def __init__(self, url, cw=None):
         self.cw = cw
-        self.url = re.findall(r'archive.[^/]+/(?:cdx/search/cdx\?url=|(?:web/)?(?:[^/]+/))(.+)', url.lower())[0].strip(
-            '/')
-        self.base_url = self.url.split('&')[0].strip('*').strip('/')
+        self.url = re.findall(r'archive.[^/]+/(?:cdx/search/cdx\?url=|(?:web/)?(?:[^/]+/))(.+)', url.lower())[0].strip('/')
+        self.base_url = self.url.split('&')[0].strip('/')
         self.md5 = md5(self.url.encode('utf8')).hexdigest()[:8]
         self.mode = self.__get_mode()
         self.title = self.__get_title()
@@ -152,7 +153,7 @@ def get_imgs(url, filter_, directory, session=Session(), cw=None):
                 return [base_url.format(snapshot[0], img['src']) for img in soup.find_all('img', src=True)]
 
             def twitter():
-                return [base_url.format(snapshot[0], img['src']) for img in soup.find_all('img', {'src': True}) if 'twimg.com/media/' in img['src']]
+                return [base_url.format(snapshot[0], img['src']) for img in soup.find_all('img', src=True) if 'twimg.com/media/' in img['src']]
 
             return [
                 default,
@@ -178,7 +179,7 @@ def get_imgs(url, filter_, directory, session=Session(), cw=None):
     with open(urls_path) as file:
         urls = set()
         for url in file.readlines():
-            urls.add(re.findall(r'^\S+$', url)[0])
+            urls.update(re.findall(r'^\S+$', url))
 
     os.remove(urls_path)
     os.remove(bitmap_path)
