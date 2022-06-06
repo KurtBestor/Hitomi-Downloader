@@ -92,6 +92,8 @@ class Downloader_torrent(Downloader):
     def read(self):
         self.__init()
         cw = self.cw
+        if cw:
+            cw._torrent_s = None
         title = self.url
         self._dn = self.get_dn(self.url)
         info = getattr(cw, 'info?', None)
@@ -254,6 +256,7 @@ class Downloader_torrent(Downloader):
         title = (self._dn or self.url) if self._info is None else self.name
 
         if cw.alive and cw.valid and not cw.pause_lock:
+            cw._torrent_s = s
             fast = len(cw.imgs) > TOO_MANY
             self.update_progress(h, fast)
 
@@ -284,7 +287,7 @@ class Downloader_torrent(Downloader):
                 title_ = 'Checking files... {}'.format(title)
                 self._filesize_prev = filesize
             elif s.state_str == 'downloading':
-                title_ = '{}    (s: {}, p: {}, a:{:.3f})'.format(title, s.num_seeds, s.num_peers, s.distributed_copies)
+                title_ = '{}'.format(title)
                 cw.setFileSize(filesize)
                 cw.setSpeed(self.size.speed)
                 cw.setUploadSpeed(self.size_upload.speed)
@@ -298,4 +301,6 @@ class Downloader_torrent(Downloader):
             cw.setTitle(title_, update_filter=False)
         else:
             self.print_('abort')
+            if cw:
+                cw._torrent_s = None
             return 'abort'

@@ -236,7 +236,10 @@ class Video(object):
         #title =  soup.title.text.replace('- YouTube', '').strip()
         self.title = title
         ext = '.' + self.stream.subtype
-        self.filename = format_filename(title, self.id, ext)
+        self.filename = self.filename0 = format_filename(title, self.id, ext)
+
+        if type == 'audio':
+            self.filename = f'{uuid()}_audio.tmp' #4776
 
         print_('Resolution: {}'.format(stream.resolution))
         print_('Codec: {} / {}'.format(stream.video_codec, stream.audio_codec))
@@ -255,7 +258,7 @@ class Video(object):
             print('no file: {}'.format(filename))
             return
         
-        filename_new = None
+        filename_new = filename
         if self.type == 'video' and (self.audio is not None or ext != '.mp4') and not self.stream.live: # UHD or non-mp4
             if self.audio is not None: # merge
                 print_('Download audio: {}'.format(self.audio))
@@ -286,6 +289,13 @@ class Video(object):
             filename_new = '{}.mp3'.format(name)
             ffmpeg.convert(filename, filename_new, '-shortest -preset ultrafast -b:a {}k'.format(get_abr()), cw=cw)
 
+        if os.path.basename(filename_new) != self.filename0: #4776
+            filename_old = filename_new
+            ext = '.mp4' if self.type == 'video' else '.mp3'
+            filename_new = os.path.join(os.path.dirname(filename_old), os.path.splitext(self.filename0)[0]+ext)
+            print_(f'rename: {filename_old} -> {filename_new}')
+            os.rename(filename_old, filename_new)
+
         if self.type == 'audio' and ui_setting.albumArt.isChecked():
             try:
                 self.thumb.seek(0)#
@@ -294,7 +304,7 @@ class Video(object):
                 s = print_error(e)[-1]
                 print_(s)
 
-        utils.pp_subtitle(self, filename, cw)
+        utils.pp_subtitle(self, filename_new, cw)
 
         return filename_new
 

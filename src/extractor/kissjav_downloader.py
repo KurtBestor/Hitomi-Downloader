@@ -1,5 +1,5 @@
 import downloader
-from utils import Soup, urljoin, Downloader, LazyUrl, Session, try_n, format_filename, clean_title
+from utils import Soup, urljoin, Downloader, LazyUrl, Session, try_n, format_filename, clean_title, get_resolution, get_print
 from timee import sleep
 import ree as re
 from io import BytesIO
@@ -9,14 +9,14 @@ import clf2
 @Downloader.register
 class Downloader_kissjav(Downloader):
     type = 'kissjav'
-    URLS = ['kissjav.com']
+    URLS = ['kissjav.com', 'kissjav.li'] #4835
     single = True
     display_name = 'KissJAV'
 
     def read(self):
         self.session = None#get_session(self.url, cw=self.cw)
         
-        video = get_video(self.url, self.session)
+        video = get_video(self.url, self.session, self.cw)
         self.urls.append(video.url)
         self.setIcon(video.thumb)
         self.enableSegment(1024*1024//2)
@@ -25,22 +25,30 @@ class Downloader_kissjav(Downloader):
 
 
 @try_n(2)
-def get_video(url, session):
+def get_video(url, session, cw):
+    print_ = get_print(cw)
     soup = downloader.read_soup(url, session=session)
 
     view = soup.find('div', id='player-container-fluid')
-    src_best = None
-    res_best = -1
+    fs = []
     for source in view.findAll('source'):
         src = urljoin(url, source.attrs['src'])
         res = re.find('([0-9]+)p', source.attrs['title'])
         res = int(res) if res else 0
-        if res > res_best:
-            src_best = src
-            res_best = res
-
-    if src_best is None:
+        f = {'res': res, 'src': src}
+        fs.append(f)
+        print_(f)
+        
+    if not fs:
         raise Exception('No source')
+
+    #4773
+    res = max(get_resolution(), min(f['res'] for f in fs))
+    print_(f'res: {res}')
+    fs = sorted([f for f in fs if f['res'] <= res], key=lambda f: f['res'])
+    f = fs[-1]
+    print_(f'best: {f}')
+    src_best = f['src']
 
     title = soup.find('h1').text.strip()
     id = soup.find('div', id='video').attrs['data-id']

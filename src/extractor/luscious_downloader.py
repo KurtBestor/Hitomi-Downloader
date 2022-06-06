@@ -1,6 +1,6 @@
 #coding:utf8
 import downloader
-from utils import Soup, Downloader, LazyUrl, urljoin, try_n, get_outdir, clean_title
+from utils import Soup, Downloader, LazyUrl, urljoin, try_n, get_outdir, clean_title, get_max_range
 import ree as re
 import os
 from timee import sleep
@@ -99,15 +99,21 @@ def get_imgs(url, soup=None, cw=None):
         html = downloader.read_html(url)
         soup = Soup(html)
     title = get_title(soup)
+
+    n = get_max_range(cw)
     
     imgs = []
-    for p in range(1, 81):
+    p = 1
+    while True:
         imgs_new = get_imgs_p(url, p)
         if not imgs_new:
             break
         imgs += imgs_new
         update(cw, title, imgs)
-    return imgs
+        p += 1
+        if len(imgs) >= n:
+            break
+    return imgs[:n]
 
 
 @try_n(4, sleep=30)

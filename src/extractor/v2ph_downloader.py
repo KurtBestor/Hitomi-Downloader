@@ -1,11 +1,13 @@
 #coding:utf8
 from __future__ import division, print_function, unicode_literals
 import downloader
-from utils import Soup, get_ext, LazyUrl, Downloader, try_n, clean_title, get_print
+from utils import get_ext, LazyUrl, Downloader, try_n, clean_title, get_print
 import ree as re
 from translator import tr_
 from timee import sleep
 import errors
+from ratelimit import limits, sleep_and_retry
+UA = downloader.hdr['User-Agent']
 
 
 def setPage(url, p):
@@ -22,9 +24,15 @@ def getPage(url):
 
 class Image(object):
     def __init__(self, url, referer, p):
-        self.url = LazyUrl(referer, lambda x: url, self)
+        self._url = url
+        self.url = LazyUrl(referer, self.get, self)
         ext = get_ext(url)
         self.filename = '{:04}{}'.format(p, ext)
+
+    @sleep_and_retry
+    @limits(4, 1)
+    def get(self, _):
+        return self._url
 
 
 @Downloader.register
@@ -51,11 +59,17 @@ class Downloader_v2ph(Downloader):
 
 @try_n(2)
 def get_info(url):
-    html = downloader.read_html(url)
-    soup = Soup(html)
+    soup = read_soup(url)
     info = {}
     info['title'] = soup.find('h1').text.strip()
     return info
+
+
+@try_n(4)
+@sleep_and_retry
+@limits(1, 5)
+def read_soup(url):    
+    return downloader.read_soup(url, user_agent=UA)
 
 
 def get_imgs(url, title, cw=None):
@@ -65,16 +79,7 @@ def get_imgs(url, title, cw=None):
     for p in range(1, 1001):
         url = setPage(url, p)
         print_(url)
-        for try_ in range(4):
-            try:
-                html = downloader.read_html(url, user_agent=downloader.hdr['User-Agent'])
-                #sleep(1)
-                break
-            except Exception as e:
-                print(e)
-        else:
-            raise
-        soup = Soup(html)
+        soup = read_soup(url)
 
         view = soup.find('div', class_='photos-list')
         if view is None:
