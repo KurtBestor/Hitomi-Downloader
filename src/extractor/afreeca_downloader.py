@@ -64,9 +64,16 @@ def get_video(url, session, cw):
     print_('url_thumb: {}'.format(url_thumb))
     params = re.find('VodParameter *= *[\'"]([^\'"]+)[\'"]', html, err='No VodParameter')
     params += '&adultView=ADULT_VIEW&_={}'.format(int(time()*1000))
-    url_xml = 'http://stbbs.afreecatv.com:8080/api/video/get_video_info.php?' + params
-    print(url_xml)
-    html = downloader.read_html(url_xml, session=session, referer=url)
+    for subdomain in ['afbbs', 'stbbs']: #4758
+        url_xml = 'http://{}.afreecatv.com:8080/api/video/get_video_info.php?'.format(subdomain) + params
+        print_(url_xml)
+        try:
+            html = downloader.read_html(url_xml, session=session, referer=url)
+            break
+        except Exception as e:
+            e_ = e
+    else:
+        raise e_
     soup = Soup(html)
     if '<flag>PARTIAL_ADULT</flag>' in html:
         raise errors.LoginRequired()
