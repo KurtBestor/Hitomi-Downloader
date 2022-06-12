@@ -1,58 +1,39 @@
-3.7m    【June 08, 2022】
+3.7m    2022-06-08
 
-[버그 해결 / 사이트 변경에 의한 수정]
+[Bug Resolution / Fix due to site change]
 
-- V3 오진으로 모듈 다운그레이드 (#4835)
+- Downgrading to V3 module (#4835)
 
 
 
 --------------------------------------------------------------------------------------------------------------------------------------------
-3.7l    【June 07, 2022】
+3.7l    2022-06-07
 
-[버그 해결 / 사이트 변경에 의한 수정]
+[Bug Resolution / Fix due to site change]
 
-- 갑자기 폰트 깨지는 문제 해결
+- Font: font-breaking solved
+- Video: fixed some sites which didn't follow quality option (in YouTube option) (#4773)
+- YouTube: false duplicate error solved. You can now download the video and then the audio without the audio being flagged as duplicate (#4776)
+- luscious: limited files downloaded fixed (#4794)
+- xHamster: new domain (xhwide.com) support (#4826)
+- Instagram: update response (#4829)
+- KissJav: new domain (kissjav.li) support (#4826)
+- YouTube: fixe proxy not usable (#4850)
+- Other small things
 
-- 일부 화질 적용 안 되는 사이트 수정 (#4773)
+[Changed/Added Features]
 
-- YouTube 동영상 다운로드 후 음원 다운로드하면 중복 처리 되는 문제 해결 (#4776)
-
-- #4794
-
-- xHamster 새 도메인 지원 (#4826)
-
-- Instagram 업데이트 대응 (#4829)
-
-- KissJav 새 도메인 지원 (#4835)
-
-- YouTube 프록시 적용 안 되는 문제 해결 (#4850)
-
-- 기타 자잘한 것들
-
-
-[변경/추가된 기능]
-
-- 생성한 폴더 목록 보기 (#4698)
-
-- #4752
-
-- Hitomi.la / E(x)Hentai 파일명 형식 "숫자 + 원본" 추가 (#4762)
-
-- Torrent 시드 파일 삭제한 후 재시작하면 남아있는 마그넷 링크로 읽도록 수정
-
-- Torrent Tracker 수정 기능
-
-- 다시 시작 시 이미 다운로드한 것들은 수정한 날짜 유지하도록 수정 (#4764)
-
-- 패커 업데이트 (#4648, #4781)
-
-- 단축키 수정 (#4805)
-
-- 프로그램 시작 시간 최적화
-
-- Twitter 로그인 필요할 경우 경고 (#4839)
-
-- 기타 자잘한 것들
+- View a list of created folders (ctrl+L) (#4698)
+- Home/End keybkaord are supported again (#4752)
+- Hitomi.la / E(x)Hentai: filename new option "Number + Original" (#4762)
+- Torrent: Fixed reading the remaining magnet link when the Torrent seed file is deleted and restarted
+- Torrent Tracker: featured modified
+- When restarting, modify the ones that have already been downloaded to keep the modified date (#4764)
+- Packer Update (#4648, #4781)
+- Shortcup: you can now change them (#4805)
+- Optimizing program start time
+- Warning if you need to log in to Twitter (#4839)
+- Other small things
 
 
 
