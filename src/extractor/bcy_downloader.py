@@ -8,13 +8,13 @@ import os
 from translator import tr_
 
 
-@Downloader.register
+
 class Downloader_bcy(Downloader):
     type = 'bcy'
     URLS = ['bcy.net/item/detail/', 'bcy.net/u/']
     MAX_CORE = 8
     display_name = '半次元'
-    
+
     def init(self):
         self.html = downloader.read_html(self.url)
         self.info = get_info(self.url, self.html)
@@ -49,7 +49,7 @@ def get_ssr_data(html):
 def get_imgs(url, html=None, cw=None):
     if '/detail/' not in url:
         return get_imgs_channel(url, html, cw)
-    
+
     if html is None:
         html = downloader.read_html(url)
 
@@ -109,7 +109,7 @@ def get_info(url, html):
     info['artist'] = uname.text.strip()
 
     j = get_ssr_data(html)
-    
+
     if '/detail/' in url:
         info['uid'] = j['detail']['detail_user']['uid']
         info['id'] = j['detail']['post_data']['item_id']
@@ -117,17 +117,17 @@ def get_info(url, html):
         info['uid'] = j['homeInfo']['uid']
 
     return info
-        
+
 
 def get_imgs_channel(url, html=None, cw=None):
     print_ = get_print(cw)
     if html is None:
         html = downloader.read_html(url)
     info = get_info(url, html)
-    
+
     # Range
     max_pid = get_max_range(cw)
-        
+
     ids = set()
     imgs = []
     for p in range(1000):
@@ -170,4 +170,3 @@ def get_imgs_channel(url, html=None, cw=None):
             print('over max_pid:', max_pid)
             break
     return imgs[:max_pid]
-    

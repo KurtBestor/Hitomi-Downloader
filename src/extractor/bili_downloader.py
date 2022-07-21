@@ -29,7 +29,7 @@ RESOLS[80] = '1080p'
 RESOLS[64] = '720p'
 RESOLS[32] = '480p'
 RESOLS[16] = '360p'
-    
+
 
 class Video(object):
 
@@ -61,7 +61,7 @@ def fix_url(url, cw=None):
     return url_new
 
 
-@Downloader.register
+
 class Downloader_bili(Downloader):
     type = 'bili'
     URLS = [r'regex:'+_VALID_URL]
@@ -158,7 +158,7 @@ def get_resolution_(quality):
 def get_videos(url, cw=None, depth=0):
     print_ = get_print(cw)
     res = get_resolution()
-    
+
     mobj = re.match(_VALID_URL, url)
     video_id = mobj.group('id')
     anime_id = mobj.group('anime_id')
@@ -180,9 +180,9 @@ def get_videos(url, cw=None, depth=0):
     print_('cid: {}'.format(cid))
     headers = {'Referer': url}
     entries = []
-    
+
     RENDITIONS = ['qn={}&quality={}&type='.format(qlt, qlt) for qlt in RESOLS.keys()]# + ['quality=2&type=mp4']
-    
+
     for num, rendition in enumerate(RENDITIONS, start=1):
         print('####', num, rendition)
         payload = 'appkey=%s&cid=%s&otype=json&%s' % (_APP_KEY, cid, rendition)
@@ -209,7 +209,7 @@ def get_videos(url, cw=None, depth=0):
         if int(re.find('([0-9]+)p', resolution)) > res:
             print_('skip resolution')
             continue
-        
+
         for idx, durl in enumerate(video_info['durl']):
             # 1343
             if idx == 0:
@@ -217,19 +217,19 @@ def get_videos(url, cw=None, depth=0):
                 if size < 1024 * 1024 and depth == 0:
                     print_('size is too small')
                     return get_videos(url, cw, depth+1)
-            
+
             formats = [
-             {'url': durl['url'], 
+             {'url': durl['url'],
                 'filesize': int_or_none(durl['size'])}]
             for backup_url in durl.get('backup_url', []):
-                formats.append({'url': backup_url, 
+                formats.append({'url': backup_url,
                    'preference': -2 if 'hd.mp4' in backup_url else -3})
 
             for a_format in formats:
                 a_format.setdefault('http_headers', {}).update({'Referer': url})
 
-            entries.append({'id': '%s_part%s' % (video_id, idx), 
-               'duration': float_or_none(durl.get('length'), 1000), 
+            entries.append({'id': '%s_part%s' % (video_id, idx),
+               'duration': float_or_none(durl.get('length'), 1000),
                'formats': formats})
 
         break
@@ -240,7 +240,7 @@ def get_videos(url, cw=None, depth=0):
         video = Video(url_video, url, cid, len(videos))
         videos.append(video)
 
-    info = {'title': clean_title(title), 
+    info = {'title': clean_title(title),
        'url_thumb': url_thumb}
     return (
      videos, info)
@@ -252,4 +252,3 @@ def get_pages(html):
     data = json.loads(data_raw)
     pages = data['videoData']['pages']
     return pages
-

@@ -15,12 +15,12 @@ class Image(object):
         def f(_):
             html = downloader.read_html(url, session=session)
             soup = Soup(html)
-            
+
             box = soup.find('section', id='picBox')
             img = box.find('img')
             if img is None:
                 raise Exception('No img')
-            
+
             onclick = img.attrs.get('onclick', '')
             if onclick and '.src' in onclick:
                 print('onclick', onclick)
@@ -28,14 +28,14 @@ class Image(object):
             else:
                 img = img.attrs['src']
             img = urljoin(url, img)
-            
+
             filename = clean_title(os.path.basename(img.split('?')[0]))
             name, ext = os.path.splitext(filename)
 
             # https://www.hentai-foundry.com/pictures/user/DrGraevling/74069/Eversong-Interrogation-pg.-13
             if ext.lower() not in ['.bmp', '.png', '.gif', '.jpg', '.jpeg', '.webp', '.webm', '.avi', '.mp4', '.mkv', '.wmv']:
                 filename = u'{}.jpg'.format(name)
-            
+
             self.filename = filename
             return img
         self.url = LazyUrl(url, f, self)
@@ -47,13 +47,13 @@ def get_username(url):
     return username
 
 
-@Downloader.register
+
 class Downloader_hf(Downloader):
     type = 'hf'
     URLS = ['hentai-foundry.com']
     MAX_CORE = 16
     display_name = 'Hentai Foundry'
-    
+
     def init(self):
         self.session = enter()
 
@@ -78,7 +78,7 @@ class Downloader_hf(Downloader):
 def enter():
     print('enter')
     session = Session()
-    
+
     r = session.get(URL_ENTER)
 
     # 862
@@ -104,10 +104,10 @@ def enter():
         })
     r = session.post(URL_FILTER, data=data, headers={'Referer': r.url})
     print(r)
-    
+
     return session
 
-        
+
 def get_imgs(username, title, session, cw=None):
     url = 'https://www.hentai-foundry.com/pictures/user/{}'.format(username)
 
@@ -153,4 +153,3 @@ def get_imgs(username, title, session, cw=None):
         imgs.append(img)
 
     return imgs
-

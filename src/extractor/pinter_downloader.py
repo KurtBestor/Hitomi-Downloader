@@ -10,7 +10,7 @@ from m3u8_tools import playlist2stream, M3u8_stream
 BASE_URL = 'https://www.pinterest.com'
 
 
-@Downloader.register
+
 class Downloader_pinter(Downloader):
     type = 'pinter'
     URLS = ['pinterest.']
@@ -82,11 +82,11 @@ def get_info(username, board, api):
 
 
 class PinterestAPI:
-    HEADERS = {'Accept': 'application/json, text/javascript, */*, q=0.01', 
-       'Accept-Language': 'en-US,en;q=0.5', 
-       'X-Pinterest-AppState': 'active', 
-       'X-APP-VERSION': 'cb1c7f9', 
-       'X-Requested-With': 'XMLHttpRequest', 
+    HEADERS = {'Accept': 'application/json, text/javascript, */*, q=0.01',
+       'Accept-Language': 'en-US,en;q=0.5',
+       'X-Pinterest-AppState': 'active',
+       'X-APP-VERSION': 'cb1c7f9',
+       'X-Requested-With': 'XMLHttpRequest',
        'Origin': BASE_URL + '/'}
 
     def __init__(self):
@@ -228,4 +228,3 @@ def get_username_board(url):
         board = board[:-1].strip()
 
     return (username, board)
-

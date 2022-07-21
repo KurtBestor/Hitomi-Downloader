@@ -48,7 +48,7 @@ class Page(object):
         self.url = url
 
 
-@Downloader.register
+
 class DownloaderNaverPost(Downloader):
     type = "naverpost"  # 타입
     URLS = ["m.post.naver.com", "post.naver.com"]

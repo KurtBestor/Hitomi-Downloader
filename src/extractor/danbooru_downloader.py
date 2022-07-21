@@ -9,7 +9,6 @@ from ratelimit import limits, sleep_and_retry
 
 
 
-@Downloader.register
 class Downloader_danbooru(Downloader):
     type='danbooru'
     URLS = ['danbooru.donmai.us']
@@ -57,9 +56,9 @@ class Downloader_danbooru(Downloader):
 
         for img in imgs:
             self.urls.append(img.url)
-            
+
         self.title = self.name
-    
+
 
 class Image(object):
     def __init__(self, id, url, cw):
@@ -77,10 +76,10 @@ class Image(object):
 
         if get_ext(img) == '.zip': #4635
             img = soup.find('section', id='content').find('video')['src']
-            
+
         img = urljoin(url, img)
         ext = get_ext(img)
-            
+
         self.filename = '{}{}'.format(self.id, ext)
         return img
 
@@ -90,8 +89,8 @@ class Image(object):
 @limits(2, 1)
 def wait(cw):
     check_alive(cw)
-    
-    
+
+
 def setPage(url, page):
     # Always use HTTPS
     url = url.replace('http://', 'https://')
@@ -105,7 +104,7 @@ def setPage(url, page):
         url = re.sub('page=[0-9]*', 'page={}'.format(page), url)
     else:
         url += '&page={}'.format(page)
-        
+
     return url
 
 
@@ -126,7 +125,7 @@ def get_imgs(url, title=None, range_=None, cw=None):
 
     # Range
     max_pid = get_max_range(cw)
-    
+
     if range_ is None:
         range_ = range(1, 1001)
     print(range_)
@@ -156,13 +155,13 @@ def get_imgs(url, title=None, range_=None, cw=None):
 
         if empty_count_global >= 6:
             break
-            
+
         for article in articles:
             id = article.attrs['data-id']
 
             #url_img = article.attrs['data-file-url'].strip()
             url_img = urljoin(url, article.find('a', class_='post-preview-link')['href']) #4160
-            
+
             #print(url_img)
             if url_img not in url_imgs:
                 url_imgs.add(url_img)
@@ -171,9 +170,9 @@ def get_imgs(url, title=None, range_=None, cw=None):
 
         if len(imgs) >= max_pid:
             break
-                
+
         if cw is not None:
             cw.setTitle('{}  {} - {}'.format(tr_('읽는 중...'), title, len(imgs)))
         i += 1
-        
+
     return imgs[:max_pid]

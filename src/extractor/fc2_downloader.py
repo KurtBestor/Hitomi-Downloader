@@ -6,7 +6,7 @@ from io import BytesIO
 PATTERN_ID = r'/content/([^/]+)'
 
 
-@Downloader.register
+
 class Downloader_fc2(Downloader):
     type = 'fc2'
     single = True
@@ -34,7 +34,7 @@ class Downloader_fc2(Downloader):
         f = BytesIO()
         downloader.download(video.url_thumb, referer=self.url, buffer=f)
         self.setIcon(f)
-        
+
         self.title = info['title']
 
 

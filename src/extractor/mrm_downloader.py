@@ -30,16 +30,14 @@ class Page(object):
         self.soup = soup
 
 
-    
 
-@Downloader.register
 class Downloader_mrm(Downloader):
     type = 'mrm'
     URLS = ['myreadingmanga.info']
     _soup = None
     MAX_CORE = 4
     display_name = 'MyReadingManga'
-    
+
     def init(self):
         self.session = get_session(self.url, self.cw)
 
@@ -76,7 +74,7 @@ class Downloader_mrm(Downloader):
             self.urls.append(img.url)
 
         self.title = self.name
-        
+
 
 def get_title(soup):
     title = soup.find('h1', class_='entry-title').text.strip()
@@ -102,7 +100,7 @@ def get_imgs(url, soup=None, session=None, cw=None):
         imgs = []
         for i, page in enumerate(pages):
             s = '{} {} / {}  ({} / {})'.format(tr_('읽는 중...'), title, page.title, i+1, len(pages))
-            
+
             if cw:
                 if not cw.alive:
                     return
@@ -157,7 +155,7 @@ def get_imgs_page(page, session=None, cw=None):
         html = read_html(url, session=session, cw=None)
         soup = Soup(html)
         page.soup = soup
-    
+
     view = soup.find('div', class_='entry-content')
 
     imgs = []
@@ -209,4 +207,3 @@ def get_session(url, cw=None):
     session = r['session']
 
     return session
-    

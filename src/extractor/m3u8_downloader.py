@@ -7,13 +7,13 @@ from translator import tr_
 DEFAULT_N_THREAD = 2
 
 
-@Downloader.register
+
 class Downloader_m3u8(Downloader):
     type = 'm3u8'
     URLS = ['.m3u8']
     single = True
     display_name = 'M3U8'
-    
+
     @classmethod
     def fix_url(cls, url):
         if '://' not in url:
@@ -43,7 +43,7 @@ class Video(object):
 
 import selector
 @selector.options('m3u8')
-def options():
+def options(urls):
     def f(urls):
         n_thread, ok = utils.QInputDialog.getInt(Downloader.mainWindow, tr_('Set number of threads'), tr_('Number of threads?'), value=DEFAULT_N_THREAD, min=1, max=4, step=1)
         if not ok:

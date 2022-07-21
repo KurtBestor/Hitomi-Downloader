@@ -35,21 +35,21 @@ class Image(object):
         return self._url
 
 
-@Downloader.register
+
 class Downloader_v2ph(Downloader):
     type = 'v2ph'
     URLS = ['v2ph.com/album/']
     MAX_CORE = 4
     MAX_PARALLEL = 1
     display_name = 'V2PH'
-    
+
     @classmethod
     def fix_url(cls, url):
         return url.split('?')[0]
 
     def read(self):
         info = get_info(self.url)
-        
+
         for img in get_imgs(self.url, info['title'], self.cw):
             self.urls.append(img.url)
 
@@ -68,7 +68,7 @@ def get_info(url):
 @try_n(4)
 @sleep_and_retry
 @limits(1, 5)
-def read_soup(url):    
+def read_soup(url):
     return downloader.read_soup(url, user_agent=UA)
 
 
@@ -91,7 +91,7 @@ def get_imgs(url, title, cw=None):
             img = img.attrs['data-src']
             img = Image(img, url, len(imgs))
             imgs.append(img)
-        
+
         pgn = soup.find('ul', class_='pagination')
         ps = [getPage(a.attrs['href']) for a in pgn.findAll('a')] if pgn else []
         if not ps or p >= max(ps):
@@ -105,5 +105,3 @@ def get_imgs(url, title, cw=None):
             print(msg)
 
     return imgs
-    
-

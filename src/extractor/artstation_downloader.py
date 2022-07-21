@@ -22,7 +22,7 @@ class Image(object):
         return 'Image({})'.format(self.filename)
 
 
-@Downloader.register
+
 class Downloader_artstation(Downloader):
     type = 'artstation'
     URLS = ['artstation.com']
@@ -30,7 +30,7 @@ class Downloader_artstation(Downloader):
 
     def init(self):
         self.url_main = 'https://www.artstation.com/{}'.format(self.id.replace('artstation_', '', 1).replace('／', '/'))
-        
+
         if '/artwork/' in self.url or '/projects/' in self.url:
             pass#raise NotImplementedError('Single post')
         else:
@@ -67,7 +67,7 @@ class Downloader_artstation(Downloader):
             imgs = get_imgs_page(id_art, self.session, cw=self.cw)
         else:
             imgs = get_imgs(id, self.title, self.session, type=type, cw=self.cw)
-            
+
         for img in imgs:
             self.urls.append(img.url)
 
@@ -135,7 +135,7 @@ def get_id_art(post_url):
 
 
 def get_id(url, cw=None):
-    print_ = get_print(cw)        
+    print_ = get_print(cw)
 
     url = url.split('?')[0].split('#')[0]
 
@@ -143,7 +143,7 @@ def get_id(url, cw=None):
         id_art = get_id_art(url)
         imgs = get_imgs_page(id_art, session=Session(), cw=cw)
         return imgs[0].data['user']['username']
-    
+
     if '.artstation.' in url and 'www.artstation.' not in url:
         id = url.split('.artstation')[0].split('//')[-1]
         type = None
@@ -214,10 +214,8 @@ def get_imgs_page(id_art, session, date=None, cw=None):
             img = video
         else:
             img = Image(post_url, date, url, page)
-            
+
         img.data = data#
         imgs.append(img)
 
     return imgs
-
-

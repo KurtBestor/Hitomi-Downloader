@@ -7,6 +7,8 @@ from timee import sleep
 from translator import tr_
 from io import BytesIO
 import json
+import clf2
+downloader.REPLACE_UA[r'\.luscious\.net'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36'
 
 
 class Image(object):
@@ -32,9 +34,9 @@ class Video(object):
         self.url_thumb = url_thumb
         self.thumb = BytesIO()
         downloader.download(self.url_thumb, buffer=self.thumb)
-        
 
-@Downloader.register
+
+
 class Downloader_luscious(Downloader):
     type = 'luscious'
     URLS = ['luscious.net']
@@ -45,20 +47,28 @@ class Downloader_luscious(Downloader):
         url = url.replace('members.luscious.', 'www.luscious.')
         return url
 
+    @classmethod
+    def key_id(cls, url):
+        return '/'.join(url.split('/')[3:])
+
     def read(self):
-        for try_ in range(8):
+        def f(html, browser=None):
+            soup = Soup(html)
+            if soup.find('input', type='password'):
+                browser.show()
+                return False
+            browser.hide()
             try:
-                html = downloader.read_html(self.url)
-                break
-            except Exception as e:
-                e_ = e
-                self.print_error(e)
-                self.print_('retry...')
-        else:
-            raise e_
-        soup = Soup(html)
+                get_title(soup)
+            except:
+                return False
+            return True
+        res = clf2.solve(self.url, f=f, cw=self.cw, show=True)
+        self.url = res['url']
+        soup = Soup(res['html'])
+
         title = clean_title(get_title(soup))
-        
+
         self.title = tr_(u'읽는 중... {}').format(title)
 
         if '/videos/' in self.url:
@@ -101,17 +111,17 @@ def get_imgs(url, soup=None, cw=None):
     title = get_title(soup)
 
     n = get_max_range(cw)
-    
+
     imgs = []
     p = 1
     while True:
-        imgs_new = get_imgs_p(url, p)
+        imgs_new, has_next_page = get_imgs_p(url, p)
         if not imgs_new:
             break
         imgs += imgs_new
         update(cw, title, imgs)
         p += 1
-        if len(imgs) >= n:
+        if len(imgs) >= n or not has_next_page:
             break
     return imgs[:n]
 
@@ -129,12 +139,12 @@ def get_imgs_p(url, p=1):
         img = Image(item, url)
         imgs.append(img)
 
-    return imgs
+    return imgs, data['data']['picture']['list']['info']['has_next_page']
 
 
 def get_video(url, soup):
     url_thumb = soup.find('meta', {'property': 'og:image'}).attrs['content']
-    
+
     title = re.find('videos/([^/]+)', url)
     video = soup.find('video')
     url = video.source.attrs['src']

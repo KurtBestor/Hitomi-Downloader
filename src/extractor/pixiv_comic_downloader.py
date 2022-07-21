@@ -7,6 +7,7 @@ import page_selector, clf2
 from hashlib import md5
 from datetime import datetime
 import errors
+import utils
 SALT = 'mAtW1X8SzGS880fsjEXlM73QpS1i4kUMBhyhdaYySk8nWz533nrEunaSplg63fzT'
 
 
@@ -26,7 +27,7 @@ class Page(object):
         self.url = url
 
 
-@Downloader.register
+
 class Downloader_pixiv_comic(Downloader):
     type = 'pixiv_comic'
     URLS = ['comic.pixiv.net/works', 'comic.pixiv.net/viewer/']
@@ -93,12 +94,14 @@ def get_artist(soup):
     if artist:
         return artist.text.strip()
     else:
-        artist = re.find(r'"author" *: *(".*?")', soup.html) # 4389
+        html = soup.html.replace('\\"', utils.esc('"')) #4936
+        artist = re.find(r'"author" *: *(".*?")', html) # 4389
         if artist:
-            artist = json.loads(artist)
+            artist = json.loads(artist).replace(utils.esc('"'), '"')
         return artist or None
 
 
+@try_n(2)
 def get_pages(soup, url):
     pages = []
     hrefs = set()
@@ -109,6 +112,8 @@ def get_pages(soup, url):
             continue
         hrefs.add(href)
         divs = a.findAll('div', recursive=False)
+        if len(divs) < 2:
+            divs = divs[0].findAll('div', recursive=False) #4861
         if len(divs) < 2:
             continue
         right = divs[1]
@@ -158,7 +163,7 @@ def get_imgs(url, title, soup=None, session=None, cw=None):
         if cw is not None:
             if not cw.alive:
                 return
-            cw.setTitle((u'{} {} / {}  ({} / {})').format(tr_(u'\uc77d\ub294 \uc911...'), title, page.title, i + 1, len(pages)))
+            cw.setTitle('{} {} / {}  ({} / {})'.format(tr_('읽는 중...'), title, page.title, i + 1, len(pages)))
         imgs += get_imgs_page(page, session)
 
     return imgs
@@ -183,7 +188,7 @@ def get_imgs_page(page, session):
 
     if not pages:
         raise Exception('No pages')
-    
+
     imgs = []
     for p in pages:
         img = p['url']
@@ -192,4 +197,3 @@ def get_imgs_page(page, session):
         imgs.append(img)
 
     return imgs
-

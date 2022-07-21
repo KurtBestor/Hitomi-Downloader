@@ -7,7 +7,7 @@ from m3u8_tools import M3u8_stream
 import os
 
 
-@Downloader.register
+
 class Downloader_vlive(Downloader):
     type = 'vlive'
     URLS = ['vlive.tv']
@@ -21,21 +21,21 @@ class Downloader_vlive(Downloader):
     def read(self):
         cw = self.cw
         video = get_video(self.url, cw=cw)
-        
+
         self.urls.append(video.url)
 
         self.setIcon(video.thumb)
         self.enableSegment()
-        
+
         self.title = clean_title(video.title)
-    
+
 
 @try_n(4)
 def get_video(url, cw=None):
     options = {
         'noplaylist': True,
         }
-    
+
     ydl = ytdl.YoutubeDL(options, cw=cw)
     info = ydl.extract_info(url)
 
@@ -51,25 +51,17 @@ def get_video(url, cw=None):
         raise Exception('No videos')
 
     f = sorted(fs, key=lambda f:f['quality'])[-1]
-
-    subs = {}
-    for sub, items in info['subtitles'].items():
-        sub = sub.split('_')[0]
-        for item in items:
-            if item['ext'] != 'vtt':
-                continue
-            subs[sub] = item['url']
-    video = Video(f, info, subs, cw)
+    video = Video(f, info, cw)
 
     return video
 
 
 class Video(object):
-    def __init__(self, f, info, subs, cw=None):
+    def __init__(self, f, info, cw=None):
         self.title = title = info['title']
         self.id = info['id']
         self.url = f['url']
-        self.subs = subs
+        self.subs = ytdl.get_subtitles(info)
         self.cw = cw
 
         self.thumb = BytesIO()
@@ -87,5 +79,3 @@ class Video(object):
     def pp(self, filename):
         pp_subtitle(self, filename, self.cw)
         return filename
-        
-

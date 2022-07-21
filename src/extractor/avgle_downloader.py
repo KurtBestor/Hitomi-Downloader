@@ -12,7 +12,7 @@ import webbrowser
 import errors
 
 
-@Downloader.register
+
 class Downloader_avgle(Downloader):
     type = 'avgle'
     single = True
@@ -29,14 +29,14 @@ class Downloader_avgle(Downloader):
         self.urls.append(video.url)
 
         self.setIcon(video.thumb)
-        
+
         self.title = video.title
-        
+
 
 @try_n(2)
 def get_video(url, cw=None):
     print_ = get_print(cw)
-    
+
     check_alive(cw)
 
     data = cw.data_
@@ -61,7 +61,7 @@ def get_video(url, cw=None):
 
     url_thumb = soup.find('meta', {'property': 'og:image'}).attrs['content']
     title = soup.find('meta', {'property': 'og:title'}).attrs['content'].strip()
-    
+
     video = Video(stream, url_thumb, url, title)
 
     return video
@@ -76,5 +76,3 @@ class Video(object):
         self.title = title
         ext = '.mp4'
         self.filename = u'{}{}'.format(clean_title(title, n=-len(ext)), ext)
-        
-

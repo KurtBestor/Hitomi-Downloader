@@ -6,7 +6,7 @@ from io import BytesIO
 import clf2
 
 
-@Downloader.register
+
 class Downloader_kissjav(Downloader):
     type = 'kissjav'
     URLS = ['kissjav.com', 'kissjav.li'] #4835
@@ -15,12 +15,12 @@ class Downloader_kissjav(Downloader):
 
     def read(self):
         self.session = None#get_session(self.url, cw=self.cw)
-        
+
         video = get_video(self.url, self.session, self.cw)
         self.urls.append(video.url)
         self.setIcon(video.thumb)
         self.enableSegment(1024*1024//2)
-        
+
         self.title = video.title
 
 
@@ -38,7 +38,7 @@ def get_video(url, session, cw):
         f = {'res': res, 'src': src}
         fs.append(f)
         print_(f)
-        
+
     if not fs:
         raise Exception('No source')
 
@@ -77,4 +77,3 @@ def get_session(url, cw=None):
     session = Session()
     clf2.solve(url, session=session, cw=cw)
     return session
-        

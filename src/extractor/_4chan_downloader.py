@@ -8,15 +8,14 @@ class Image:
         self._url = url
         self.url = LazyUrl(ref, self.get, self)
         self.filename = '{:04}{}'.format(n, get_ext(url))
-        
+
     @sleep_and_retry
     @limits(2, 1)
     def get(self, _):
         return self._url
-        
-        
 
-@Downloader.register
+
+
 class Downloader_4chan(Downloader):
     type = '4chan'
     URLS = [r'regex:boards.(4chan|4channel).org']

@@ -30,12 +30,12 @@ def get_id(url):
     return username, pid
 
 
-@Downloader.register
+
 class Downloader_naver(Downloader):
     type = 'naver'
     URLS = ['blog.naver.', '.blog.me']
     display_name = 'Naver Blog'
-    
+
     def init(self):
         username, pid = get_id(self.url)
         if username is None:
@@ -58,7 +58,7 @@ class Downloader_naver(Downloader):
             self.urls.append(img.url)
 
         self.title = self.name
-        
+
 
 class Image(object):
     def __init__(self, url, referer, p):
@@ -66,14 +66,14 @@ class Image(object):
         #3788, #3817
         ext = get_ext(url)
         self.filename = '{:04}{}'.format(p, ext)
-        
+
 
 class Video(object):
     def __init__(self, url, referer, p):
         self.url = LazyUrl(referer, lambda _: url, self)
         self.filename = 'video_{}.mp4'.format(p)
 
-        
+
 def read_page(url, depth=0):
     print('read_page', url, depth)
     if depth > 10:
@@ -108,7 +108,7 @@ def get_imgs(url):
     print('view', view is not None)
 
     imgs_ = view.findAll('span', class_='_img') + view.findAll('img')
-    
+
     for img in imgs_:
         url = img.attrs.get('src', None)
         if url is None:
@@ -116,7 +116,7 @@ def get_imgs(url):
         if url is None:
             print(u'invalid img: {}'.format(url))
             continue
-        
+
         if 'ssl.pstatic.net' in url: #
             continue
 
@@ -128,7 +128,7 @@ def get_imgs(url):
 
         if 'storep-phinf.pstatic.net' in url: # emoticon
             continue
-        
+
         url =  url.replace('mblogthumb-phinf', 'blogfiles')
         #url = re.sub('\?type=[a-zA-Z0-9]*', '?type=w1@2x', url)
         #url = re.sub('\?type=[a-zA-Z0-9]*', '', url)
@@ -137,7 +137,7 @@ def get_imgs(url):
         if url in urls:
             print('### Duplicate:', url)
             continue
-        
+
         urls.add(url)
         #url = url.split('?type=')[0]
         img = Image(url, referer, len(imgs))
@@ -170,4 +170,3 @@ def get_imgs(url):
         videos.append(video)
 
     return imgs + videos
-

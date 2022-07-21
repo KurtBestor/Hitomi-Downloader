@@ -11,7 +11,7 @@ from ratelimit import limits, sleep_and_retry
 from utils import Downloader, Session, clean_title, get_print, print_error
 
 
-@Downloader.register
+
 class Downloader_wayback_machine(Downloader):
     type = 'waybackmachine'
     URLS = ['archive.org', 'web.archive.org']

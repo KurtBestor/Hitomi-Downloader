@@ -30,7 +30,7 @@ import requests
 import errors
 
 
-@Downloader.register
+
 class DownloaderDiscordEmoji(Downloader):
     type = "discord"
 

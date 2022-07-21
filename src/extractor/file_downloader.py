@@ -5,7 +5,7 @@ from timee import sleep
 from hashlib import md5
 
 
-@Downloader.register
+
 class Downloader_file(Downloader):
     type = 'file'
     single = True
@@ -35,15 +35,15 @@ class Downloader_file(Downloader):
             ext = ''
         if not ext:
             ext = get_ext(name)
-            
+
         name = os.path.splitext(name)[0]
 
         self.urls.append(self.url)
-        
+
         id_ = md5(self.url.encode('utf8')).hexdigest()[:8]
         tail = ' ({}){}'.format(id_, ext)
         filename = clean_title(name, n=-len(tail)) + tail
-        
+
         self.filenames[self.url] = filename
-        
+
         self.title = filename

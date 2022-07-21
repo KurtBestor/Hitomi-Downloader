@@ -8,7 +8,7 @@ import utils
 import ffmpeg
 
 
-@Downloader.register
+
 class Downloader_etc(Downloader):
     type = 'etc'
     URLS = []
@@ -51,7 +51,7 @@ def int_or_none(s):
 def format_(f):
     if f is None:
         return 'None'
-    return '{} - {} - {} - {}'.format(f['format'], f['_resolution'], f['_audio'], f['url'])
+    return 'format:{} - resolution:{} - vbr:{} - audio:{} - url:{}'.format(f['format'], f['_resolution'], f['_vbr'], f['_audio'], f['url'])
 
 
 def get_video(url, session, cw, ie_key=None):
@@ -105,7 +105,8 @@ def _get_video(url, session, cw, ie_key=None, allow_m3u8=True):
     fs = []
     for i, f in enumerate(formats):
         f['_index'] = i
-        f['_resolution'] = f.get('vbr') or int_or_none(re.find('([0-9]+)p', f['format'], re.IGNORECASE)) or f.get('height') or f.get('width') or int(f.get('vcodec', 'none') != 'none')
+        f['_resolution'] = int_or_none(re.find('([0-9]+)p', f['format'], re.IGNORECASE)) or f.get('height') or f.get('width') or int(f.get('vcodec', 'none') != 'none')
+        f['_vbr'] = f.get('vbr') or 0
         f['_audio'] = f.get('abr') or f.get('asr') or int(f.get('acodec', 'none') != 'none')
         print_(format_(f))
         fs.append(f)
@@ -128,13 +129,13 @@ def _get_video(url, session, cw, ie_key=None, allow_m3u8=True):
             print_('invalid url: {}'.format(f['url']))
         return list(fs)[0]#
 
-    f_video = filter_f(reversed(sorted(fs, key=lambda f:(f['_resolution'], f['_index']))))
+    f_video = filter_f(reversed(sorted(fs, key=lambda f:(f['_resolution'], f['_vbr'], f['_index']))))
     print_('video0: {}'.format(format_(f_video)))
 
     if f_video['_audio']:
         f_audio = None
     else:
-        fs_audio = sorted([f_audio for f_audio in fs if (not f_audio['_resolution'] and f_audio['_audio'])], key=lambda f:(f['_audio'], f['_index']))
+        fs_audio = sorted([f_audio for f_audio in fs if (not f_audio['_resolution'] and f_audio['_audio'])], key=lambda f:(f['_audio'], f['_vbr'], f['_index']))
         if fs_audio:
             f_audio = fs_audio[-1]
         else:
@@ -179,6 +180,7 @@ class Video(object):
         self.header = utils.capitalize(get_ie_key(info))
         self.session = session
         self.referer = referer
+        self.subs = ytdl.get_subtitles(info)
 
         self.url_thumb = info.get('thumbnail')
         self.thumb = BytesIO()
@@ -211,4 +213,5 @@ class Video(object):
             f = BytesIO()
             downloader.download(self.f_audio['url'], buffer=f, referer=self.referer, session=self.session)
             ffmpeg.merge(filename, f, cw=self.cw)
+        utils.pp_subtitle(self, filename, self.cw)
         return filename

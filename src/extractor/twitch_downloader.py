@@ -10,7 +10,7 @@ import errors
 import utils
 
 
-@Downloader.register
+
 class Downloader_twitch(Downloader):
     type = 'twitch'
     URLS = ['twitch.tv']
@@ -35,7 +35,7 @@ class Downloader_twitch(Downloader):
     def read(self):
         if '/directory/' in self.url.lower():
             raise errors.Invalid('[twitch] Directory is unsupported: {}'.format(self.url))
-            
+
         if self.url.count('/') == 3:
             if 'www.twitch.tv' in self.url or '//twitch.tv' in self.url:
                 filter = 'live'
@@ -47,7 +47,7 @@ class Downloader_twitch(Downloader):
                 filter = None
         else:
             filter = None
-            
+
         if filter is None:
             video = Video(self.url, self.cw)
             video.url()
@@ -64,8 +64,10 @@ class Downloader_twitch(Downloader):
         else:
             raise NotImplementedError(filter)
 
+        self.artist = video.artist
+
         self.setIcon(video.thumb)
-            
+
 
 @try_n(2)
 def get_videos(url, cw=None):
@@ -117,7 +119,7 @@ def extract_info(url, cw=None):
             raise errors.LoginRequired()
         raise
     return info
-    
+
 
 class Video(object):
     _url = None
@@ -133,11 +135,12 @@ class Video(object):
         if self._url:
             return self._url
         info = extract_info(url, self.cw)
+        self.artist = info['creator'] #4953
 
         def print_video(video):
             #print_(video)#
             print_('{}[{}] [{}] [{}] {}'.format('LIVE ', video['format_id'], video.get('height'), video.get('tbr'), video['url']))
-            
+
         videos = [video for video in info['formats'] if video.get('height')]
 
         videos = sorted(videos, key=lambda video:(video.get('height', 0), video.get('tbr', 0)), reverse=True)
@@ -152,9 +155,9 @@ class Video(object):
         else:
             video_best = videos[-1]
         print_video(video)
-        
+
         video = video_best['url']
-        
+
         ext = get_ext(video)
         self.title = info['title']
         id = info['display_id']
@@ -166,7 +169,7 @@ class Video(object):
             if ext.lower() == '.m3u8':
                 video = M3u8_stream(video, n_thread=4, alter=alter)
                 ext = '.mp4'
-        self.filename = format_filename(self.title, id, ext)
+        self.filename = format_filename(self.title, id, ext, artist=self.artist)
         self.url_thumb = info['thumbnail']
         self.thumb = BytesIO()
         downloader.download(self.url_thumb, buffer=self.thumb)

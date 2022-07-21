@@ -51,12 +51,12 @@ def find_ps(url):
     return user, ps
 
 
-@Downloader.register
+
 class Downloader_flickr(Downloader):
     type = 'flickr'
     URLS = ['flickr.com']
     _name = None
-    
+
     def init(self):
         if 'flickr.com' in self.url.lower():
             self.url = self.url.replace('http://', 'https://')
@@ -94,14 +94,14 @@ def get_imgs(url, title=None, cw=None):
     if not flickr_auth.isAuth:
         raise Exception('No Auth')
 
-    
+
     if '/albums/' in url:
         user, ps = find_ps(url)
         handle = ps
     else:
         user = flickr_api.Person.findByUrl(url)
         handle = user
-    
+
     photos = []
 
     per_page = 500
@@ -125,4 +125,3 @@ def get_imgs(url, title=None, cw=None):
         imgs.append(img)
 
     return imgs
-

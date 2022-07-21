@@ -15,8 +15,8 @@ import os
 def decode(s, hash):
     # generateKey
     key = int(hash[:16], 16)
-    
-    filter = [int((key>>i*8)%256) for i in range(8)][::-1] # 
+
+    filter = [int((key>>i*8)%256) for i in range(8)][::-1] #
     s2 = bytes(x^y for x, y in zip(s, cycle(filter)))
     return s2
 
@@ -42,7 +42,7 @@ class Page(object):
         self.title = clean_title(title)
 
 
-@Downloader.register
+
 class Downloader_comicwalker(Downloader):
     type = 'comicwalker'
     URLS = ['comic-walker.com/contents/detail/', 'comic-walker.jp/contents/detail/']
@@ -147,13 +147,12 @@ def get_imgs(url, soup=None, cw=None):
         if imgs_already:
             imgs += imgs_already
             continue
-        
+
         if cw is not None:
             if not cw.alive:
                 return
             cw.setTitle(u'{} {} / {}  ({} / {})'.format(tr_(u'읽는 중...'), title, page.title, i+1, len(pages)))
-        
+
         imgs += get_imgs_page(page)
 
     return imgs
-

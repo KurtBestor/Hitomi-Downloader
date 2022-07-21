@@ -7,13 +7,13 @@ import os
 import json
 
 
-@Downloader.register
+
 class Downloader_nhentai_com(Downloader):
     type = 'nhentai_com'
     URLS = [r'regex:https?://nhentai.com']
     MAX_CORE = 16
     display_name = 'nhentai.com'
-    
+
     def init(self):
         self.info = get_info(self.url)
         self.url = self.info['url']
@@ -56,8 +56,8 @@ class LazyUrl_nhentai_com(LazyUrl):
         url = data['url']
         img = Image(referer, url, data['p'])
         return img.url
-        
-    
+
+
 class Image(object):
     def __init__(self, url_page, url_img, p):
         self.p = p
@@ -82,7 +82,7 @@ def get_info(url):
 
     info = {}
     info['url'] = url
-    
+
     info['id'] = int(data['id'])
     info['type'] = data['category']['name']
     info['title'] = data['title']
@@ -97,7 +97,5 @@ def get_info(url):
         img = Image(url, img, len(imgs))
         imgs.append(img)
     info['imgs'] = imgs
-    
+
     return info
-
-

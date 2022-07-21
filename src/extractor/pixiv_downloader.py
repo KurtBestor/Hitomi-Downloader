@@ -28,7 +28,6 @@ for header in ['pixiv_illust', 'pixiv_bmk', 'pixiv_search', 'pixiv_following', '
 
 
 
-@Downloader.register
 class Downloader_pixiv(Downloader):
     type = 'pixiv'
     MAX_CORE = 16
@@ -49,10 +48,10 @@ class Downloader_pixiv(Downloader):
             url = 'https://www.pixiv.net/bookmark_new_illust.php'
         elif not re.find(r'^https?://', url) and '.' not in url:
             url = 'https://www.pixiv.net/en/users/{}'.format(url)
-            
+
         #3474
         url = re.sub(r'(users/[0-9]+)/artworks$', r'\1', url)
-        
+
         url = re.sub(r'[?&]p=[0-9]+$', '', url)
         return url.strip('/')
 
@@ -65,6 +64,7 @@ class Downloader_pixiv(Downloader):
 ##        asyncio.set_event_loop(loop)
         try:
             info = get_info(self.url, self.cw)
+            self.artist = info.get('artist') #4897
             for img in info['imgs']:
                 self.urls.append(img.url)
             self.title = clean_title(info['title'])
@@ -108,15 +108,15 @@ class PixivAPI():
         if err:
             raise PixivAPIError(info.get('message'))
         return info['body']
-    
+
     def illust(self, id_):
         return self.call('illust/{}'.format(id_))
-        
-    
+
+
     def pages(self, id_):
         return self.call('illust/{}/pages'.format(id_))
-        
-    
+
+
     def ugoira_meta(self, id_):
         return self.call('illust/{}/ugoira_meta'.format(id_))
 
@@ -159,8 +159,8 @@ class PixivAPI():
         mode = 'r18' if r18 else 'all'
         url = f'follow_latest/illust?p={p}&mode={mode}&lang=en'
         return self.call(url)
-        
-        
+
+
 
 class Image():
     local = False
@@ -251,7 +251,7 @@ def tags_matched(tags_illust, tags_add, cw=None):
         tags.update((pretty_tag(tag) for tag in tags_add))
         if init:
             print_('tags_add: {}'.format(tags_add))
-    
+
     tags_illust = set(pretty_tag(tag) for tag in tags_illust)
     return (not tags or tags & tags_illust) and tags_ex.isdisjoint(tags_illust)
 
@@ -261,12 +261,12 @@ def get_info(url, cw=None, depth=0, tags_add=None):
     api = PixivAPI()
     info = {}
     imgs = []
-    
+
     ugoira_ext = [None, '.gif', '.webp', '.png'][utils.ui_setting.ugoira_convert.currentIndex()] if utils.ui_setting else None
     format_ = compatstr(utils.ui_setting.pixivFormat.currentText()) if utils.ui_setting else 'id_ppage'
-            
+
     max_pid = get_max_range(cw)
-    
+
     if api.illust_id(url): # Single post
         id_ = api.illust_id(url)
         data = api.illust(id_)
@@ -281,7 +281,7 @@ def get_info(url, cw=None, depth=0, tags_add=None):
         info['title'] = '{} (pixiv_illust_{})'.format(info['raw_title'], id_)
         info['create_date'] = parse_time(data['createDate'])
         tags_illust = set(tag['tag'] for tag in data['tags']['tags'])
-        
+
         if tags_matched(tags_illust, tags_add, cw):
             if data['illustType'] == 2: # ugoira
                 data = api.ugoira_meta(id_)
@@ -407,12 +407,12 @@ def get_info(url, cw=None, depth=0, tags_add=None):
         else:
             tag = None
         print_('types: {}, tag: {}'.format(types, tag))
-        
+
         id_ = api.user_id(url)
         process_user(id_, info, api)
         data = api.profile(id_)
         info['title'] = '{} (pixiv_{})'.format(info['artist'], info['artist_id'])
-        
+
         ids = []
         for type_ in types:
             illusts = data[type_]
@@ -466,7 +466,7 @@ def process_ids(ids, info, imgs, cw, depth=0, tags_add=None):
         @lock
         def add_rem(cls, x):
             cls.rem += x
-            
+
         def run(self):
             while self.alive:
                 try:

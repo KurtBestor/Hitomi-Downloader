@@ -21,13 +21,13 @@ def isLogin(soup):
     return False
 
 
-@Downloader.register
+
 class Downloader_nijie(Downloader):
     type = 'nijie'
     URLS = ['nijie.info']
     MAX_CORE = 4
     display_name = 'ニジエ'
-    
+
     def init(self):
         if 'members.php' not in self.url and 'members_illust.php' not in self.url:
             raise NotImplementedError()
@@ -77,7 +77,7 @@ class Image(object):
         ext = get_ext(img)
         self.filename = '{}_p{}{}'.format(self.id, self.p, ext)
         return img
-        
+
 
 @try_n(8, sleep=10)
 def get_imgs_post(id, url):
@@ -92,7 +92,7 @@ def get_imgs_post(id, url):
         img = Image(id, url, len(imgs), False, url_img)
         imgs.append(img)
     return imgs
-    
+
 
 def setPage(url, page):
     # Always use HTTPS
@@ -142,7 +142,7 @@ def get_imgs(url, title=None, cw=None):
                 imgs_ = get_imgs_post(id, url_img)#
             else:
                 imgs_ = [Image(id, url_img, 0)]
-            
+
             imgs += imgs_
             c += 1
 
@@ -160,5 +160,3 @@ def get_imgs(url, title=None, cw=None):
         if len(imgs) >= max_pid or c == 0:
             break
     return imgs
-
-

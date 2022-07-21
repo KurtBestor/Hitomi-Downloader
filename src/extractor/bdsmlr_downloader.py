@@ -11,7 +11,7 @@ import clf2
 import errors
 
 
-@Downloader.register
+
 class Downloader_bdsmlr(Downloader):
     type = 'bdsmlr'
     URLS = ['bdsmlr.com']
@@ -20,7 +20,7 @@ class Downloader_bdsmlr(Downloader):
     def init(self):
         if u'bdsmlr.com/post/' in self.url:
             raise errors.Invalid(tr_(u'개별 다운로드는 지원하지 않습니다: {}').format(self.url))
-        
+
         self.url = 'https://{}.bdsmlr.com'.format(self.id_)
         self.session = Session()
         clf2.solve(self.url, session=self.session,  cw=self.cw)
@@ -38,13 +38,13 @@ class Downloader_bdsmlr(Downloader):
 
     def read(self):
         info = get_imgs(self.id_, session=self.session, cw=self.cw)
-        
+
         for post in info['posts']:
             self.urls.append(post.url)
 
         self.title = u'{} (bdsmlr_{})'.format(clean_title(info['username']), self.id_)
 
-        
+
 class Post(object):
     def __init__(self, url, referer, id, p):
         self.id = id
@@ -71,7 +71,7 @@ def foo(url, soup, info, reblog=False):
             post = Post(mag.attrs['href'], url, id, p)
             info['posts'].append(post)
     info['c'] += 20 if info['c'] else 5
-    
+
 
 @try_n(2)
 def get_imgs(user_id, session, cw=None):
@@ -89,7 +89,7 @@ def get_imgs(user_id, session, cw=None):
     username = soup.find('title').text.strip()###
     print('username:', username)
     info['username'] = username
-    
+
     token = soup.find('meta', {'name': 'csrf-token'}).attrs['content']
     print_(u'token: {}'.format(token))
 
@@ -136,9 +136,8 @@ def get_imgs(user_id, session, cw=None):
             cw.setTitle(s)
         else:
             print(s)
-            
+
         if len(info['posts']) > max_pid:
             break
 
     return info
-

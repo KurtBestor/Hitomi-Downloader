@@ -31,7 +31,7 @@ class Page(object):
         self.id = int(re.find(r'/(comic|webtoon)/([0-9]+)', url, err='no id')[1])
 
 
-@Downloader.register
+
 class Downloader_manatoki(Downloader):
     type = 'manatoki'
     URLS = [r'regex:(mana|new)toki[0-9]*\.(com|net)']
@@ -55,7 +55,7 @@ class Downloader_manatoki(Downloader):
                 raise Exception('no selected option')
             self.session, self.soup, url = get_soup(url)
             url_page = self.fix_url(url)
-            
+
             for i, page in enumerate(get_pages(url_page, self.soup)):
                 if page.id == int(op['value']):
                     break
@@ -89,7 +89,7 @@ class Downloader_manatoki(Downloader):
         self.artist = get_artist(self.soup)
 
         imgs = get_imgs(self.url, self.name, self.soup, self.session, self.cw)
-        
+
         for img in imgs:
             if isinstance(img, Image):
                 self.urls.append(img.url)
@@ -121,26 +121,53 @@ def get_soup(url, session=None):
         return True
     res = clf2.solve(url, session=session, f=f)
     soup = Soup(res['html'], apply_css=True)
-    
+
     return session, soup, res['url']
 
 
-def get_pages(url, soup):
+def get_pages(url, soup, sub=False):
     list = soup.find('ul', class_='list-body')
     pages = []
-    titles = {}
-    for item in list.findAll('div', 'wr-subject')[::-1]:
+    for item in list.findAll('div', 'wr-subject'):
         for span in item.a.findAll('span'):
             span.decompose()
         title = item.a.text.strip()
-        title = utils.fix_dup(title, titles) #4161
         href = item.a['href']
         href = urljoin(url, href)
-        page = Page(title, href)
-        pages.append(page)
+        pages.append((title, href))
+
     if not pages:
         raise Exception('no pages')
-    return pages
+
+##    if sub: #4909
+##        return pages
+##    else:
+##        pg = soup.find('ul', class_='pagination')
+##        as_ = pg.findAll('a')
+##        for a in as_:
+##            href = a.get('href')
+##            if not href:
+##                continue
+##            href = urljoin(url, href)
+##            for try_ in range(2):
+##                try:
+##                    session, soup2, href = get_soup(href)
+##                    pages += get_pages(href, soup2, sub=True)
+##                    break
+##                except Exception as e:
+##                    e_ = e
+##                    print(e)
+##            else:
+##                raise e_
+
+    titles = {}
+    pages_ = []
+    for title, href in pages[::-1]:
+        title = utils.fix_dup(title, titles) #4161
+        page = Page(title, href)
+        pages_.append(page)
+
+    return pages_
 
 
 @page_selector.register('manatoki')
@@ -155,7 +182,7 @@ def f(url):
 
 def get_imgs(url, title, soup=None, session=None, cw=None):
     print_ = get_print(cw)
-    
+
     if soup is None or session is None:
         session, soup, url = get_soup(url, session)
 
@@ -168,7 +195,7 @@ def get_imgs(url, title, soup=None, session=None, cw=None):
         if imgs_already:
             imgs += imgs_already
             continue
-        
+
         imgs_ = get_imgs_page(page, title, url, session, cw)
         imgs += imgs_
 
@@ -198,7 +225,7 @@ def get_imgs_page(page, title, referer, session, cw):
     if page.title != title_page:
         print_('{} -> {}'.format(page.title, title_page))
         page.title = title_page
-    
+
     views = soup.findAll('div', class_='view-content')\
             + soup.findAll('div', class_='view-padding')
     if not views:
@@ -208,7 +235,7 @@ def get_imgs_page(page, title, referer, session, cw):
     print_('hash: {}'.format(hash))
     if hash is None:
         raise Exception('no hash')
-    
+
     imgs = []
     for view in views:
         if view is None:

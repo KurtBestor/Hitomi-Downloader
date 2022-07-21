@@ -11,7 +11,7 @@ def get_id(url):
     return re.find(r'/view/([0-9a-z]+)', url, err='no id')
 
 
-@Downloader.register 
+
 class Downloader_coub(Downloader):
     type = 'coub'
     URLS = ['coub.com', r'regex:'+PATTEN_IMAGIZER]
@@ -40,7 +40,7 @@ class Downloader_coub(Downloader):
 
 class Video(object):
     _url = None
-    
+
     def __init__(self, url, cw=None):
         self.url = LazyUrl(url, self.get, self, pp=self.pp)
         self.cw = cw
@@ -49,7 +49,7 @@ class Video(object):
     def get(self,  url):
         if self._url:
             return self._url
-        
+
         ydl = ytdl.YoutubeDL(cw=self.cw)
         info = ydl.extract_info(url)
         fs = [f for f in info['formats'] if f['ext'] == 'mp4']
@@ -57,7 +57,7 @@ class Video(object):
         self._url = f['url']
 ##        fs = [f for f in info['formats'] if f['ext'] == 'mp3']
 ##        self.f_audio = sorted(fs, key=lambda f: int(f.get('filesize', 0)))[-1]
-        
+
         self.thumb_url = info['thumbnails'][0]['url']
         self.thumb = IO()
         downloader.download(self.thumb_url, buffer=self.thumb)

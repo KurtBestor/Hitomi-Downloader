@@ -2,7 +2,7 @@
 from utils import Downloader, get_print, urljoin, Soup, get_ext, LazyUrl, clean_title, downloader, re, try_n, errors, json
 
 
-@Downloader.register
+
 class Downloader_navercafe(Downloader):
     type = 'navercafe'
     URLS = ['cafe.naver.com']
@@ -45,7 +45,7 @@ def get_info(url, cw=None):
     info['cafename'] = j['result']['cafe']['url']
     info['cafeid'] = clubid
     info['id'] = articleid
-    
+
     html_content = j['result']['article']['contentHtml']
     soup = Soup(html_content)
 
@@ -75,7 +75,7 @@ def get_info(url, cw=None):
         fs = sorted(fs, key=lambda f: f['size'], reverse=True)
         video = Image(fs[0]['source'], url_article, len(imgs))
         imgs.append(video)
-        
+
     for img in soup.findAll('img'):
         img = Image(urljoin(url_article, img['src']), url, len(imgs))
         imgs.append(img)

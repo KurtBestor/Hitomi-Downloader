@@ -30,7 +30,7 @@ class Page(object):
         self.id = int(re.find(PATTERN_ID, url))
 
 
-@Downloader.register
+
 class Downloader_jmana(Downloader):
     type = 'jmana'
     URLS = ['regex:'+PATTERN_ALL]
@@ -55,7 +55,7 @@ class Downloader_jmana(Downloader):
                 raise Exception('list not found')
             self.url = self.fix_url(url)
             self._soup = None
-            
+
             for i, page in enumerate(get_pages(self.url, self.session, self.soup)):
                 if page.id == int(op['value']):
                     break
@@ -106,7 +106,7 @@ def get_title(soup):
 
 def get_artist(soup):
     return re.find(r'작가 *: *(.+)', soup.text, default='').strip() or 'N/A'
-        
+
 
 @try_n(4, sleep=60)
 def get_imgs_page(page, referer, session, cw=None):
@@ -118,15 +118,15 @@ def get_imgs_page(page, referer, session, cw=None):
     print_('inserted: {}'.format(inserted))
 
     inserted = set(int(i) for i in inserted.split(',')) if inserted else set()
-    
+
     soup = Soup(html)
 
     view = soup.find(class_='pdf-wrap')
-    
+
     imgs = []
     for i, img in enumerate(child for child in view.children if isinstance(child, bs4.element.Tag)):
         src = img.get('data-src') or img.get('src') or ''
-        
+
         if i in inserted:
             print_('remove: {}'.format(src))
             continue
@@ -140,7 +140,7 @@ def get_imgs_page(page, referer, session, cw=None):
         if '/notice' in src:
             print('notice:', src)
             continue
-        
+
         img = Image(src, page, len(imgs))
         imgs.append(img)
 
@@ -195,7 +195,7 @@ def get_imgs(url, title, session, soup=None, cw=None):
         if imgs_already:
             imgs += imgs_already
             continue
-        
+
         imgs += get_imgs_page(page, url, session, cw)
         if cw is not None:
             if not cw.alive:
@@ -206,4 +206,3 @@ def get_imgs(url, title, session, soup=None, cw=None):
         raise Exception('no imgs')
 
     return imgs
-

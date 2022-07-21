@@ -33,7 +33,7 @@ class File(object):
 class LazyFile(object):
     _url = None
     thumb = None
-    
+
     def __init__(self, url, type_, session):
         self.url = LazyUrl(url, self.get, self)
         self.type = {'videos': 'video', 'images': 'image'}.get(type_) or type_
@@ -48,9 +48,9 @@ class LazyFile(object):
         self.filename = file.filename
         self._url = file.url()
         return self._url
-        
 
-@Downloader.register
+
+
 class Downloader_iwara(Downloader):
     type = 'iwara'
     URLS = ['iwara.tv']
@@ -104,14 +104,14 @@ class Downloader_iwara(Downloader):
 
             if file.type == 'youtube':
                 raise errors.Invalid('[iwara] Youtube: {}'.format(self.url))
-            
+
             if file.type == 'image':
                 self.single = False
             title = title or file.title
             if not self.single:
                 title = clean_title(title)
             self.title = title
-            
+
         if file.thumb is not None:
             self.setIcon(file.thumb)
 
@@ -143,11 +143,11 @@ def read_channel(url, type_, session, cw=None):
         if p == 0:
             title = soup.find('h1', class_='page-title').text
             info['title'] = title.replace("'s videos", '').replace("'s images", '').strip()
-            
+
         view = soup.find('div', class_='view-content')
         if view is None:
             break
-        
+
         urls_new = []
         for div in view.findAll('div', class_='views-column'):
             href = div.find('a')['href']
@@ -175,7 +175,7 @@ def get_files(url, session, multi_post=False, cw=None):
     video = content.find('video')
     if youtube:
         type = 'youtube'
-    elif video:
+    elif video and video.attrs.get('poster'): #4901
         type = 'video'
     else:
         type = 'image'
@@ -183,8 +183,12 @@ def get_files(url, session, multi_post=False, cw=None):
     files = []
     if type == 'image':
         urls = set()
-        for img in content.findAll('img'):
-            img = urljoin(url, img.parent.attrs['href'])
+        for img in content.findAll(['img', 'video']):
+            if img.source: #4901
+                img = img.source['src']
+            else:
+                img = img.parent.attrs['href']
+            img = urljoin(url, img)
             if '/files/' not in img:
                 continue
             if img in urls:

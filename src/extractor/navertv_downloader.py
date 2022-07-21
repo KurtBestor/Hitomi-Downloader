@@ -9,13 +9,12 @@ import ytdl
 
 
 
-@Downloader.register
 class Downloader_navertv(Downloader):
     type = 'navertv'
     single = True
     URLS = ['tv.naver.com']
     display_name = 'Naver TV'
-    
+
     def init(self):
         if not re.match('https?://.+', self.url, re.IGNORECASE):
             self.url = 'https://tv.naver.com/v/{}'.format(self.url)
@@ -35,7 +34,7 @@ class Downloader_navertv(Downloader):
 
 class Video(object):
     _url = None
-    
+
     def __init__(self, url, cw=None):
         self.url = LazyUrl(url, self.get, self)
         self.cw = cw
@@ -44,7 +43,7 @@ class Video(object):
     def get(self, url):
         if self._url:
             return self._url
-        
+
         ydl = ytdl.YoutubeDL(cw=self.cw)
         info = ydl.extract_info(url)
         fs = [f for f in info['formats'] if f['protocol'] in ['http', 'https']]
@@ -53,7 +52,7 @@ class Video(object):
             raise Exception('No MP4 videos')
         f = fs[0]
         self._url = f['url']
-        
+
         self.thumb_url = info['thumbnails'][0]['url']
         self.thumb = IO()
         downloader.download(self.thumb_url, buffer=self.thumb)

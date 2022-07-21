@@ -46,7 +46,7 @@ def get_soup_session(url, cw=None):
     return Soup(res['html']), session
 
 
-@Downloader.register
+
 class Downloader_lhscan(Downloader):
     type = 'lhscan'
     URLS = [
@@ -103,7 +103,7 @@ class Downloader_lhscan(Downloader):
 def get_imgs_page(page, referer, session, cw=None):
     print_ = get_print(cw)
     print_(page.title)
-    
+
     html = downloader.read_html(page.url, referer, session=session)
     if clf2._is_captcha(Soup(html)): #4124
         html = clf2.solve(page.url, session, cw)['html']
@@ -149,7 +149,7 @@ def get_pages(url, session, soup=None, cw=None):
     if soup is None:
         html = downloader.read_html(url, session=session)
         soup = Soup(html)
-        
+
     tab = soup.find('ul', class_='list-chapters')
 
     pages = []

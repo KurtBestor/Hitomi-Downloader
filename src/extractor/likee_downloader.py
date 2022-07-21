@@ -6,7 +6,7 @@ from io import BytesIO
 from translator import tr_
 
 
-@Downloader.register
+
 class Downloader_likee(Downloader):
     type = 'likee'
     URLS = ['likee.video']
@@ -39,7 +39,7 @@ def get_info(url, session, cw=None):
 
     info = {}
     info['videos'] = []
-    
+
     if '/video/' in url:
         info['type'] = 'single'
         video = Video(url, session)
@@ -68,7 +68,7 @@ def get_info(url, session, cw=None):
         videos = data['data']['videoList']
         if not videos:
             break
-        
+
         for data in videos:
             url_post = 'https://likee.video/@{}/video/{}'.format(data['likeeId'], data['postId'])
             if url_post in urls:
@@ -87,7 +87,7 @@ def get_info(url, session, cw=None):
             cw.setTitle(msg)
         else:
             print(msg)
-            
+
     return info
 
 
@@ -107,7 +107,7 @@ class Video(object):
 
             data = json.loads(r.text)
             video = data['data']['videoList'][0]
-            
+
         url_video = video['videoUrl']
         self.url_thumb = video['coverUrl']
         self.artist = video['nickname']
@@ -116,4 +116,3 @@ class Video(object):
         self.filename = '{}{}'.format(self.id_, ext)
 
         return url_video
-

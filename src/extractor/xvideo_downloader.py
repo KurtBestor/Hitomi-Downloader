@@ -57,7 +57,6 @@ class Video(object):
 
 
 
-@Downloader.register
 class Downloader_xvideo(Downloader):
     type = 'xvideo'
     URLS = [r'regex:[./]xvideos[0-9]*\.(com|in|es)']
@@ -95,7 +94,7 @@ class Downloader_xvideo(Downloader):
             video.url()
             self.title = video.title
             self.urls.append(video.url)
-            
+
         self.setIcon(video.thumb)
 
 
@@ -118,12 +117,12 @@ def read_channel(url_page, cw=None):
         print_(url_api)
         r = session.post(url_api)
         data = json.loads(r.text)
-        
+
         videos = data.get('videos') #4530
         if not videos:
             print_('empty')
             break
-        
+
         for video in videos:
             id_ = video['id']
             if id_ in ids:
@@ -132,12 +131,12 @@ def read_channel(url_page, cw=None):
             ids.add(id_)
             info['name'] = video['pn']
             urls.append(urljoin(url_page, video['u']))
-        
+
         if len(urls) >= max_pid:
             break
 
         n = data['nb_videos']
-        
+
         s = '{} {} - {}'.format(tr_('읽는 중...'), info['name'], len(urls))
         if cw:
             cw.setTitle(s)

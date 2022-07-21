@@ -27,9 +27,9 @@ class Video(object):
         self.username = info['uploader']
         self.url = LazyUrl('https://www.nicovideo.jp/watch/{}'.format(self.id), lambda _: info['url'], self, pp=self.pp)
         self.cw = cw
-        
+
         self.filename = format_filename(self.title, self.id, self.ext)
-        
+
         self.url_thumb = info['thumbnail_url']
         print('thumb:', self.url_thumb)
         self.thumb = BytesIO()
@@ -60,7 +60,7 @@ def suitable(url):
     return get_id(url) is not None
 
 
-@Downloader.register
+
 class Downloader_nico(Downloader):
     type = 'nico'
     single = True
@@ -94,7 +94,7 @@ class Downloader_nico(Downloader):
         else:
             username = ''
             password = ''
-            
+
         try:
             session = login(username, password)
         except Exception as e:
@@ -133,7 +133,7 @@ def get_video(session, url, format, cw=None):
 
 import selector
 @selector.options('nico')
-def options():
+def options(urls):
     return [
         {'text': 'MP4 (동영상)', 'format': 'mp4'},
         {'text': 'MP3 (음원)', 'format': 'mp3'},

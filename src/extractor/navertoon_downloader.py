@@ -33,7 +33,7 @@ class Info(object):
         self.artist = artist
 
 
-@Downloader.register
+
 class Downloader_navertoon(Downloader):
     type = 'navertoon'
     URLS = ['comic.naver.com']
@@ -167,7 +167,7 @@ def get_imgs(page, cw=None):
 
     type_ = re.find('''webtoonType *: *['"](.+?)['"]''', html)
     print_('type: {}'.format(type_))
-    
+
     imgs = []
     if type_ == 'DEFAULT': # https://m.comic.naver.com/webtoon/detail.nhn?titleId=715772
         view = soup.find('div', class_='toon_view_lst')
@@ -235,4 +235,3 @@ def get_imgs_all(url, title, cw=None):
                 break
 
     return imgs
-

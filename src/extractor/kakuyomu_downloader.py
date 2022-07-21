@@ -26,7 +26,7 @@ class Page(object):
         return f
 
 
-@Downloader.register
+
 class Downloader_kakuyomu(Downloader):
     type = 'kakuyomu'
     URLS = ['kakuyomu.jp']
@@ -36,13 +36,13 @@ class Downloader_kakuyomu(Downloader):
 
     def init(self):
         self.info = get_info(self.url, cw=self.cw)
-    
+
     def read(self):
         outdir = get_outdir('kakuyomu')
 
         self.artist = self.info['artist']
         title_dir = clean_title(u'[{}] {}'.format(self.artist, self.info['title']))
-        
+
         for page in self.info['pages']:
             file = os.path.join(outdir, title_dir, page.filename)
             if os.path.isfile(file):
@@ -85,7 +85,7 @@ def get_text(page):
 
 {}'''.format(page.title, page.date, story)
     return text
-        
+
 
 def get_info(url, soup=None, cw=None):
     print_ = get_print(cw)
@@ -117,7 +117,7 @@ def get_info(url, soup=None, cw=None):
         intro = intro.text.strip()
     desc = u'  {}{}'.format(catch, ('\n\n\n'+intro) if intro else '')
     info['description'] = desc
-    
+
     pages = []
     for a in soup.findAll('a', class_='widget-toc-episode-episodeTitle'):
         href = urljoin(url, a.attrs['href'])
@@ -129,4 +129,3 @@ def get_info(url, soup=None, cw=None):
     info['pages'] = pages
 
     return info
-    

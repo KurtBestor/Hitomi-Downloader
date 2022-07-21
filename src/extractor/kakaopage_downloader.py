@@ -22,9 +22,9 @@ class Image(object):
         self.url = LazyUrl('https://page.kakao.com/', lambda _: url, self)
         ext = '.jpg'
         self.filename = '{}/{:04}{}'.format(clean_title(page.title), p, ext)
-        
 
-@Downloader.register
+
+
 class Downloader_kakaopage(Downloader):
     type = 'kakaopage'
     URLS = ['page.kakao.com/home']
@@ -56,8 +56,8 @@ class Downloader_kakaopage(Downloader):
 
         self.title = info['title']
 
-        
-        
+
+
 def get_id(url):
     id_ = re.find('seriesId=([0-9]+)', url, err='No seriesId')
     return id_
@@ -138,7 +138,7 @@ def get_info(url, session, cw=None):
         raise Exception('no pages')
 
     info = {}
-    
+
     html = read_html(url, session=session)
     soup = Soup(html)
 
@@ -174,7 +174,7 @@ def get_info(url, session, cw=None):
         if imgs_already:
             imgs += imgs_already
             continue
-        
+
         try:
             _imgs = get_imgs_page(page, session)
             e_msg = None
@@ -184,7 +184,7 @@ def get_info(url, session, cw=None):
         print_('{} {}'.format(page.title, len(_imgs)))
         if e_msg:
             print_(e_msg)
-        
+
         imgs += _imgs
         sleep(.2)
 

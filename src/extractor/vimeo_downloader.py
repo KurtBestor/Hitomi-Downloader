@@ -7,12 +7,11 @@ import ytdl
 
 
 
-@Downloader.register
 class Downloader_vimeo(Downloader):
     type = 'vimeo'
     URLS = ['vimeo.com']
     single = True
-    
+
     def init(self):
         if 'vimeo.com' not in self.url.lower():
             self.url = u'https://vimeo.com/{}'.format(self.url)
@@ -31,7 +30,7 @@ class Downloader_vimeo(Downloader):
 
 class Video(object):
     _url = None
-    
+
     def __init__(self, url, cw=None):
         self.url = LazyUrl(url, self.get, self)
         self.cw = cw
@@ -40,7 +39,7 @@ class Video(object):
     def get(self,  url):
         if self._url:
             return self._url
-        
+
         ydl = ytdl.YoutubeDL(cw=self.cw)
         info = ydl.extract_info(url)
         fs = [f for f in info['formats'] if f['protocol'] in ['http', 'https']]
@@ -48,7 +47,7 @@ class Video(object):
         if not fs:
             raise Exception('No MP4 videos')
         f = fs[0]
-        
+
         self.thumb_url = info['thumbnails'][0]['url']
         self.thumb = IO()
         downloader.download(self.thumb_url, buffer=self.thumb)

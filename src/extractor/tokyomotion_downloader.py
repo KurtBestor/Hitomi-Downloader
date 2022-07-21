@@ -8,14 +8,14 @@ import ree as re
 import os
 
 
-@Downloader.register
+
 class Downloader_tokyomotion(Downloader):
     type = 'tokyomotion'
     URLS = ['tokyomotion.net']
     single = True
     _type = None
     display_name = 'TOKYO Motion'
-    
+
     def init(self):
         html = downloader.read_html(self.url)
         self.soup = Soup(html)
@@ -67,7 +67,7 @@ def get_video(url, soup=None):
     if soup is None:
         html = downloader.read_html(url)
         soup = Soup(html)
-        
+
     video = soup.find('video', id='vjsplayer').find('source').attrs['src']
     url_thumb = soup.find('video', id='vjsplayer').attrs['poster']
     title = get_title(soup)

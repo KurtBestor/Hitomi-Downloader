@@ -7,7 +7,6 @@ import ree as re
 
 
 
-@Downloader.register
 class Downloader_webtoon(Downloader):
     type = 'webtoon'
     URLS = ['webtoon.com', 'webtoons.com']
@@ -34,7 +33,7 @@ class Downloader_webtoon(Downloader):
                 self.urls.append(img)
 
         self.title = title
-        
+
 
 class Page(object):
 
@@ -50,7 +49,7 @@ class Image(object):
         self.filename = '{}/{:04}{}'.format(clean_title(page.title), p, ext)
 
         self.url = LazyUrl(page.url, lambda _: url, self)
-        
+
 
 @try_n(2)
 def get_imgs(page):

@@ -21,13 +21,13 @@ from ratelimit import limits, sleep_and_retry
 from urllib.parse import quote
 
 
-@Downloader.register
+
 class Downloader_sankaku(Downloader):
     type = 'sankaku'
     URLS = ['chan.sankakucomplex.com', 'idol.sankakucomplex.com', 'www.sankakucomplex.com']
     MAX_CORE = 4
     display_name = 'Sankaku Complex'
-    
+
     def init(self):
         type = self.url.split('sankakucomplex.com')[0].split('//')[-1].strip('.').split('.')[-1]
         if type == '':
@@ -174,7 +174,7 @@ class Image(object):
         cw = self.cw
         d = self.d
         print_ = get_print(cw)
-        
+
         for try_ in range(4):
             wait(cw)
             html = ''
@@ -197,7 +197,7 @@ class Image(object):
                     t_sleep = 5
                 s = '[Sankaku] failed to read image (id:{}): {}'.format(self.id, e)
                 print_(s)
-                sleep(t_sleep, cw)                
+                sleep(t_sleep, cw)
         else:
             raise Exception('can not find image (id:{})\n{}'.format(self.id, e_msg))
         soup = Soup('<p>{}</p>'.format(url))
@@ -216,7 +216,7 @@ def setPage(url, page):
         url = re.sub(r'page=[0-9]*', 'page={}'.format(page), url)
     else:
         url += '&page={}'.format(page)
-        
+
     return url
 
 
@@ -246,7 +246,7 @@ def get_imgs(url, title=None, cw=None, d=None, types=['img', 'gif', 'video'], se
         id = get_id(url)
         info['imgs'] = [Image(type, id, url, None, cw=cw, d=d)]
         return info
-    
+
     # Range
     max_pid = get_max_range(cw)
 
@@ -261,7 +261,7 @@ def get_imgs(url, title=None, cw=None, d=None, types=['img', 'gif', 'video'], se
         for name in names:
             id = os.path.splitext(name)[0]
             local_ids[id] = os.path.join(dir, name)
-        
+
     imgs = []
     page = 1
     url_imgs = set()
@@ -287,10 +287,10 @@ def get_imgs(url, title=None, cw=None, d=None, types=['img', 'gif', 'video'], se
         url_old = url
         soup = Soup(html)
         articles = soup.findAll('span', {'class': 'thumb'})
-        
+
         if not articles:
             break
-            
+
         for article in articles:
             # 1183
             tags = article.find('img', class_='preview').attrs['title'].split()
@@ -302,7 +302,7 @@ def get_imgs(url, title=None, cw=None, d=None, types=['img', 'gif', 'video'], se
                 type_ = 'img'
             if type_ not in types:
                 continue
-            
+
             url_img = article.a.attrs['href']
             if not url_img.startswith('http'):
                 url_img = urljoin('https://{}.sankakucomplex.com'.format(type), url_img)
@@ -337,7 +337,7 @@ def get_imgs(url, title=None, cw=None, d=None, types=['img', 'gif', 'video'], se
             print_(print_error(e)[-1])
             #url = setPage(url, page)
             break
-        
+
         if cw is not None:
             cw.setTitle('{}  {} - {}'.format(tr_('읽는 중...'), title, len(imgs)))
         else:
@@ -347,10 +347,9 @@ def get_imgs(url, title=None, cw=None, d=None, types=['img', 'gif', 'video'], se
         raise Exception('no images')
 
     info['imgs'] = imgs
-    
+
     return info
 
 
 def get_id(url_img):
     return re.find('show/([0-9]+)', url_img)
-

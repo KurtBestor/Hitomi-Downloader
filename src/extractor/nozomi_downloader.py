@@ -23,7 +23,7 @@ class Image:
         return url
 
 
-@Downloader.register
+
 class Downloader_nozomi(Downloader):
     type = 'nozomi'
     URLS = ['nozomi.la']

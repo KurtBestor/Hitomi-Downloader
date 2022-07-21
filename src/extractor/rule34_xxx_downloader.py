@@ -28,7 +28,7 @@ def get_tags(url):
     return id
 
 
-@Downloader.register
+
 class Downloader_rule34_xxx(Downloader):
     type = 'rule34_xxx'
     URLS = ['rule34.xxx']

@@ -10,7 +10,7 @@ import errors
 class EmbedUrlError(Exception): pass
 
 
-@Downloader.register
+
 class Downloader_pandoratv(Downloader):
     type = 'pandoratv'
     URLS = ['pandora.tv']
@@ -50,7 +50,7 @@ def extract(name, html, cw=None):
 
 class Video(object):
     _url_video = None
-    
+
     def __init__(self, url, format='title', cw=None):
         self.url = LazyUrl(url, self.get, self)
         self.format = format
@@ -68,7 +68,7 @@ class Video(object):
         embedUrl = extract('embedUrl', html, cw)
         if embedUrl:
             raise EmbedUrlError('[pandoratv] EmbedUrl: {}'.format(embedUrl))
-        
+
         uid = extract('strLocalChUserId', html, cw)
         pid = extract('nLocalPrgId', html, cw)
         fid = extract('strFid', html, cw)
@@ -98,13 +98,12 @@ class Video(object):
         self._url_video = data['src']
 
         self.title = soup.find('meta', {'property': 'og:description'})['content']
-        
+
         ext = get_ext(self._url_video)
         self.filename = format_filename(self.title, pid, ext)
 
         self.url_thumb = soup.find('meta', {'property': 'og:image'})['content']
         self.thumb = BytesIO()
         downloader.download(self.url_thumb, buffer=self.thumb)
-        
-        return self._url_video
 
+        return self._url_video

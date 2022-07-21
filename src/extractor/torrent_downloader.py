@@ -7,16 +7,27 @@ import utils
 import filesize as fs
 from datetime import datetime
 import errors
+import ips
 torrent = None
 TIMEOUT = 600
 CACHE_INFO = True
 TOO_MANY = 1000
+
+
+def isInfoHash(s):
+    if len(s) != 40:
+        return False
+    try:
+        bytes.fromhex(s)
+        return True
+    except:
+        return False
     
 
-@Downloader.register
+
 class Downloader_torrent(Downloader):
     type = 'torrent'
-    URLS = [r'regex:^magnet:', r'regex:\.torrent$']
+    URLS = [r'regex:^magnet:', r'regex:\.torrent$', isInfoHash]
     single = True
     update_filesize = False
     _info = None
@@ -27,11 +38,14 @@ class Downloader_torrent(Downloader):
     _h = None
     _dn = None
     MAX_PARALLEL = 16
+    MAX_CORE = 0
     skip_convert_imgs = True
     _filesize_init = False
     _max_speed = None
     _anon = False
     _proxy = '', '', 0, '', ''
+    _seeding = False
+    _virgin = True
 
     @classmethod
     def set_max_speed(cls, speed):
@@ -58,13 +72,16 @@ class Downloader_torrent(Downloader):
         torrent.set_anon(cls._anon)
         torrent.set_proxy(*cls._proxy)
 
-    @lock
-    def __init(self):
+    @classmethod
+    def _import_torrent(cls):
         global torrent
         if torrent is None:
             import torrent
+
+    @lock
+    def __init(self):
+        self._import_torrent()
         Downloader_torrent.updateSettings()
-        self.cw.pbar.hide()
 
     @classmethod
     def key_id(cls, url):
@@ -90,8 +107,9 @@ class Downloader_torrent(Downloader):
                 return utils.html_unescape(qs['dn'][0])
 
     def read(self):
-        self.__init()
         cw = self.cw
+        self.cw.pbar.hide()
+        self.__init()
         if cw:
             cw._torrent_s = None
         title = self.url
@@ -126,7 +144,7 @@ class Downloader_torrent(Downloader):
         self.print_('Creator: {}'.format(self._info.creator()))
         self.print_('Comment: {}'.format(self._info.comment()))
         cw.setTotalFileSize(self._info.total_size())
-        
+
         cw.imgs.clear()
         cw.dones.clear()
 
@@ -136,7 +154,7 @@ class Downloader_torrent(Downloader):
 
         if not self.single and not os.path.isdir(self.dir): #4698
             downloader.makedir_event(self.dir, cw)
-        
+
         cw.pbar.show()
 
     def update_files(self):
@@ -146,12 +164,15 @@ class Downloader_torrent(Downloader):
             raise Exception('No files')
         cw.single = self.single = len(files) <= 1
         for file in files:
-            filename = os.path.join(self.dir, file)
+            filename = os.path.join(self.dir, file.path)
             cw.imgs.append(filename)
 
     def update_pause(self):
         cw = self.cw
         if cw.pause_lock:
+            if self._seeding:
+                cw.pause_lock = False
+                return
             cw.pause_data = {
                 'type': self.type,
                 'url': self.url,
@@ -165,39 +186,47 @@ class Downloader_torrent(Downloader):
         cw.pbar.setFormat('%p%')
         cw.setColor('reading')
         cw.downloader_pausable = True
+        self._seeding = False
         if cw.paused:
             data = cw.pause_data
             cw.paused = False
             cw.pause_lock = False
             self.update_tools_buttons()
-        self.read()
-        if self.status == 'stop':
-            self.stop()
-            return True
-        if cw.paused:
-            pass
-        else:
-            cw.dir = self.dir
-            cw.urls[:] = self.urls
+        try:
+            self.read()
+            if self.status == 'stop':
+                self.stop()
+                return True
+            if cw.paused:
+                pass
+            else:
+                cw.dir = self.dir
+                cw.urls[:] = self.urls
+                cw.clearPieces()
+                self.size = Size()
+                self.size_upload = Size()
+                cw.pbar.setMaximum(self._info.total_size())
+                cw.setColor('reading')
+                torrent.download(self._info, save_path=self.dir, callback=self.callback, cw=cw)
+                self.update_progress(self._h, False)
+                cw.setSpeed(0.0)
+                cw.setUploadSpeed(0.0)
+            if not cw.alive:
+                return
+            self.update_pause()
+            if cw.paused:
+                return True
+            self.title = self.name
+            if not self.single:
+                cw.pbar.setMaximum(len(cw.imgs))
+        finally:
             cw.clearPieces()
-            self.size = Size()
-            self.size_upload = Size()
-            cw.pbar.setMaximum(self._info.total_size())
-            cw.setColor('downloading')
-            torrent.download(self._info, save_path=self.dir, callback=self.callback, cw=cw)
-            self.update_progress(self._h, False)
-            cw.setSpeed(0.0)
-            cw.setUploadSpeed(0.0)
-        if not cw.alive:
-            return
-        self.update_pause()
-        if cw.paused:
-            return True
-        self.title = self.name
-        if not self.single:
-            cw.pbar.setMaximum(len(cw.imgs))
-        cw.clearPieces()
-        self._h = None
+            try:
+                cw.set_extra('torrent_progress', torrent.get_file_progress(self._h, self._info, True))
+            except Exception as e:
+                cw.remove_extra('torrent_progress')
+                self.print_error(e)
+            self._h = None
 
     def _updateIcon(self):
         cw = self.cw
@@ -211,16 +240,16 @@ class Downloader_torrent(Downloader):
         if self._info is None:
             return
         cw = self.cw
-        
+
         if not cw.imgs: #???
             self.print_('???')
             self.update_files()
-    
+
         sizes = torrent.get_file_progress(h, self._info, fast)
         for i, (file, size) in enumerate(zip(cw.names, sizes)):
             if i > 0 and fast:
                 break#
-            file = os.path.realpath(file.replace('\\\\?\\', ''))
+            file = os.path.realpath(file)
             if file in cw.dones:
                 continue
             if size[0] == size[1]:
@@ -245,7 +274,14 @@ class Downloader_torrent(Downloader):
     def _callback(self, h, s, alerts):
         self._h = h
         cw = self.cw
-            
+
+        if self._virgin:
+            self._virgin = False
+            try:
+                ips.get('0.0.0.0')
+            except Exception as e:
+                self.print_error(e)
+
         if self._state != s.state_str:
             self._state = s.state_str
             self.print_('state: {}'.format(s.state_str))
@@ -256,19 +292,21 @@ class Downloader_torrent(Downloader):
         title = (self._dn or self.url) if self._info is None else self.name
 
         if cw.alive and cw.valid and not cw.pause_lock:
+            seeding = False
             cw._torrent_s = s
             fast = len(cw.imgs) > TOO_MANY
             self.update_progress(h, fast)
 
             filesize = s.total_done
             upload = s.total_upload
-            if s.state_str in ('downloading', ):
+            color = 'downloading'
+            if s.state_str in ('downloading', 'seeding'):
                 # init filesize
                 if not self._filesize_init:
                     self._filesize_prev = filesize
                     self._filesize_init = True
                     self.print_('init filesize: {}'.format(fs.size(filesize)))
-                    
+
                 # download
                 d_size = filesize - self._filesize_prev
                 self._filesize_prev = filesize
@@ -282,8 +320,10 @@ class Downloader_torrent(Downloader):
             if self._info is not None:
                 cw.pbar.setValue(s.progress * self._info.total_size())
             if s.state_str == 'queued':
+                color = 'reading'
                 title_ = 'Waiting... {}'.format(title)
             elif s.state_str == 'checking files':
+                color = 'reading'
                 title_ = 'Checking files... {}'.format(title)
                 self._filesize_prev = filesize
             elif s.state_str == 'downloading':
@@ -292,15 +332,51 @@ class Downloader_torrent(Downloader):
                 cw.setSpeed(self.size.speed)
                 cw.setUploadSpeed(self.size_upload.speed)
             elif s.state_str == 'seeding':
-                title_ = '{}'.format(title)
                 cw.setFileSize(filesize)
+                if not cw.seeding:
+                    return 'abort'
+                seeding = True
+                title_ = 'Seeding... {}'.format(title)
+                cw.setSpeed(self.size_upload.speed)
             elif s.state_str == 'reading':
+                color = 'reading'
                 title_ = 'Reading... {}'.format(title)
+            elif s.state_str == 'finished':
+                return 'abort'
             else:
                 title_ = '{}... {}'.format(s.state_str.capitalize(), title)
             cw.setTitle(title_, update_filter=False)
+            cw.setColor(color)
+            self._seeding = seeding
         else:
             self.print_('abort')
             if cw:
                 cw._torrent_s = None
             return 'abort'
+
+
+@utils.actions('torrent')
+def actions(cw):
+    if cw.type != 'torrent':
+        return
+    items = [item for item in cw.listWidget().selectedItems() if item.type == 'torrent']
+    seeding = int(all(item._seeding for item in items)) * 2
+    if not seeding:
+        seeding = int(all(item._seeding is False for item in items))
+        if not seeding:
+            seeding = 0 if all(item._seeding is None for item in items) else None
+    if seeding is None:
+        mix_seeding = any(item._seeding for item in items)
+        mix_no_seeding = any(item._seeding is False for item in items)
+        mix_pref = any(item._seeding is None for item in items)
+    else:
+        mix_seeding = mix_no_seeding = mix_pref = False
+    return [
+        {'icon': 'list', 'text': '파일 목록', 'clicked': cw.showFiles},
+        {'icon': 'peer', 'text': 'Peers', 'clicked': cw.showPeers},
+        {'icon': 'tracker', 'text': '트래커 수정', 'clicked': cw.editTrackers},
+        {'text':'-'},
+        {'text': '시딩', 'clicked': lambda:cw.setSeedings(True), 'checkable': True, 'checked': seeding==2, 'group': 'seeding', 'mixed': mix_seeding},
+        {'text': '시딩 하지 않음', 'clicked': lambda:cw.setSeedings(False), 'checkable': True, 'checked': seeding==1, 'group': 'seeding', 'mixed': mix_no_seeding},
+        {'text': '설정을 따름', 'clicked': lambda:cw.setSeedings(None), 'checkable': True, 'checked': seeding==0, 'group': 'seeding', 'mixed': mix_pref},
+        ]

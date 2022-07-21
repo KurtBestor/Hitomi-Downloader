@@ -33,7 +33,7 @@ class Image(object):
         return url
 
 
-@Downloader.register
+
 class Downloader_tumblr(Downloader):
     type = 'tumblr'
     URLS = ['tumblr.com']
@@ -41,7 +41,7 @@ class Downloader_tumblr(Downloader):
 
     def init(self):
         if u'tumblr.com/post/' in self.url:
-            raise errors.Invalid(tr_(u'개별 다운로드는 지원하지 않습니다: {}').format(self.url))        
+            raise errors.Invalid(tr_(u'개별 다운로드는 지원하지 않습니다: {}').format(self.url))
         self.session = Session()
 
     @classmethod
@@ -52,7 +52,7 @@ class Downloader_tumblr(Downloader):
     def read(self):
         username = get_id(self.url)
         name = get_name(username, self.session)
-        
+
         for img in get_imgs(username, self.session, cw=self.cw):
             self.urls.append(img.url)
 
@@ -141,11 +141,11 @@ class Post(object):
     def __init__(self, data, url, cw=None):
         id_ = data['id']
         self.imgs = []
-        
+
         cs = data['content']
         for trail in data['trail']:
             cs += trail['content']
-            
+
         for c in cs:
             if c['type'] in ['image', 'video']:
                 media = c.get('media')
@@ -159,7 +159,7 @@ class Post(object):
                 continue
             else:
                 raise NotImplementedError(id_, c)
-            
+
 
 
 def get_name(username, session):
@@ -183,7 +183,7 @@ def get_imgs(username, session, cw=None):
             cw.setTitle(s)
         else:
             print(s)
-            
+
         if len(imgs) > max_pid:
             break
 
@@ -205,4 +205,3 @@ def get_id(url):
     if url == 'www':
         raise Exception('no id')
     return url
-    

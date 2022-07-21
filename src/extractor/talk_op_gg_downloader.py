@@ -31,7 +31,7 @@ import requests
 from utils import Downloader, Soup
 
 
-@Downloader.register
+
 class DownloaderTalkOPGG(Downloader):
     type = "talkopgg"
     URLS = ["talk.op.gg"]

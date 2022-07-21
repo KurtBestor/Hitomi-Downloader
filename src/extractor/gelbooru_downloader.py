@@ -28,7 +28,7 @@ def get_tags(url):
     return id
 
 
-@Downloader.register
+
 class Downloader_gelbooru(Downloader):
     type = 'gelbooru'
     URLS = ['gelbooru.com']
@@ -79,7 +79,7 @@ class LazyUrl_gelbooru(LazyUrl):
         img = Image(data['id'], data['url'])
         return img.url
 
-    
+
 class Image(object):
     def __init__(self, id_, url):
         self.id_ = id_
@@ -134,7 +134,7 @@ def get_imgs(url, title=None, cw=None):
     else:
         cookies = {'fringeBenefits': 'yup'}
     print_('user_id: {}'.format(user_id))
-    
+
     # Range
     max_pid = get_max_range(cw)
 
@@ -167,7 +167,7 @@ def get_imgs(url, title=None, cw=None):
             if count_no_imgs > 1:
                 print('break')
                 break
-            
+
         if len(imgs) >= max_pid:
             break
 
@@ -175,5 +175,5 @@ def get_imgs(url, title=None, cw=None):
             if not cw.alive:
                 break
             cw.setTitle(u'{}  {} - {}'.format(tr_(u'읽는 중...'), title, len(imgs)))
-            
+
     return imgs[:max_pid]

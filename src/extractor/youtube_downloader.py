@@ -16,13 +16,15 @@ import chardet
 import os
 from random import randrange
 import utils
-from translator import tr_
+from translator import tr, tr_
 from datetime import datetime
+import threading
+from putils import DIR
 
 
 def print_streams(streams, cw):
     print_ = get_print(cw)
-            
+
     for stream in streams:
         print_('{}[{}][{}fps][{}{}][{}] {} [{} / {}] ─ {}'.format('LIVE ' if stream.live else '', stream.resolution, stream.fps, stream.abr_str, '(fixed)' if stream.abr_fixed else '', stream.tbr, stream.subtype, stream.video_codec, stream.audio_codec, stream.format))
     print_('')
@@ -31,7 +33,7 @@ def print_streams(streams, cw):
 class Video(object):
     _url = None
     vcodec = None
-    
+
     def __init__(self, url, type='video', only_mp4=False, audio_included=False, max_res=None, max_abr=None, cw=None):
         self.type = type
         self.only_mp4 = only_mp4
@@ -41,11 +43,11 @@ class Video(object):
         self.cw = cw
         self.url = LazyUrl(url, self.get, self, pp=self.pp)
         self.exec_queue = cw.exec_queue if cw else None#
-        
+
     def get(self, url, force=False):
         if self._url:
             return self._url
-        
+
         type = self.type
         only_mp4 = self.only_mp4
         audio_included = self.audio_included
@@ -72,7 +74,7 @@ class Video(object):
 
         streams = yt.streams.all()
         print_streams(streams, cw)
-        
+
         #3528
         time = datetime.strptime(yt.info['upload_date'], '%Y%m%d')
         self.utime = (time-datetime(1970,1,1)).total_seconds()
@@ -145,7 +147,7 @@ class Video(object):
                         #print(foo)
                         print_('# stream_final {} {} {} {} {} {}fps'.format(stream, stream.format, stream.resolution, stream.subtype, stream.audio_codec, stream.fps))
                         stream_final = stream
-            
+
             ok = downloader.ok_url(stream_final.url, referer=url) if isinstance(stream_final.url, str) else True
             if ok:
                 break
@@ -161,7 +163,7 @@ class Video(object):
 
 ##        if stream.video_codec and stream_final.video_codec.lower().startswith('av'):
 ##            self.vcodec = 'h264'
-        
+
         self.yt = yt
         self.id = yt.video_id
         self.stream = stream
@@ -236,7 +238,7 @@ class Video(object):
         #title =  soup.title.text.replace('- YouTube', '').strip()
         self.title = title
         ext = '.' + self.stream.subtype
-        self.filename = self.filename0 = format_filename(title, self.id, ext)
+        self.filename = self.filename0 = format_filename(title, self.id, ext, artist=self.username) #4953
 
         if type == 'audio':
             self.filename = f'{uuid()}_audio.tmp' #4776
@@ -246,6 +248,21 @@ class Video(object):
         print_('Abr: {}'.format(stream.abr))
         print_('Subtype: {}'.format(stream.subtype))
         print_('FPS: {}\n'.format(stream.fps))
+
+        if self.audio is not None: #5015
+            def f(audio):
+                print_('Download audio: {}'.format(audio))
+                path = os.path.join(DIR, f'{uuid()}_a.tmp')
+                if cw is not None:
+                    cw.trash_can.append(path)
+                if constants.FAST:
+                    downloader_v3.download(audio, chunk=1024*1024, n_threads=2, outdir=os.path.dirname(path), fileName=os.path.basename(path), customWidget=cw, overwrite=True)
+                else:
+                    downloader.download(audio, outdir=os.path.dirname(path), fileName=os.path.basename(path), customWidget=cw, overwrite=True)
+                self.audio_path = path
+                print_('audio done')
+            self.thread_audio = threading.Thread(target=f, args=(self.audio,), daemon=True)
+            self.thread_audio.start()
 
         return self._url
 
@@ -257,20 +274,12 @@ class Video(object):
         if not os.path.isfile(filename):
             print('no file: {}'.format(filename))
             return
-        
+
         filename_new = filename
         if self.type == 'video' and (self.audio is not None or ext != '.mp4') and not self.stream.live: # UHD or non-mp4
             if self.audio is not None: # merge
-                print_('Download audio: {}'.format(self.audio))
-                hash = uuid()
-                path = os.path.join(os.path.dirname(filename), '{}_a.tmp'.format(hash))
-                if cw is not None:
-                    cw.trash_can.append(path)
-                if constants.FAST:
-                    downloader_v3.download(self.audio, chunk=1024*1024, n_threads=2, outdir=os.path.dirname(path), fileName=os.path.basename(path), customWidget=cw, overwrite=True)
-                else:
-                    downloader.download(self.audio, outdir=os.path.dirname(path), fileName=os.path.basename(path), customWidget=cw, overwrite=True)
-                ext, out = ffmpeg.merge(filename, path, cw=cw, vcodec=self.vcodec)
+                self.thread_audio.join()
+                ext, out = ffmpeg.merge(filename, self.audio_path, cw=cw, vcodec=self.vcodec)
                 #print(out)
                 name, ext_old = os.path.splitext(filename)
                 if ext_old.lower() != ext.lower():
@@ -294,7 +303,10 @@ class Video(object):
             ext = '.mp4' if self.type == 'video' else '.mp3'
             filename_new = os.path.join(os.path.dirname(filename_old), os.path.splitext(self.filename0)[0]+ext)
             print_(f'rename: {filename_old} -> {filename_new}')
-            os.rename(filename_old, filename_new)
+            if filename_old != filename_new:
+                if os.path.isfile(filename_new):
+                    os.remove(filename_new)
+                os.rename(filename_old, filename_new)
 
         if self.type == 'audio' and ui_setting.albumArt.isChecked():
             try:
@@ -309,7 +321,7 @@ class Video(object):
         return filename_new
 
 
-@Downloader.register
+
 class Downloader_youtube(Downloader):
     type = 'youtube'
     single = True
@@ -318,15 +330,22 @@ class Downloader_youtube(Downloader):
     lock = True
     display_name = 'YouTube'
     keep_date = True #3528
-    
+    __format = {}
+
     def init(self):
-        ui_setting = self.ui_setting
-        if self.cw.format:
-            ext_result = self.cw.format
+        format = self.cw.format
+        if format:
+            if isinstance(format, str):
+                ext_result = format
+            elif isinstance(format, dict):
+                ext_result = format['format']
+                self.__format = format
+            else:
+                raise NotImplementedError(format)
         else:
-            ext_result = compatstr(ui_setting.youtubeCombo_type.currentText()).lower().split()[0]
+            ext_result = default_option()
             self.cw.format = ext_result
-            
+
         if ext_result in ['mp4', 'mkv', '3gp']:
             self.yt_type = 'video'
         else:
@@ -346,16 +365,16 @@ class Downloader_youtube(Downloader):
     def key_id(cls, url):
         id_ = re.find(r'youtu.be/([0-9A-Za-z-_]{10,})', url) or re.find(r'[?&]v=([0-9A-Za-z-_]{10,})', url)
         return id_ or url
-    
+
     def read(self):
         ui_setting = self.ui_setting
         cw = self.cw
         print_ = get_print(cw)
         if self.yt_type == 'video':
-            res = get_resolution()
+            res = self.__format.get('res', get_resolution())
             info = get_videos(self.url, type=self.yt_type, max_res=res, only_mp4=False, audio_included=not True, cw=cw)
         else:
-            abr = get_abr()
+            abr = self.__format.get('abr', get_abr())
             info = get_videos(self.url, type=self.yt_type, max_abr=abr, cw=cw)
         videos = info['videos']
 
@@ -384,7 +403,7 @@ class Downloader_youtube(Downloader):
             self.title = video.title
             if video.stream.live:
                 self.lock = False
-            
+
         self.artist = video.username
         self.setIcon(video.thumb)
 
@@ -395,13 +414,13 @@ def int_(x):
     except:
         return 0
 
-        
+
 @try_n(2, sleep=1)
 def get_videos(url, type='video', only_mp4=False, audio_included=False, max_res=None, max_abr=None, cw=None):
     info = {}
 
     n = get_max_range(cw)
-    
+
     if '/channel/' in url or '/user/' in url or '/c/' in url:
         info = read_channel(url, n=n, cw=cw)
         info['type'] = 'channel'
@@ -435,7 +454,7 @@ def read_playlist(url, n, cw=None):
         if '/{}/'.format(header) in url.lower():
             username = re.find(r'/{}/([^/\?]+)'.format(header), url, re.IGNORECASE)
             url = urljoin(url, '/{}/{}/videos'.format(header, username))
-        
+
     options = {
             'extract_flat': True,
             'playlistend': n,
@@ -463,15 +482,90 @@ def read_playlist(url, n, cw=None):
 import selector
 @selector.register('youtube')
 def select():
+    from Qt import Qt, QDialog, QFormLayout, QLabel, QComboBox, QWidget, QVBoxLayout, QDialogButtonBox
     if utils.ui_setting.askYoutube.isChecked():
-        value = utils.messageBox(tr_('Youtube format?'), icon=utils.QMessageBox.Question, buttons=[tr_('MP4 (동영상)'), tr_('MP3 (음원)')])
-        format = ['mp4', 'mp3'][value]
+        win = QDialog(constants.mainWindow)
+        win.setWindowTitle('Youtube format')
+        utils.windows.append(win)
+        layout = QFormLayout(win)
+
+        youtubeCombo_type = QComboBox()
+        layout.addRow('파일 형식', youtubeCombo_type)
+        for i in range(utils.ui_setting.youtubeCombo_type.count()):
+            youtubeCombo_type.addItem(utils.ui_setting.youtubeCombo_type.itemText(i))
+        youtubeCombo_type.setCurrentIndex(utils.ui_setting.youtubeCombo_type.currentIndex())
+
+        youtubeLabel_res = QLabel('해상도')
+        youtubeCombo_res = QComboBox()
+        for i in range(utils.ui_setting.youtubeCombo_res.count()):
+            youtubeCombo_res.addItem(utils.ui_setting.youtubeCombo_res.itemText(i))
+        youtubeCombo_res.setCurrentIndex(utils.ui_setting.youtubeCombo_res.currentIndex())
+
+        youtubeLabel_abr = QLabel('음질')
+        youtubeCombo_abr = QComboBox()
+        for i in range(utils.ui_setting.youtubeCombo_abr.count()):
+            youtubeCombo_abr.addItem(utils.ui_setting.youtubeCombo_abr.itemText(i))
+        youtubeCombo_abr.setCurrentIndex(utils.ui_setting.youtubeCombo_abr.currentIndex())
+
+        aa = QWidget()
+        a = QVBoxLayout(aa)
+        a.setContentsMargins(0,0,0,0)
+        a.addWidget(youtubeLabel_res)
+        a.addWidget(youtubeLabel_abr)
+        bb = QWidget()
+        b = QVBoxLayout(bb)
+        b.setContentsMargins(0,0,0,0)
+        b.addWidget(youtubeCombo_res)
+        b.addWidget(youtubeCombo_abr)
+        layout.addRow(aa, bb)
+
+        def currentIndexChanged(index):
+            text_type = compatstr(youtubeCombo_type.currentText())
+            print(text_type)
+            if tr_('동영상') in text_type:
+                youtubeLabel_abr.hide()
+                youtubeCombo_abr.hide()
+                youtubeLabel_res.show()
+                youtubeCombo_res.show()
+            elif tr_('음원') in text_type:
+                youtubeLabel_res.hide()
+                youtubeCombo_res.hide()
+                youtubeLabel_abr.show()
+                youtubeCombo_abr.show()
+        youtubeCombo_type.currentIndexChanged.connect(currentIndexChanged)
+        youtubeCombo_type.currentIndexChanged.emit(youtubeCombo_type.currentIndex())
+
+        buttonBox = QDialogButtonBox()
+        layout.addWidget(buttonBox)
+        buttonBox.setOrientation(Qt.Horizontal)
+        buttonBox.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
+        buttonBox.accepted.connect(win.accept)
+        buttonBox.rejected.connect(win.reject)
+
+        tr(win)
+        win.setWindowOpacity(constants.opacity_max)
+        try:
+            res = win.exec_()
+            utils.log(f'youtube.select.res: {res}')
+            if not res:
+                return selector.Cancel
+            utils.windows.remove(win)
+            format = {}
+            format['format'] = compatstr(youtubeCombo_type.currentText()).lower().split()[0]
+            format['res'] = get_resolution(compatstr(youtubeCombo_res.currentText()))
+            format['abr'] = get_abr(compatstr(youtubeCombo_abr.currentText()))
+        finally:
+            win.deleteLater()
         return format
 
 
 @selector.options('youtube')
-def options():
+def options(urls):
     return [
         {'text': 'MP4 (동영상)', 'format': 'mp4'},
         {'text': 'MP3 (음원)', 'format': 'mp3'},
         ]
+
+@selector.default_option('youtube')
+def default_option():
+    return compatstr(utils.ui_setting.youtubeCombo_type.currentText()).lower().split()[0]

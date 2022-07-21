@@ -5,7 +5,7 @@ from io import BytesIO as IO
 from m3u8_tools import M3u8_stream
 
 
-@Downloader.register
+
 class Downloader_vlive(Downloader):
     type = 'kakaotv'
     URLS = ['tv.kakao']
@@ -31,7 +31,7 @@ class Downloader_vlive(Downloader):
 
 class Video(object):
     _url = None
-    
+
     def __init__(self, url, cw=None):
         self.url = LazyUrl(url, self.get, self)
         self.cw = cw
@@ -40,13 +40,13 @@ class Video(object):
     def get(self,  url):
         if self._url:
             return self._url
-        
+
         ydl = ytdl.YoutubeDL(cw=self.cw)
         info = ydl.extract_info(url)
         fs = [f for f in info['formats'] if f['ext'] == 'mp4']
         f = sorted(fs, key=lambda f: f['height'])[-1]
         self._url = f['url']
-        
+
         self.thumb_url = info['thumbnails'][0]['url']
         self.thumb = IO()
         downloader.download(self.thumb_url, buffer=self.thumb)

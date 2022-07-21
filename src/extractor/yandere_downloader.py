@@ -12,7 +12,7 @@ def read_soup(url):
     return downloader.read_soup(url)
 
 
-@Downloader.register
+
 class Downloader_yandere(Downloader):
     type = 'yande.re'
     URLS = ['yande.re']

@@ -11,7 +11,6 @@ from translator import tr_
 
 
 
-@Downloader.register
 class Downloader_hameln(Downloader):
     type = 'hameln'
     URLS = ['syosetu.org']
@@ -71,7 +70,7 @@ class Text(object):
         f.write(text.encode('utf8'))
         f.seek(0)
         return f
-    
+
 
 class Page(object):
     def __init__(self, title, url):
@@ -114,7 +113,7 @@ def get_pages(url, soup=None):
 def read_page(page):
     html = read_html(page.url)
     soup = Soup(html)
-    
+
     text_top = get_text(soup.find('div', id='maegaki'))
     print(text_top.count('\n'))
     text_mid = get_text(soup.find('div', id='honbun'))
@@ -151,4 +150,3 @@ def get_info(url, soup=None):
     sss = get_sss(soup)
     info['novel_ex'] = get_text(sss[-2], '')
     return info
-

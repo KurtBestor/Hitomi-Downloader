@@ -9,7 +9,6 @@ import ytdl
 
 
 
-@Downloader.register
 class Downloader_youporn(Downloader):
     type = 'youporn'
     single = True
@@ -42,7 +41,7 @@ class Video(object):
         f = info['formats'][-1]
         url_video = f['url']
         self.url = LazyUrl(url, lambda _: url_video, self)
-        
+
         self.url_thumb = info['thumbnails'][0]['url']
         self.thumb = BytesIO()
         downloader.download(self.url_thumb, buffer=self.thumb)

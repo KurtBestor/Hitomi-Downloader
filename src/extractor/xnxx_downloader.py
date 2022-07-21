@@ -30,7 +30,7 @@ def get_id(url):
     return url.split('xnxx.com/')[1].split('/')[0]
 
 
-@Downloader.register
+
 class Downloader_xnxx(Downloader):
     type = 'xnxx'
     URLS = [r'regex:xnxx[0-9]*\.(com|es)']
@@ -46,7 +46,7 @@ class Downloader_xnxx(Downloader):
         self.urls.append(video.url)
         self.setIcon(video.thumb)
         self.title = video.title
-        
+
 
 def get_video(url):
     html = downloader.read_html(url)
@@ -65,11 +65,10 @@ def get_video(url):
     title = get_title(soup)
 
     url_thumb = soup.find('meta', {'property': 'og:image'}).attrs['content'].strip()
-    
+
     video = Video(video, url, title, url_thumb)
     return video
 
 
 def get_title(soup):
     return soup.find('meta', {'property': 'og:title'}).attrs['content'].strip()
-

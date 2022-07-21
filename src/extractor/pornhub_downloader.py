@@ -25,25 +25,25 @@ class File(object):
     File
     '''
 
-    def __init__(self, id_, title, url, url_thumb):
+    def __init__(self, id_, title, url, url_thumb, artist=''):
         self.id_ = id_
         self.title = clean_title('{}'.format(title))
         self.url = url
-        
+
         ext = get_ext(self.url)
         if ext.lower() == '.m3u8':
             try:
                 self.url = playlist2stream(self.url, n_thread=4)
             except:
                 self.url = M3u8_stream(self.url, n_thread=4)
-            
+
         self.url_thumb = url_thumb
         self.thumb = BytesIO()
         downloader.download(self.url_thumb, buffer=self.thumb)
-        
+
         if ext.lower() == '.m3u8':
             ext = '.mp4'
-        self.filename = format_filename(self.title, self.id_, ext)
+        self.filename = format_filename(self.title, self.id_, ext, artist=artist)
         print('filename:', self.filename)
 
 
@@ -89,7 +89,7 @@ class Video(object):
         except: #3511
             url = url.replace('pornhub.com', 'pornhubpremium.com')
             html = downloader.read_html(url, session=session)
-            
+
         soup = Soup(html)
         soup = fix_soup(soup, url, session, cw)
         html = soup.html
@@ -103,7 +103,7 @@ class Video(object):
             print_('GIF')
             id_ = url.split('/gif/')[1]
             id_ = re.findall('[0-9a-zA-Z]+', id_)[0]
-            
+
             jss = list(gif.children)
             for js in jss:
                 if 'data-mp4' in getattr(js, 'attrs', {}):
@@ -139,7 +139,7 @@ class Video(object):
                     return None
                 url = url.strip()
                 return url if re.match(r'^(?:(?:https?|rt(?:m(?:pt?[es]?|fp)|sp[su]?)|mms|ftps?):)?//', url) else None
-            
+
             flashvars  = json.loads(re.find(r'var\s+flashvars_\d+\s*=\s*({.+?});', html, err='no flashvars'))
             url_thumb = flashvars.get('image_url')
             media_definitions = flashvars.get('mediaDefinitions')
@@ -245,7 +245,7 @@ class Video(object):
             for video_url, height in video_urls_:
                 if '/video/get_media' in video_url:
                     print_(video_url)
-                    medias = downloader.read_json(video_url, session=session)
+                    medias = downloader.read_json(video_url, url, session=session)
                     if isinstance(medias, list):
                         for media in medias:
                             if not isinstance(media, dict):
@@ -255,9 +255,9 @@ class Video(object):
                                 continue
                             height = int_or_none(media.get('quality'))
                             video_urls.append((video_url, height))
-                    continue
-                video_urls.append((video_url, height))
-                
+                else:
+                    video_urls.append((video_url, height))
+
 
             videos = []
             for video_url, height in video_urls:
@@ -286,8 +286,11 @@ class Video(object):
                 video = videos[0]
             print_('\n[{}p] {} {}'.format(video['height'], video['ext'], video['videoUrl']))
 
-            file = File(id_, title, video['videoUrl'].strip(), url_thumb)
-        
+            #4940
+            artist = soup.find('div', class_='userInfo').find('div', class_='usernameWrap').text.strip()
+
+            file = File(id_, title, video['videoUrl'].strip(), url_thumb, artist)
+
         self._url = file.url
         self.title = file.title
         self.filename = file.filename
@@ -313,7 +316,6 @@ def is_login(session, cw=None, n=2):
 
 
 
-@Downloader.register
 class Downloader_pornhub(Downloader):
     '''
     Downloader
@@ -322,12 +324,6 @@ class Downloader_pornhub(Downloader):
     single = True
     strip_header = False
     URLS = ['pornhub.com', 'pornhubpremium.com', 'pornhubthbh7ap3u.onion']
-
-    def init(self):
-        self.session = Session() # 1791
-        if 'pornhubpremium.com' in self.url.lower() and\
-           not is_login(self.session, self.cw):
-            raise errors.LoginRequired()
 
     @classmethod
     def fix_url(cls, url):
@@ -356,9 +352,14 @@ class Downloader_pornhub(Downloader):
             raise Exception('no id')
         return id_.split('#')[0]
 
+    @try_n(2)
     def read(self):
         cw = self.cw
-        session = self.session
+        
+        session = self.session = Session() # 1791
+        if 'pornhubpremium.com' in self.url.lower() and\
+           not is_login(session, cw):
+            raise errors.LoginRequired()
 
         videos = []
         tab = ''.join(self.url.replace('pornhubpremium.com', 'pornhub.com', 1).split('?')[0].split('#')[0].split('pornhub.com/')[-1].split('/')[2:3])

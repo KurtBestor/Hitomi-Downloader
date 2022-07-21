@@ -21,7 +21,7 @@ class Video(object):
         downloader.download(url_thumb, buffer=self.thumb)
 
 
-@Downloader.register
+
 class Downloader_afreeca(Downloader):
     type = 'afreeca'
     URLS = ['afreecatv.com']
@@ -31,14 +31,14 @@ class Downloader_afreeca(Downloader):
     @classmethod
     def fix_url(cls, url):
         return url.rstrip(' /')
-    
+
     def read(self):
         session = Session()
         video = get_video(self.url, session, self.cw)
         self.urls.append(video.url)
 
         self.setIcon(video.thumb)
-        
+
         self.title = video.title
 
 

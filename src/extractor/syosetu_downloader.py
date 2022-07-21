@@ -32,7 +32,7 @@ class Text(object):
         self.url = LazyUrl(url, f, self)
 
 
-@Downloader.register
+
 class Downloader_syosetu(Downloader):
     type = 'syosetu'
     URLS = ['syosetu.com']
@@ -148,20 +148,20 @@ def get_text(url, subtitle, update, session):
         update = u'        ' + update
     else:
         update = ''
-        
+
     story = soup.find('div', id='novel_honbun').text.strip()
-        
+
     p = soup.find('div', id='novel_p')
     p = '' if p is None else p.text.strip()
     if p:
         story = '{}\n\n════════════════════════════════\n\n{}'.format(p, story)
-        
+
     #2888
     a = soup.find('div', id='novel_a')
     a = '' if a is None else a.text.strip()
     if a:
         story = '{}\n\n════════════════════════════════\n\n{}'.format(story, a)
-        
+
     text =u'''────────────────────────────────
 
   ◆  {}{}
@@ -177,5 +177,3 @@ def get_session():
     session = Session()
     session.cookies.set(name='over18', value='yes', path='/', domain='.syosetu.com')
     return session
-
-

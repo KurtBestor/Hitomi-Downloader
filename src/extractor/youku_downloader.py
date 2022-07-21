@@ -6,7 +6,7 @@ from utils import LazyUrl, get_ext, Downloader, format_filename, clean_title
 from io import BytesIO
 
 
-@Downloader.register
+
 class Downloader_youku(Downloader):
     type = 'youku'
     single = True
@@ -21,10 +21,10 @@ class Downloader_youku(Downloader):
 
         self.title = video.title
 
-        
+
 class Video(object):
     _url = None
-    
+
     def __init__(self, url, cw=None):
         self.url = LazyUrl(url, self.get, self)
         self.cw = cw
@@ -32,7 +32,7 @@ class Video(object):
     def get(self, url):
         if self._url:
             return self._url
-        
+
         ydl = ytdl.YoutubeDL(cw=self.cw)
         info = ydl.extract_info(url)
 
@@ -57,6 +57,5 @@ class Video(object):
         self.filename = format_filename(self.title, info['id'], '.mp4')
 
         self._url = url_video
-        
-        return self._url
 
+        return self._url

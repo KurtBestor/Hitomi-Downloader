@@ -1,14 +1,11 @@
 #coding: utf8
 import downloader
-import json
 from io import BytesIO
-from utils import Downloader, LazyUrl, get_print, try_n, lock, clean_title
-from error_printer import print_error
-import os
-from timee import sleep
+from utils import Downloader, LazyUrl, get_print, try_n, lock, clean_title, get_max_range
 import ffmpeg
 import ytdl
 from m3u8_tools import M3u8_stream
+from ratelimit import limits, sleep_and_retry
 CLIENT_ID = None
 
 
@@ -26,41 +23,41 @@ def get_cid(force=False):
 
 class Audio(object):
     _url = None
-    
-    def __init__(self, info, album_art, cw=None):
-        self.info = info
+
+    def __init__(self, url, album_art, cw=None):
         self.album_art = album_art
         self.cw = cw
-        self.url = LazyUrl(info['webpage_url'], self.get, self, pp=self.pp)
+        self.url = LazyUrl(url, self.get, self, pp=self.pp)
 
+    @try_n(2)
+    @sleep_and_retry
+    @limits(1, 1)
     def get(self, url):
         print_ = get_print(self.cw)
         if self._url:
             return self._url
 
-        info = self.info
-        
-##        ydl = ytdl.YoutubeDL()
-##        info = ydl.extract_info(url)
+        ydl = ytdl.YoutubeDL()
+        self.info = info = ydl.extract_info(url)
 
         formats = info['formats']
         print(formats)
         formats = sorted(formats, key=lambda x: int(x.get('abr', 0)), reverse=True)
         url_audio = None
-        
+
         for format in formats:
             protocol = format['protocol']
-            print_(u'【{}】 format【{}】 abr【{}】'.format(protocol, format['format'], format.get('abr', 0)))
+            print_('【{}】 format【{}】 abr【{}】'.format(protocol, format['format'], format.get('abr', 0)))
             if not url_audio and protocol in ['http', 'https']:
                 url_audio = format['url']
 
         if not url_audio:
             url_audio = M3u8_stream(formats[0]['url'])
             self.album_art = False#
-        
+
         self.username = info['uploader']
-        self.title = u'{} - {}'.format(self.username, info['title'])
-        self.filename = u'{}{}'.format(clean_title(self.title, allow_dot=True, n=-4), '.mp3')
+        self.title = '{} - {}'.format(self.username, info['title'])
+        self.filename = '{}{}'.format(clean_title(self.title, allow_dot=True, n=-4), '.mp3')
 
         thumb = None
         for t in info['thumbnails'][::-1]:
@@ -76,7 +73,7 @@ class Audio(object):
                 print(e)
                 thumb = None
         self.thumb = thumb
-        
+
         self._url = url_audio
         return self._url
 
@@ -86,7 +83,7 @@ class Audio(object):
             ffmpeg.add_cover(filename, self.thumb, {'artist':self.username, 'title':self.info['title']}, cw=self.cw)
 
 
-@Downloader.register
+
 class Downloader_soundcloud(Downloader):
     type = 'soundcloud'
     single = True
@@ -94,7 +91,7 @@ class Downloader_soundcloud(Downloader):
     #lock = True
     audio = None
     display_name = 'SoundCloud'
-    
+
     def init(self):
         if 'soundcloud.com' in self.url.lower():
             self.url = self.url.replace('http://', 'https://')
@@ -105,7 +102,7 @@ class Downloader_soundcloud(Downloader):
         album_art = self.ui_setting.albumArt.isChecked()
         info = get_audios(self.url, self.cw, album_art)
         audios = info['audios']
-        
+
         if not audios:
             raise Exception('no audios')
 
@@ -139,11 +136,12 @@ def get_audios(url, cw, album_art):
     if url.count('/') == 3:
         url += '/tracks'
 
-    info = {
-        #'extract_flat': True,
+    options = {
+        'extract_flat': True,
+        'playlistend': get_max_range(cw),
         }
 
-    ydl = ytdl.YoutubeDL(cw=cw)
+    ydl = ytdl.YoutubeDL(options, cw=cw)
     info = ydl.extract_info(url)
     if 'entries' in info:
         entries = info['entries']
@@ -156,20 +154,19 @@ def get_audios(url, cw, album_art):
                 break
         else:
             kind = 'Playlist'
-        print_(u'kind: {}'.format(kind))
-        info['title'] = u'[{}] {}'.format(kind.capitalize(), title)
+        print_('kind: {}'.format(kind))
+        info['title'] = '[{}] {}'.format(kind.capitalize(), title)
     else:
         entries = [info]
 
     audios = []
     for e in entries:
-        if '/sets/' in e['webpage_url']:
+        url = e.get('webpage_url') or e['url']
+        if '/sets/' in url:
             continue
-        audio = Audio(e, album_art, cw=cw)
+        audio = Audio(url, album_art, cw=cw)
         audios.append(audio)
 
     info['audios'] = audios
-    
+
     return info
-
-

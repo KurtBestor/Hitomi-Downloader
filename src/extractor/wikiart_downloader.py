@@ -17,8 +17,7 @@ class Image(object):
         self.filename = u'{} - {}{}'.format(id, title, ext)
 
 
-        
-@Downloader.register
+
 class Downloader_wikiart(Downloader):
     type = 'wikiart'
     URLS = ['wikiart.org']
@@ -39,7 +38,7 @@ class Downloader_wikiart(Downloader):
 
         for img in get_imgs(self.url, artist, cw=self.cw):
             self.urls.append(img.url)
-        
+
         self.title = clean_title(artist)
 
 
@@ -103,4 +102,3 @@ def get_artist(userid, soup=None):
         soup = Soup(html)
 
     return soup.find('h3').text.strip()
-

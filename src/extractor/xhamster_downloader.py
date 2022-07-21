@@ -8,7 +8,7 @@ import shutil, ffmpeg, json
 from io import BytesIO
 
 
-@Downloader.register
+
 class Downloader_xhamster(Downloader):
     type = 'xhamster'
     __name = r'(xhamster|xhwebsite|xhofficial|xhlocal|xhopen|xhtotal|megaxh|xhwide)[0-9]*' #3881, #4332, #4826
@@ -38,7 +38,7 @@ class Downloader_xhamster(Downloader):
         cw = self.cw
         self.enableSegment(1024*1024//2)
         thumb = BytesIO()
-        
+
         if '/users/' in self.url:
             info = read_channel(self.url, cw)
             urls = info['urls']
@@ -82,12 +82,12 @@ class Video(object):
             fs = self.info['formats']
             res = max(get_resolution(), min(f['height'] for f in fs))
             fs = [f for f in fs if f['height'] <= res]
-            
+
             video_best = fs[-1]
             self._url = video_best['url']
             ext = get_ext(self._url)
             self.filename = format_filename(self.title, id, ext)
-            
+
             if isinstance(self._url, str) and 'referer=force' in self._url.lower():
                 self._referer = self._url
             else:
@@ -110,11 +110,11 @@ def get_info(url):
         raise Exception(err.text.strip())
 
     data = get_data(html)
-    
+
     info['title'] = data['videoModel']['title']
     info['id'] = data['videoModel']['id']
     info['thumbnail'] = data['videoModel']['thumbURL']
-    
+
     fs = []
     for res, url_video in data['videoModel']['sources']['mp4'].items():
         height = int(re.find('(\d+)p', res))
@@ -145,7 +145,7 @@ def read_page(username, p, cw):
         raise e_
     return items
 
-        
+
 def read_channel(url, cw=None):
     print_ =  get_print(cw)
     username = url.split('/users/')[1].split('/')[0]
@@ -154,7 +154,7 @@ def read_channel(url, cw=None):
     soup = downloader.read_soup(url)
     title = soup.find('div', class_='user-name').text.strip()
     info['title'] = '[Channel] {}'.format(title)
-    
+
     urls = []
     urls_set = set()
     for p in range(1, 101):
@@ -204,7 +204,7 @@ def setPage(url, p):
         url += '/{}'.format(p)
     return url
 
-        
+
 def read_gallery(url, cw=None):
     print_ = get_print(cw)
 
@@ -225,14 +225,14 @@ def read_gallery(url, cw=None):
         print_('p: {}'.format(p))
         url = setPage(url, p)
         html = downloader.read_html(url)
-        
+
         data = get_data(html)
 
         photos = data['photosGalleryModel']['photos']
         if not photos:
             print('no photos')
             break
-        
+
         for photo in photos:
             img = photo['imageURL']
             id = photo['id']
@@ -243,7 +243,7 @@ def read_gallery(url, cw=None):
             ids.add(id)
             img = Image(img, id, referer)
             imgs.append(img)
-    
+
     info['imgs'] = imgs
 
     return info

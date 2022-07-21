@@ -1,7 +1,7 @@
 from __future__ import division, print_function, unicode_literals
 import downloader
 import ree as re
-from utils import Soup, LazyUrl, Downloader, try_n, compatstr, get_print, clean_title, Session, get_max_range, format_filename
+from utils import Soup, LazyUrl, Downloader, try_n, compatstr, get_print, Session, get_max_range, format_filename, json
 from io import BytesIO
 import clf2
 from translator import tr_
@@ -15,14 +15,14 @@ SHOW = True
 def is_captcha(soup):
     return soup.find('div', class_="verify-wrap") is not None
 
-    
-@Downloader.register
+
+
 class Downloader_tiktok(Downloader):
     type = 'tiktok'
     single = True
-    URLS = ['tiktok.com']
+    URLS = ['tiktok.com', 'douyin.com']
     display_name = 'TikTok'
-    
+
     def init(self):
         cw = self.cw
         self.session = Session()
@@ -37,33 +37,40 @@ class Downloader_tiktok(Downloader):
     @classmethod
     def fix_url(cls, url):
         url = url.split('?')[0].split('#')[0].strip('/')
-        if 'tiktok.com' not in url.lower():
+        if '://' not in url:
             url = 'https://www.tiktok.com/@{}'.format(url)
         return url
-    
+
     def read(self):
         format = compatstr(self.ui_setting.youtubeFormat.currentText()).lower().strip()
-        
+
+        def parse_video_url(info, item):
+            if 'tiktok.com' in self.url.lower(): # TikTok
+                return 'https://www.tiktok.com/@{}/video/{}'.format(info['uid'], item['id'])
+            else: # Douyin
+                return 'https://www.douyin.com/video/{}'.format(item['id'])
+
         if re.search(PATTERN_VID, self.url) is None:
             info = read_channel(self.url, self.session, self.cw)
             items = info['items']
-            videos = [Video('https://www.tiktok.com/@{}/video/{}'.format(info['uid'], item['id']), self.session, format) for item in items]
+            videos = [Video(parse_video_url(info, item), self.session, format, self.cw) for item in items]
             title = '{} (tiktok_{})'.format(info['nickname'], info['uid'])
             video = self.process_playlist(title, videos)
         else:
-            video = Video(self.url, self.session, format)
+            video = Video(self.url, self.session, format, self.cw)
             video.url()
             self.urls.append(video.url)
-            self.title = clean_title(video.title)
+            self.title = video.title
 
 
 class Video(object):
     _url = None
-    
-    def __init__(self, url, session, format='title (id)'):
+
+    def __init__(self, url, session, format, cw):
         self.url = LazyUrl(url, self.get, self)
         self.session = session
         self.format = format
+        self.cw = cw
 
     @try_n(2)
     def get(self, url):
@@ -71,12 +78,13 @@ class Video(object):
             return self._url
         m = re.search(PATTERN_VID, url)
         id = m.group('id')
-        ext = '.mp4'
-        self.title = id#
-        self.filename = format_filename(self.title, id, ext)
 
-        ydl = ytdl.YoutubeDL()
+        ydl = ytdl.YoutubeDL(cw=self.cw)
         info = ydl.extract_info(url)
+
+        ext = '.mp4'
+        self.title = info['title']
+        self.filename = format_filename(self.title, id, ext)
 
         self._url = info['url']
 
@@ -97,7 +105,7 @@ def read_channel(url, session, cw=None):
         }
 
     max_pid = get_max_range(cw)
-    
+
     def f(html, browser=None):
         soup = Soup(html)
         if is_captcha(soup):
@@ -107,25 +115,38 @@ def read_channel(url, session, cw=None):
         elif sd['shown'] and not SHOW:
             browser.hide()
             sd['shown'] = False
-        try:
-            st = soup.find('h2', class_='share-title')
-            if st is None:
-                st = soup.find('h2', class_=lambda c: c and 'ShareTitle' in c)
-            info['uid'] = st.text.strip()
-            st = soup.find('h1', class_='share-sub-title')
-            if st is None:
-                st = soup.find('h1', class_=lambda c: c and 'ShareSubTitle' in c)
-            info['nickname'] = st.text.strip()
-        except Exception as e:
-            print_(print_error(e)[0])
+        if 'tiktok.com' in url.lower(): # TikTok
+            try:
+                st = soup.find('h2', class_='share-title')
+                if st is None:
+                    st = soup.find('h2', class_=lambda c: c and 'ShareTitle' in c)
+                info['uid'] = st.text.strip()
+                st = soup.find('h1', class_='share-sub-title')
+                if st is None:
+                    st = soup.find('h1', class_=lambda c: c and 'ShareSubTitle' in c)
+                info['nickname'] = st.text.strip()
+            except Exception as e:
+                print_(print_error(e)[0])
+        else: # Douyin
+            try:
+                info['uid'] = re.find(r'''uniqueId%22%3A%22(.+?)%22''', html, err='no uid')
+                info['nickname'] = json.loads(re.find(r'''"name"\s*:\s*(".+?")''', html, err='no nickname'))
+            except Exception as e:
+                print_(print_error(e)[0])
         c = 0
         ids_now = set()
-        items = soup.findAll('div', class_='video-feed-item') + soup.findAll('div', class_=lambda c: c and 'DivItemContainer' in c)
-        for div in items:
-            a = div.find('a')
-            if a is None:
-                continue
-            href = a['href']
+        if 'tiktok.com' in url.lower(): # TikTok
+            items = soup.findAll('div', class_='video-feed-item') + soup.findAll('div', class_=lambda c: c and 'DivItemContainer' in c)
+        else: # Douyin
+            items = soup.findAll('a')
+        for item in items:
+            if item.name == 'a':
+                a = item
+            else:
+                a = item.find('a')
+                if a is None:
+                    continue
+            href = a.get('href')
             if not href:
                 continue
             m = re.search(PATTERN_VID, href)
@@ -143,10 +164,10 @@ def read_channel(url, session, cw=None):
         if len(info['items']) >= max_pid:
             info['items'] = info['items'][:max_pid]
             return True
-        
+
         browser.runJavaScript('window.scrollTo(0, document.body.scrollHeight);')
         sleep(15, cw)
-        
+
         if c or (ids_now and min(ids_now) > min(ids)):
             sd['count_empty'] = 0
         else:
@@ -166,4 +187,3 @@ def read_channel(url, session, cw=None):
         raise Exception('no items')
 
     return info
-    

@@ -11,12 +11,12 @@ def get_id(url):
     return re.find('baraag.net/([^/]+)', url.lower())
 
 
-@Downloader.register
+
 class Downloader_baraag(Downloader):
     type = 'baraag'
     URLS = ['baraag.net']
     display_name = 'baraag.net'
-    
+
     def init(self):
         self.referer = self.url
 
@@ -49,6 +49,3 @@ class Downloader_baraag(Downloader):
             self.filenames[img.url] = img.filename
 
         self.title = self.name
-
-
-

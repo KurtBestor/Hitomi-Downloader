@@ -21,7 +21,7 @@ def suitable(url):
     return True
 
 
-@Downloader.register
+
 class Downloader_weibo(Downloader):
     type = 'weibo'
     URLS = [suitable]
@@ -48,10 +48,10 @@ class Downloader_weibo(Downloader):
 
     def read(self):
         checkLogin(self.session)
-        
+
         uid, oid, name = get_id(self.url, self.cw)
         title = clean_title('{} (weibo_{})'.format(name, uid))
-        
+
         for img in get_imgs(uid, oid, title, self.session, cw=self.cw, d=self, parent=self.mainWindow):
             self.urls.append(img.url)
             self.filenames[img.url] = img.filename
@@ -63,7 +63,7 @@ def checkLogin(session):
     c = session.cookies._cookies.get('.weibo.com', {}).get('/',{}).get('SUBP')
     if not c or c.is_expired():
         raise errors.LoginRequired()
-    
+
 
 class Album(object):
 
@@ -117,7 +117,7 @@ def get_id(url, cw=None):
 def get_imgs(uid, oid, title, session, cw=None, d=None, parent=None):
     print_ = get_print(cw)
     print_('uid: {}, oid:{}'.format(uid, oid))
-    
+
     max_pid = get_max_range(cw)
 
     @try_n(4)
@@ -190,5 +190,3 @@ def get_imgs(uid, oid, title, session, cw=None, d=None, parent=None):
 
     imgs = sorted(imgs, key=lambda img: img.timestamp, reverse=True)
     return imgs[:max_pid]
-
-

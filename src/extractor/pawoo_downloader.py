@@ -7,15 +7,15 @@ from mastodon import get_imgs
 import json
 
 
-@Downloader.register
+
 class Downloader_pawoo(Downloader):
     type = 'pawoo'
     URLS = ['pawoo.net']
-    
+
     def init(self):
         self.url = 'https://pawoo.net/{}'.format(self.id_)
         self.referer = self.url
-        
+
     @property
     def id_(self):
         return re.find('pawoo.net/([^/]+)', self.url.lower(), default=self.url)
@@ -41,5 +41,3 @@ class Downloader_pawoo(Downloader):
             self.filenames[img.url] = img.filename
 
         self.title = self.name
-
-

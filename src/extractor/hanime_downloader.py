@@ -34,7 +34,7 @@ class Video(object):
         return ('Video({})').format(self.id)
 
 
-@Downloader.register
+
 class Downloader_hanime(Downloader):
     type = 'hanime'
     URLS = ['hanime.tv/hentai-videos/', 'hanime.tv/videos/']
@@ -44,7 +44,7 @@ class Downloader_hanime(Downloader):
     def read(self):
         video, session = get_video(self.url, cw=self.cw)
         self.video = video
-        
+
         self.urls.append(video.url)
         self.filenames[video.url] = video.filename
 
@@ -116,10 +116,7 @@ def get_video(url, session=None, cw=None):
         stream = sorted(steams_filtered, key=lambda _: _['height'])[-1]
     else:
         stream = sorted(streams_good, key=lambda _: _['height'])[0]
-        
+
     print_('Final stream:')
     print_stream(stream)
     return Video(info, stream), session
-
-
-

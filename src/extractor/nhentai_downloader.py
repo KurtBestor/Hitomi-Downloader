@@ -15,13 +15,13 @@ def get_id(url):
         return int(re.find('/g/([0-9]+)', url))
 
 
-@Downloader.register
+
 class Downloader_nhentai(Downloader):
     type = 'nhentai'
     URLS = ['nhentai.net']
     MAX_CORE = 16
     display_name = 'nhentai'
-    
+
     def init(self):
         self.session = clf2.solve(self.url)['session'] #4541
 
@@ -63,8 +63,8 @@ class LazyUrl_nhentai(LazyUrl):
         url = data['url']
         img = Image(referer, url, data['p'])
         return img.url
-        
-    
+
+
 class Image(object):
     def __init__(self, url_page, url_img, p):
         self.p = p
@@ -96,7 +96,7 @@ def get_info(id, session):
     data = html.split('JSON.parse(')[1].split(');')[0]
     gal = json.loads(json.loads(data))
     host = 'https://i.nhentai.net'#re.find('''media_url: *['"]([^'"]+)''', html, err='no host')
-    
+
     id = int(gal['id'])
     id_media = int(gal['media_id'])
     title = gal['title']['english']

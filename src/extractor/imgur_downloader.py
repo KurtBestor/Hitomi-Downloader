@@ -1,15 +1,11 @@
-# uncompyle6 version 3.5.0
-# Python bytecode 2.7 (62211)
-# Decompiled from: Python 2.7.16 (v2.7.16:413a49145e, Mar  4 2019, 01:30:55) [MSC v.1500 32 bit (Intel)]
-# Embedded file name: imgur_downloader.pyo
-# Compiled at: 2019-10-07 05:58:14
 import downloader
 from utils import Downloader, Soup, try_n, urljoin, get_max_range, clean_title, cut_pair
 import ree as re, json, os
 from timee import sleep
 from translator import tr_
 
-@Downloader.register
+
+
 class Downloader_imgur(Downloader):
     type = 'imgur'
     URLS = ['imgur.com']
@@ -81,7 +77,7 @@ def get_imgs(url, info=None, cw=None):
             imgs_ = info['media']
         else: # legacy
             imgs_ = [info]
-        
+
         for img in imgs_:
             img_url = img.get('url') # new
             if not img_url: # legacy
@@ -91,7 +87,7 @@ def get_imgs(url, info=None, cw=None):
             if img_url in imgs:
                 continue
             imgs.append(img_url)
-            
+
     elif info['type'] == 'r':
         urls = set()
         for p in range(100):
@@ -99,7 +95,7 @@ def get_imgs(url, info=None, cw=None):
             print(url_api)
             html = downloader.read_html(url_api, referer=url)
             soup = Soup(html)
-            
+
             c = 0
             for post in soup.findAll('div', class_='post'):
                 a = post.find('a', class_='image-list-link')
@@ -122,10 +118,9 @@ def get_imgs(url, info=None, cw=None):
                         return []
                 else:
                     print(s)
-                
+
             if c == 0:
                 print('same; break')
                 break
 
     return imgs
-    

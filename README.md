@@ -35,7 +35,6 @@
 | **4chan** | <https://4chan.org> |
 | **AfreecaTV** | <https://afreecatv.com> |
 | **ArtStation** | <https://artstation.com> |
-| **AsianSister** | <https://asiansister.com> |
 | **AsmHentai** | <https://asmhentai.com> |
 | **Avgle** | <https://avgle.com> |
 | **baraag.net** | <https://baraag.net> |
@@ -56,13 +55,11 @@
 | **hanime.tv** | <https://hanime.tv> |
 | **Hentai Foundry** | <https://hentai-foundry.com> |
 | **Hitomi.la** | <https://hitomi.la> |
-| **Hiyobi.me** | <https://hiyobi.me> |
 | **Imgur** | <https://imgur.com> |
 | **Instagram** | <https://instagram.com> |
 | **Iwara** | <https://iwara.tv><br><https://ecchi.iwara.tv> |
 | **Jmana** | <https://jmana.net> |
 | **カクヨム** | <https://kakuyomu.jp> |
-| **LHScan** | <https://loveheaven.net> |
 | **Likee** | <https://likee.video> |
 | **Luscious** | <https://luscious.net> |
 | **MyReadingManga** | <https://myreadingmanga.info> |
@@ -100,4 +97,4 @@
 | **Yande.re** | <https://yande.re> |
 | **Youku** | <https://youku.com> |
 | **YouTube** | <https://youtube.com> |
-| **and more...** | [Supported sites by youtube-dl](http://ytdl-org.github.io/youtube-dl/supportedsites.html) |
+| **and more...** | [Supported sites by yt-dlp](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md) |
