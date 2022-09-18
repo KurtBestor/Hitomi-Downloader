@@ -48,6 +48,12 @@ class Downloader_torrent(Downloader):
     _virgin = True
 
     @classmethod
+    def fix_url(cls, url):
+        if isInfoHash(url):
+            url = f'magnet:?xt=urn:btih:{url}'
+        return url
+
+    @classmethod
     def set_max_speed(cls, speed):
         cls._max_speed = speed
         cls.updateSettings()

@@ -32,7 +32,7 @@ class Downloader_navertv(Downloader):
 
 
 
-class Video(object):
+class Video:
     _url = None
 
     def __init__(self, url, cw=None):

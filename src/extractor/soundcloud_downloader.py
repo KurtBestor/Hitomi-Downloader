@@ -21,7 +21,7 @@ def get_cid(force=False):
     return CLIENT_ID
 
 
-class Audio(object):
+class Audio:
     _url = None
 
     def __init__(self, url, album_art, cw=None):
@@ -97,6 +97,10 @@ class Downloader_soundcloud(Downloader):
             self.url = self.url.replace('http://', 'https://')
         else:
             self.url = 'https://soundcloud.com/{}'.format(self.url)
+            
+    @classmethod
+    def fix_url(cls, url):
+        return url.split('?')[0]
 
     def read(self):
         album_art = self.ui_setting.albumArt.isChecked()

@@ -12,9 +12,10 @@ class Downloader_kissjav(Downloader):
     URLS = ['kissjav.com', 'kissjav.li'] #4835
     single = True
     display_name = 'KissJAV'
+    ACCEPT_COOKIES = [r'(.*\.)?kissjav\.(com|li)']
 
     def read(self):
-        self.session = None#get_session(self.url, cw=self.cw)
+        self.session = Session()#get_session(self.url, cw=self.cw)
 
         video = get_video(self.url, self.session, self.cw)
         self.urls.append(video.url)
@@ -61,7 +62,7 @@ def get_video(url, session, cw):
     return video
 
 
-class Video(object):
+class Video:
     def __init__(self, url, url_thumb, referer, title, id, session):
         self.title = title
         self.filename = format_filename(title, id, '.mp4')

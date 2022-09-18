@@ -14,7 +14,6 @@ import urllib
 import sys
 from timee import sleep
 import constants
-from sankaku_login import login
 from error_printer import print_error
 from constants import clean_url
 from ratelimit import limits, sleep_and_retry
@@ -27,6 +26,7 @@ class Downloader_sankaku(Downloader):
     URLS = ['chan.sankakucomplex.com', 'idol.sankakucomplex.com', 'www.sankakucomplex.com']
     MAX_CORE = 4
     display_name = 'Sankaku Complex'
+    ACCEPT_COOKIES = [r'(.*\.)?(sankakucomplex\.com|sankaku\.app)']
 
     def init(self):
         type = self.url.split('sankakucomplex.com')[0].split('//')[-1].strip('.').split('.')[-1]
@@ -38,9 +38,6 @@ class Downloader_sankaku(Downloader):
         self.url = self.url.replace('&commit=Search', '')
         self.url = clean_url(self.url)
         self.session = Session()
-
-        if self.type_sankaku != 'www':
-            login(type, self.session, self.cw)
 
         if self.type_sankaku == 'www':
             html = downloader.read_html(self.url, session=self.session)
@@ -154,7 +151,7 @@ class LazyUrl_sankaku(LazyUrl):
         return img.url
 
 
-class Image(object):
+class Image:
     filename = None
     def __init__(self, type, id, url, referer, local=False, cw=None, d=None, session=None):
         self.type = type
@@ -329,10 +326,10 @@ def get_imgs(url, title=None, cw=None, d=None, types=['img', 'gif', 'video'], se
             # For page > 50
             pagination = soup.find('div', class_='pagination')
             url = urljoin('https://{}.sankakucomplex.com'.format(type), pagination.attrs['next-page-url'])
-            #3366
-            p = int(re.find(r'[?&]page=([0-9]+)', url, default=1))
-            if p > 100:
-                url = setPage(url, 100)
+##            #3366
+##            p = int(re.find(r'[?&]page=([0-9]+)', url, default=1))
+##            if p > 100:
+##                break
         except Exception as e:
             print_(print_error(e)[-1])
             #url = setPage(url, page)

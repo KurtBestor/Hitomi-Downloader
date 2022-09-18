@@ -25,6 +25,7 @@ def suitable(url):
 class Downloader_weibo(Downloader):
     type = 'weibo'
     URLS = [suitable]
+    ACCEPT_COOKIES = [r'(.*\.)?(weibo\.com|sina\.com\.cn)']
 
     def init(self):
         self.session = Session()
@@ -65,14 +66,14 @@ def checkLogin(session):
         raise errors.LoginRequired()
 
 
-class Album(object):
+class Album:
 
     def __init__(self, id, type):
         self.id = id
         self.type = type
 
 
-class Image(object):
+class Image:
 
     def __init__(self, url, filename=None, timestamp=0):
         self.url = url

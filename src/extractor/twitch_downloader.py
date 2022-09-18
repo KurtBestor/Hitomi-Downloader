@@ -15,6 +15,7 @@ class Downloader_twitch(Downloader):
     type = 'twitch'
     URLS = ['twitch.tv']
     single = True
+    ACCEPT_COOKIES = [r'.*(twitch|ttvnw|jtvnw).*']
 
     def init(self):
         url = self.url
@@ -25,6 +26,7 @@ class Downloader_twitch(Downloader):
         else:
             url = 'https://www.twitch.tv/videos/{}'.format(url)
             self.url = url
+        self.session = Session()
 
     @classmethod
     def fix_url(cls, url):
@@ -121,7 +123,7 @@ def extract_info(url, cw=None):
     return info
 
 
-class Video(object):
+class Video:
     _url = None
 
     def __init__(self, url, cw, live=False):
@@ -135,7 +137,7 @@ class Video(object):
         if self._url:
             return self._url
         info = extract_info(url, self.cw)
-        self.artist = info['creator'] #4953
+        self.artist = info.get('creator') or info.get('uploader') #4953, #5031
 
         def print_video(video):
             #print_(video)#

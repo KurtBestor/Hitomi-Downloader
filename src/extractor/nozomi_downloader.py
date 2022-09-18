@@ -4,23 +4,32 @@ from io import BytesIO
 from utils import Downloader, query_url, LazyUrl, get_ext, urljoin, clean_title, check_alive, lock, get_print, get_max_range
 import errors
 from translator import tr_
+from multiprocessing.pool import ThreadPool
+from math import ceil
+from ratelimit import limits, sleep_and_retry
 
 
 class Image:
 
-    def __init__(self, id, referer):
-        self._id = id
-        self.url = LazyUrl(referer, self.get, self)
-
-    def get(self, referer):
-        # https://j.nozomi.la/nozomi.js
-        s_id = str(self._id)
-        url_post = 'https://j.nozomi.la/post/{}/{}/{}.json'.format(s_id[-1], s_id[-3:-1], self._id)
-        j = downloader.read_json(url_post, referer)
-        url = urljoin(referer, j['imageurl'])
+    def __init__(self, id, url, referer, p):
+        self.url = LazyUrl(referer, lambda _: url, self)
         ext = get_ext(url)
-        self.filename = '{}{}'.format(self._id, ext)
-        return url
+        self.filename = '{}{}{}'.format(id, f'_p{p}' if p else '', ext)
+
+
+@sleep_and_retry
+@limits(4, 1)
+def read_post(id, referer):
+    # https://j.nozomi.la/nozomi.js
+    s_id = str(id)
+    url_post = 'https://j.nozomi.la/post/{}/{}/{}.json'.format(s_id[-1], s_id[-3:-1], s_id)
+    j = downloader.read_json(url_post, referer)
+    imgs = []
+    for p, url in enumerate(j['imageurls']):
+        url = urljoin(referer, url['imageurl'])
+        img = Image(id, url, referer, p)
+        imgs.append(img)
+    return imgs
 
 
 
@@ -30,6 +39,7 @@ class Downloader_nozomi(Downloader):
     display_name = 'Nozomi.la'
     MAX_CORE = 15
     ACC_MTIME = True
+    ACCEPT_COOKIES = [r'(.*\.)?nozomi\.la']
 
     @classmethod
     def fix_url(cls, url):
@@ -50,13 +60,20 @@ class Downloader_nozomi(Downloader):
         self.title = clean_title(self.name)
         qs = query_url(self.url)
         q = qs['q'][0]
-        for id in get_ids_multi(q, self._popular, self.cw):
-            img = Image(id, self.url)
-            self.urls.append(img.url)
+        ids = get_ids_multi(q, self._popular, self.cw)
+        p = ThreadPool(6)
+        step = 10
+        for i in range(int(ceil(len(ids)/step))):
+            for imgs in p.map(lambda id: read_post(id, self.url), ids[i*step:(i+1)*step]):
+                self.urls += [img.url for img in imgs]
+                s = '{} {} - {} / {}'.format(tr_('읽는 중...'), self.name, i*step, len(ids))
+                self.cw.setTitle(s)
+        self.title = clean_title(self.name)
 
 
 @lock
 def get_ids(q, popular, cw):
+    print_ = get_print(cw)
     check_alive(cw)
     if q is None:
         if popular:
@@ -64,11 +81,12 @@ def get_ids(q, popular, cw):
         else:
             url_api = 'https://j.nozomi.la/index.nozomi'
     else:
+        q = q.replace('/', '') #5146
         if popular:
             url_api = 'https://j.nozomi.la/nozomi/popular/{}-Popular.nozomi'.format(quote(q))
         else:
             url_api = 'https://j.nozomi.la/nozomi/{}.nozomi'.format(quote(q))
-    print(url_api)
+    #print_(url_api)
     f = BytesIO()
     downloader.download(url_api, referer='https://nozomi.la/', buffer=f)
     data = f.read()

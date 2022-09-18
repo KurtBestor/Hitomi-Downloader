@@ -9,7 +9,7 @@ URL_ENTER = 'https://www.hentai-foundry.com/site/index?enterAgree=1&size=1550'
 URL_FILTER = 'https://www.hentai-foundry.com/site/filters'
 
 
-class Image(object):
+class Image:
     def __init__(self, url, session):
         @try_n(4)
         def f(_):

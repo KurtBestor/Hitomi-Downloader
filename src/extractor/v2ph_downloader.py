@@ -1,5 +1,4 @@
 #coding:utf8
-from __future__ import division, print_function, unicode_literals
 import downloader
 from utils import get_ext, LazyUrl, Downloader, try_n, clean_title, get_print
 import ree as re
@@ -7,7 +6,7 @@ from translator import tr_
 from timee import sleep
 import errors
 from ratelimit import limits, sleep_and_retry
-UA = downloader.hdr['User-Agent']
+import clf2
 
 
 def setPage(url, p):
@@ -22,7 +21,7 @@ def getPage(url):
     return int(p or 1)
 
 
-class Image(object):
+class Image:
     def __init__(self, url, referer, p):
         self._url = url
         self.url = LazyUrl(referer, self.get, self)
@@ -42,15 +41,19 @@ class Downloader_v2ph(Downloader):
     MAX_CORE = 4
     MAX_PARALLEL = 1
     display_name = 'V2PH'
+    ACCEPT_COOKIES = [r'(.*\.)?v2ph\.com']
+
+    def init(self):
+        self.session = clf2.solve(self.url)['session']
 
     @classmethod
     def fix_url(cls, url):
         return url.split('?')[0]
 
     def read(self):
-        info = get_info(self.url)
+        info = get_info(self.url, self.session)
 
-        for img in get_imgs(self.url, info['title'], self.cw):
+        for img in get_imgs(self.url, self.session, info['title'], self.cw):
             self.urls.append(img.url)
 
         self.title = clean_title(info['title'])
@@ -58,8 +61,8 @@ class Downloader_v2ph(Downloader):
 
 
 @try_n(2)
-def get_info(url):
-    soup = read_soup(url)
+def get_info(url, session):
+    soup = read_soup(url, session)
     info = {}
     info['title'] = soup.find('h1').text.strip()
     return info
@@ -68,18 +71,18 @@ def get_info(url):
 @try_n(4)
 @sleep_and_retry
 @limits(1, 5)
-def read_soup(url):
-    return downloader.read_soup(url, user_agent=UA)
+def read_soup(url, session):
+    return downloader.read_soup(url, session=session)
 
 
-def get_imgs(url, title, cw=None):
+def get_imgs(url, session, title, cw=None):
     print_ = get_print(cw)
     imgs = []
 
     for p in range(1, 1001):
         url = setPage(url, p)
         print_(url)
-        soup = read_soup(url)
+        soup = read_soup(url, session)
 
         view = soup.find('div', class_='photos-list')
         if view is None:

@@ -9,7 +9,7 @@ import os
 from translator import tr_
 
 
-class Text(object):
+class Text:
 
     def __init__(self, title, update, url, session, single):
         if single:
@@ -17,10 +17,10 @@ class Text(object):
             self.title = title
         else:
             self.p = int(re.findall('/([0-9]+)', url)[(-1)])
-            title = (u'[{:04}] {}').format(self.p, title)
+            title = '[{:04}] {}'.format(self.p, title)
             title = clean_title(title, n=-4)
             self.title = title
-        self.filename = (u'{}.txt').format(self.title)
+        self.filename = '{}.txt'.format(self.title)
 
         def f(url):
             text = get_text(url, self.title, update, session)
@@ -39,9 +39,10 @@ class Downloader_syosetu(Downloader):
     MAX_CORE = 2
     detect_removed = False
     display_name = '小説家になろう'
+    ACCEPT_COOKIES = [r'(.*\.)?syosetu\.com']
 
     def init(self):
-        self.url = (u'https://ncode.syosetu.com/{}/').format(self.id_)
+        self.url = 'https://ncode.syosetu.com/{}/'.format(self.id_)
 
     @property
     def id_(self):
@@ -72,7 +73,7 @@ class Downloader_syosetu(Downloader):
         ncode = re.find(r'syosetu.com/([^/]+)', self.url, err='no ncode') #3938
         title_dir = clean_title('[{}] {} ({})'.format(self.artist, title, ncode))
         ex = soup.find('div', id='novel_ex')
-        self.novel_ex = ex.text.strip() if ex else None
+        self.novel_ex = utils.get_text(ex, '') if ex else None
         texts = []
         subtitles = soup.findAll('dd', class_='subtitle')
         if subtitles:
@@ -86,12 +87,12 @@ class Downloader_syosetu(Downloader):
 
                     update = update.text.strip()
                 if update2:
-                    update += (u'  ({})').format(update2)
+                    update += '  ({})'.format(update2)
                 a = subtitle.find('a')
                 subtitle = a.text.strip()
                 href = urljoin(self.url, a.attrs['href'])
-                if not re.search(('ncode.syosetu.com/{}/[0-9]+').format(self.id_), href):
-                    self.print_((u'skip: {}').format(href))
+                if not re.search('ncode.syosetu.com/{}/[0-9]+'.format(self.id_), href):
+                    self.print_('skip: {}'.format(href))
                     continue
                 text = Text(subtitle, update, href, session, False)
                 texts.append(text)
@@ -100,7 +101,7 @@ class Downloader_syosetu(Downloader):
             self.single = True
             text = Text(title_dir, None, self.url, session, True)
             texts.append(text)
-        self.print_((u'single: {}').format(self.single))
+        self.print_('single: {}'.format(self.single))
         outdir = get_outdir('syosetu')
         for text in texts:
             if self.single:
@@ -118,14 +119,14 @@ class Downloader_syosetu(Downloader):
         if self.single:
             return
         names = self.cw.names
-        filename = os.path.join(self.dir, (u'[merged] {}.txt').format(self.title))
+        filename = os.path.join(self.dir, '[merged] {}.txt'.format(self.title))
         try:
             with utils.open(filename, 'wb') as f:
-                f.write(u'    {}\n\n    \u4f5c\u8005\uff1a{}\n\n\n'.format(self.__title, self.artist).encode('utf8'))
+                f.write('    {}\n\n    \u4f5c\u8005\uff1a{}\n\n\n'.format(self.__title, self.artist).encode('utf8'))
                 if self.novel_ex:
                     f.write(self.novel_ex.encode('utf8'))
                 for i, file in enumerate(names):
-                    self.cw.pbar.setFormat(u"[%v/%m]  {} [{}/{}]".format(tr_(u'\ubcd1\ud569...'), i, len(names)))
+                    self.cw.pbar.setFormat(u"[%v/%m]  {} [{}/{}]".format(tr_('\ubcd1\ud569...'), i, len(names)))
                     with open(file, 'rb') as f_:
                         text = f_.read()
                     f.write(b'\n\n\n\n')
@@ -135,7 +136,7 @@ class Downloader_syosetu(Downloader):
 
 
 def get_title_artist(soup):
-    artist = soup.find('div', class_='novel_writername').text.replace(u'\u4f5c\u8005', '').replace(u'\uff1a', '').replace(':', '').replace(u'\u3000', ' ').strip()
+    artist = soup.find('div', class_='novel_writername').text.replace('\u4f5c\u8005', '').replace('\uff1a', '').replace(':', '').replace('\u3000', ' ').strip()
     rem = len(artist.encode('utf8', 'ignore')) + len('[merged] [] .txt') + len(' (n8273ds)')
     return clean_title(soup.find('p', class_='novel_title').text.strip(), n=-rem), clean_title(artist)
 
@@ -145,24 +146,24 @@ def get_text(url, subtitle, update, session):
     html = downloader.read_html(url, session=session)
     soup = Soup(html)
     if update:
-        update = u'        ' + update
+        update = '        ' + update
     else:
         update = ''
 
-    story = soup.find('div', id='novel_honbun').text.strip()
+    story = utils.get_text(soup.find('div', id='novel_honbun'), '')
 
     p = soup.find('div', id='novel_p')
-    p = '' if p is None else p.text.strip()
+    p = '' if p is None else utils.get_text(p, '')
     if p:
         story = '{}\n\n════════════════════════════════\n\n{}'.format(p, story)
 
     #2888
     a = soup.find('div', id='novel_a')
-    a = '' if a is None else a.text.strip()
+    a = '' if a is None else utils.get_text(a, '')
     if a:
         story = '{}\n\n════════════════════════════════\n\n{}'.format(story, a)
 
-    text =u'''────────────────────────────────
+    text ='''────────────────────────────────
 
   ◆  {}{}
 

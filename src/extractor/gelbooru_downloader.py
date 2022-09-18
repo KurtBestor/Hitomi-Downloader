@@ -34,6 +34,7 @@ class Downloader_gelbooru(Downloader):
     URLS = ['gelbooru.com']
     MAX_CORE = 8
     _name = None
+    ACCEPT_COOKIES = [r'(.*\.)?gelbooru\.com']
 
     @classmethod
     def fix_url(cls, url):
@@ -80,7 +81,7 @@ class LazyUrl_gelbooru(LazyUrl):
         return img.url
 
 
-class Image(object):
+class Image:
     def __init__(self, id_, url):
         self.id_ = id_
         self._url = url

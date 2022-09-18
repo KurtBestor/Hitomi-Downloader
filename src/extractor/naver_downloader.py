@@ -60,7 +60,7 @@ class Downloader_naver(Downloader):
         self.title = self.name
 
 
-class Image(object):
+class Image:
     def __init__(self, url, referer, p):
         self.url = LazyUrl(referer, lambda _: url, self)
         #3788, #3817
@@ -68,7 +68,7 @@ class Image(object):
         self.filename = '{:04}{}'.format(p, ext)
 
 
-class Video(object):
+class Video:
     def __init__(self, url, referer, p):
         self.url = LazyUrl(referer, lambda _: url, self)
         self.filename = 'video_{}.mp4'.format(p)

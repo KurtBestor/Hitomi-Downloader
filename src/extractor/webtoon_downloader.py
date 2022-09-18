@@ -1,5 +1,5 @@
 import downloader
-from utils import Soup, LazyUrl, clean_title, get_ext, get_imgs_already, urljoin, try_n, Downloader
+from utils import Soup, Session, LazyUrl, clean_title, get_ext, get_imgs_already, urljoin, try_n, Downloader
 import os
 import page_selector
 from translator import tr_
@@ -13,10 +13,12 @@ class Downloader_webtoon(Downloader):
     MAX_CORE = 8
     MAX_SPEED = 4.0
     display_name = 'WEBTOON'
+    ACCEPT_COOKIES = [r'(.*\.)?webtoons?\.com']
 
     def init(self):
-        self.url = get_main(self.url)
-        self.soup = downloader.read_soup(self.url)
+        self.session = Session()
+        self.url = get_main(self.url, self.session)
+        self.soup = downloader.read_soup(self.url, session=self.session)
 
     @classmethod
     def fix_url(cls, url):
@@ -25,7 +27,7 @@ class Downloader_webtoon(Downloader):
     def read(self):
         title = clean_title(self.soup.find('h1').text.strip())
         self.title = tr_(u'\uc77d\ub294 \uc911... {}').format(title)
-        imgs = get_imgs_all(self.url, title, cw=self.cw)
+        imgs = get_imgs_all(self.url, self.session, title, cw=self.cw)
         for img in imgs:
             if isinstance(img, Image):
                 self.urls.append(img.url)
@@ -35,25 +37,25 @@ class Downloader_webtoon(Downloader):
         self.title = title
 
 
-class Page(object):
+class Page:
 
     def __init__(self, url, title):
         self.url = url
         self.title = title
 
 
-class Image(object):
+class Image:
 
-    def __init__(self, url, page, p):
-        ext = get_ext(url) or downloader.get_ext(url, referer=page.url)
+    def __init__(self, url, session, page, p):
+        ext = get_ext(url) or downloader.get_ext(url, referer=page.url, session=session)
         self.filename = '{}/{:04}{}'.format(clean_title(page.title), p, ext)
 
         self.url = LazyUrl(page.url, lambda _: url, self)
 
 
 @try_n(2)
-def get_imgs(page):
-    html = downloader.read_html(page.url)
+def get_imgs(page, session):
+    html = downloader.read_html(page.url, session=session)
     if 'window.__motiontoonViewerState__' in html:
         raise NotImplementedError('motiontoon')
     soup = Soup(html)
@@ -61,14 +63,14 @@ def get_imgs(page):
     imgs = []
     for img in view.findAll('img'):
         src = img.get('data-url') or img['src']
-        img = Image(urljoin(page.url, src), page, len(imgs))
+        img = Image(urljoin(page.url, src), session, page, len(imgs))
         imgs.append(img)
     return imgs
 
 
-def get_main(url):
+def get_main(url, session):
     if 'episode_no=' in url:
-        soup = downloader.read_soup(url)
+        soup = downloader.read_soup(url, session=session)
         url = urljoin(url, soup.find('div', class_='subj_info').find('a')['href'])
     return url
 
@@ -83,7 +85,7 @@ def set_page(url, p):
     return url
 
 
-def get_pages(url):
+def get_pages(url, session=None):
     pages = []
     urls = set()
     for p in range(1, 101):
@@ -91,7 +93,7 @@ def get_pages(url):
         print(url_page)
         for try_ in range(4):
             try:
-                soup = downloader.read_soup(url_page)
+                soup = downloader.read_soup(url_page, session=session)
                 view = soup.find('ul', id='_listUl')
                 if view is None:
                     raise Exception('no view')
@@ -121,12 +123,12 @@ def get_pages(url):
 @page_selector.register('webtoon')
 @try_n(4)
 def f(url):
-    url = get_main(url)
+    url = get_main(url, None)
     return get_pages(url)
 
 
-def get_imgs_all(url, title, cw=None):
-    pages = get_pages(url)
+def get_imgs_all(url, session, title, cw=None):
+    pages = get_pages(url, session)
     pages = page_selector.filter(pages, cw)
     imgs = []
     for p, page in enumerate(pages):
@@ -134,7 +136,7 @@ def get_imgs_all(url, title, cw=None):
         if imgs_already:
             imgs += imgs_already
             continue
-        imgs += get_imgs(page)
+        imgs += get_imgs(page, session)
         msg = tr_(u'\uc77d\ub294 \uc911... {} / {}  ({}/{})').format(title, page.title, p + 1, len(pages))
         if cw is not None:
             cw.setTitle(msg)

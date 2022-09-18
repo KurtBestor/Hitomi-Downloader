@@ -11,7 +11,7 @@ import ffmpeg
 
 class Downloader_etc(Downloader):
     type = 'etc'
-    URLS = []
+    URLS = ['thisvid.com'] #5153
     single = True
     MAX_PARALLEL = 8
     display_name = 'Etc'
@@ -20,8 +20,8 @@ class Downloader_etc(Downloader):
         self.session = Session()
         name = ytdl.get_extractor_name(self.url)
         self.print_('extractor: {}'.format(name))
-        if name == 'generic':
-            raise NotImplementedError()
+        #if name == 'generic':
+        #    raise NotImplementedError()
 
     def read(self):
         video = get_video(self.url, self.session, self.cw)
@@ -54,16 +54,23 @@ def format_(f):
     return 'format:{} - resolution:{} - vbr:{} - audio:{} - url:{}'.format(f['format'], f['_resolution'], f['_vbr'], f['_audio'], f['url'])
 
 
+class UnSupportedError(Exception):pass
+
+
 def get_video(url, session, cw, ie_key=None):
     print_ = get_print(cw)
     try:
         video = _get_video(url, session, cw, ie_key, allow_m3u8=True)
+        if isinstance(video, Exception):
+            raise video
         if isinstance(video.url(), M3u8_stream):
             c = video.url().segs[0].download(cw)
             if not c:
                 raise Exception('invalid m3u8')
         return video
     except Exception as e:
+        if isinstance(e, UnSupportedError):
+            raise e
         print_(e)
         return _get_video(url, session, cw, ie_key, allow_m3u8=False)
 
@@ -77,7 +84,12 @@ def _get_video(url, session, cw, ie_key=None, allow_m3u8=True):
         'playlistend': 1,
         }
     ydl = ytdl.YoutubeDL(options, cw=cw)
-    info = ydl.extract_info(url)
+    try:
+        info = ydl.extract_info(url)
+    except Exception as e:
+        if 'ERROR: Unsupported URL' in str(e):
+            return UnSupportedError(str(e))
+        raise e
     if not ie_key:
         ie_key = ytdl.get_extractor_name(url)
     info['ie_key'] = ie_key
@@ -169,7 +181,7 @@ def get_ext_(url, session, referer):
     return ext
 
 
-class Video(object):
+class Video:
     def __init__(self, f, f_audio, info, session, referer, cw=None):
         self.f_audio = f_audio
         self.cw = cw

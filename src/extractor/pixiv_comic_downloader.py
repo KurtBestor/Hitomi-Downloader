@@ -11,7 +11,7 @@ import utils
 SALT = 'mAtW1X8SzGS880fsjEXlM73QpS1i4kUMBhyhdaYySk8nWz533nrEunaSplg63fzT'
 
 
-class Image(object):
+class Image:
 
     def __init__(self, url, page, p):
         ext = get_ext(url)
@@ -20,7 +20,7 @@ class Image(object):
         self.url = LazyUrl(page.url, lambda _: url, self)
 
 
-class Page(object):
+class Page:
 
     def __init__(self, url, title):
         self.title = clean_title(title)
@@ -111,14 +111,16 @@ def get_pages(soup, url):
         if href in hrefs:
             continue
         hrefs.add(href)
-        divs = a.findAll('div', recursive=False)
+        divs = a.div.findAll('div', recursive=False) #5158
+        if not divs: #5158
+            continue
         if len(divs) < 2:
             divs = divs[0].findAll('div', recursive=False) #4861
         if len(divs) < 2:
             continue
         right = divs[1]
-        number = right.findAll('span')[0].text.strip()
-        title = right.findAll('span')[1].text.strip()
+        number = list(right.children)[0].text.strip() #5158
+        title = list(right.children)[1].text.strip() #5158
         title = ' - '.join(x for x in [number, title] if x)
         if title in titles:
             title0 = title

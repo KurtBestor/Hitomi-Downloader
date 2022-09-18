@@ -8,7 +8,7 @@ from ratelimit import limits, sleep_and_retry
 from error_printer import print_error
 
 
-class Image(object):
+class Image:
 
     def __init__(self, url, id, referer, p, cw=None):
         self._url = url
@@ -60,7 +60,7 @@ class Downloader_tumblr(Downloader):
 
 
 
-class TumblrAPI(object):
+class TumblrAPI:
     _url_base = 'https://www.tumblr.com/api'
     _hdr = {
         'referer': 'https://www.tumblr.com',
@@ -136,7 +136,7 @@ class TumblrAPI(object):
                 break
 
 
-class Post(object):
+class Post:
 
     def __init__(self, data, url, cw=None):
         id_ = data['id']

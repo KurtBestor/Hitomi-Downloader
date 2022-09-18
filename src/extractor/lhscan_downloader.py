@@ -12,7 +12,7 @@ import errors
 ##from image_reader import QPixmap
 
 
-class Image(object):
+class Image:
     def __init__(self, url, page, p):
         self._url = url
         self.url = LazyUrl(page.url, self.get, self)#, pp=self.pp)
@@ -30,7 +30,7 @@ class Image(object):
 ##        return filename
 
 
-class Page(object):
+class Page:
     def __init__(self, title, url):
         self.title = clean_title(title)
         self.url = url
@@ -137,8 +137,10 @@ def get_imgs_page(page, referer, session, cw=None):
             continue
         if '/uploads/lazy_loading.gif' in src:
             continue
+        src = 'https://welovekai.com/proxy.php?link=' + src.replace('\n', '').replace('\r', '') #5238
         if not imgs:
             print_(src0)
+            print_(src)
         img = Image(src, page, len(imgs))
         imgs.append(img)
 

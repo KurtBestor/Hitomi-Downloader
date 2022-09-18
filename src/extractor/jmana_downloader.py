@@ -13,7 +13,7 @@ PATTERN_ALL = r'jmana[0-9]*.*/(comic_list_title|book|bookdetail)\?book'
 PATTERN_ID = '[?&]bookdetailid=([0-9]+)'
 
 
-class Image(object):
+class Image:
 
     def __init__(self, url, page, p):
         self.url = LazyUrl(page.url, lambda _: url, self)
@@ -22,7 +22,7 @@ class Image(object):
         self.filename = (u'{}/{}').format(page.title, name)
 
 
-class Page(object):
+class Page:
 
     def __init__(self, title, url):
         self.title = clean_title(title)

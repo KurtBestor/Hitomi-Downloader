@@ -68,7 +68,7 @@ class Downloader_rule34_xxx(Downloader):
         self.title = self.name
 
 
-class Image(object):
+class Image:
     def __init__(self, id_, url):
         self.url = url
         ext = os.path.splitext(url)[1]

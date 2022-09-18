@@ -9,7 +9,7 @@ from io import BytesIO as IO
 
 
 
-class Video(object):
+class Video:
 
     def __init__(self, url, url_page, title, url_thumb):
         self._url = url

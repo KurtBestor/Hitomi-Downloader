@@ -1,5 +1,4 @@
 #coding:utf8
-from __future__ import division, print_function, unicode_literals
 import downloader
 import ree as re
 from utils import Soup, urljoin, LazyUrl, Downloader, try_n, join, clean_title
@@ -58,7 +57,7 @@ class LazyUrl_nhentai_com(LazyUrl):
         return img.url
 
 
-class Image(object):
+class Image:
     def __init__(self, url_page, url_img, p):
         self.p = p
         self.referer = url_page

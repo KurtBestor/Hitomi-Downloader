@@ -1,5 +1,5 @@
 import downloader
-from utils import Downloader, Session, urljoin, clean_title, LazyUrl, get_ext, get_print, try_n, compatstr, get_max_range, check_alive, query_url, get_outdir
+from utils import Downloader, Session, urljoin, clean_title, LazyUrl, get_ext, get_print, try_n, compatstr, get_max_range, check_alive, query_url, get_outdir, Soup
 import ffmpeg
 import utils
 import os
@@ -19,8 +19,8 @@ from collections import deque
 from locker import lock
 import threading
 from ratelimit import limits, sleep_and_retry
+import clf2
 ##import asyncio
-FORCE_LOGIN = True
 LIMIT = 48
 for header in ['pixiv_illust', 'pixiv_bmk', 'pixiv_search', 'pixiv_following', 'pixiv_following_r18']:
     if header not in constants.available_extra:
@@ -28,11 +28,23 @@ for header in ['pixiv_illust', 'pixiv_bmk', 'pixiv_search', 'pixiv_following', '
 
 
 
+
 class Downloader_pixiv(Downloader):
     type = 'pixiv'
-    MAX_CORE = 16
+    MAX_CORE = 4
+    MAX_PARALLEL = 2
     keep_date = True
-    STEP = 8, 32
+    STEP = 4, 16
+    ACCEPT_COOKIES = [r'(.*\.)?pixiv\.(com|co|net)']
+
+    def init(self):
+        res = clf2.solve(self.url, cw=self.cw)
+        self.session = res['session'] #5105
+        
+        soup = Soup(res['html'])
+        err = soup.find('p', class_='error-message')
+        if err: #5223
+            raise errors.Invalid('{}: {}'.format(err.text.strip(), self.url))
 
     @classmethod
     def fix_url(cls, url):
@@ -63,7 +75,7 @@ class Downloader_pixiv(Downloader):
 ##        loop = asyncio.new_event_loop()
 ##        asyncio.set_event_loop(loop)
         try:
-            info = get_info(self.url, self.cw)
+            info = get_info(self.url, self.session, self.cw)
             self.artist = info.get('artist') #4897
             for img in info['imgs']:
                 self.urls.append(img.url)
@@ -77,10 +89,20 @@ class PixivAPIError(errors.LoginRequired): pass
 class HTTPError(Exception): pass
 
 
-class PixivAPI():
+class PixivAPI:
 
-    def __init__(self):
-        self.session = None#Session()
+    def __init__(self, session):
+        self.session = session
+        hdr = {
+            'Accept': 'application/json',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Accept-Language': 'en-US,en;q=0.9,ko-KR;q=0.8,ko;q=0.7,ja;q=0.6',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache',
+            'Referer': 'https://www.pixiv.net/',
+            'X-User-Id': my_id(session),
+            }
+        self.session.headers.update(hdr)
 
     def illust_id(self, url):
         return re.find('/artworks/([0-9]+)', url) or re.find('[?&]illust_id=([0-9]+)', url)
@@ -88,15 +110,18 @@ class PixivAPI():
     def user_id(self, url):
         return re.find('/users/([0-9]+)', url) or re.find('[?&]id=([0-9]+)', url)
 
-    @try_n(8)
+    @try_n(8, sleep=5)
     @sleep_and_retry
-    @limits(30, 1) #3355
+    @limits(2, 3) #3355, #5105
     def call(self, url):
+        #print('call:', url)
         url = urljoin('https://www.pixiv.net/ajax/', url)
         e_ = None
         try:
             info = downloader.read_json(url, session=self.session)
         except requests.exceptions.HTTPError as e:
+            utils.SD['pixiv'] = {}
+            utils.SD['pixiv']['err'] = self.session
             code = e.response.status_code
             if code in (403, 404):
                 e_ = HTTPError('{} Client Error'.format(code))
@@ -112,27 +137,25 @@ class PixivAPI():
     def illust(self, id_):
         return self.call('illust/{}'.format(id_))
 
-
     def pages(self, id_):
         return self.call('illust/{}/pages'.format(id_))
-
 
     def ugoira_meta(self, id_):
         return self.call('illust/{}/ugoira_meta'.format(id_))
 
-    def user(self, id_):
-        return self.call('user/{}'.format(id_))
-
     def profile(self, id_):
-        return self.call('user/{}/profile/all?lang=en'.format(id_))
+        return self.call('user/{}/profile/all'.format(id_))
+
+    def top(self, id_):
+        return self.call('user/{}/profile/top'.format(id_))
 
     def bookmarks(self, id_, offset=0, limit=None, rest='show'):
         if limit is None:
             limit = LIMIT
-        return self.call('user/{}/illusts/bookmarks?tag=&offset={}&limit={}&rest={}&lang=en'.format(id_, offset, limit, rest))
+        return self.call('user/{}/illusts/bookmarks?tag=&offset={}&limit={}&rest={}'.format(id_, offset, limit, rest))
 
     def search(self, q, order='date_d', mode='all', p=1, s_mode='s_tag_full', type_='all', scd=None, ecd=None, wlt=None, wgt=None, hlt=None, hgt=None, blt=None, bgt=None, ratio=None, tool=None):
-        url = 'search/artworks/{0}?word={0}&order={1}&mode={2}&p={3}&s_mode={4}&type={5}&lang=en'.format(quote(q), order, mode, p, s_mode, type_)
+        url = 'search/artworks/{0}?word={0}&order={1}&mode={2}&p={3}&s_mode={4}&type={5}'.format(quote(q), order, mode, p, s_mode, type_)
         if scd:
             url += '&scd={}'.format(scd)
         if ecd:
@@ -157,7 +180,7 @@ class PixivAPI():
 
     def following(self, p, r18=False): #4077
         mode = 'r18' if r18 else 'all'
-        url = f'follow_latest/illust?p={p}&mode={mode}&lang=en'
+        url = f'follow_latest/illust?p={p}&mode={mode}'
         return self.call(url)
 
 
@@ -256,9 +279,9 @@ def tags_matched(tags_illust, tags_add, cw=None):
     return (not tags or tags & tags_illust) and tags_ex.isdisjoint(tags_illust)
 
 
-def get_info(url, cw=None, depth=0, tags_add=None):
+def get_info(url, session, cw=None, depth=0, tags_add=None):
     print_ = get_print(cw)
-    api = PixivAPI()
+    api = PixivAPI(session)
     info = {}
     imgs = []
 
@@ -271,7 +294,7 @@ def get_info(url, cw=None, depth=0, tags_add=None):
         id_ = api.illust_id(url)
         data = api.illust(id_)
         login = 'noLoginData' not in data
-        if FORCE_LOGIN and not login:#
+        if not login:#
             raise errors.LoginRequired()
         if data['xRestrict'] and not login:
             raise errors.LoginRequired('R-18')
@@ -301,8 +324,8 @@ def get_info(url, cw=None, depth=0, tags_add=None):
     elif '/bookmarks/' in url or 'bookmark.php' in url: # User bookmarks
         id_ = api.user_id(url)
         if id_ is None: #
-            id_ = my_id()
-        if id_ == my_id():
+            id_ = my_id(session)
+        if id_ == my_id(session):
             rests = ['show', 'hide']
         else:
             rests = ['show']
@@ -326,7 +349,7 @@ def get_info(url, cw=None, depth=0, tags_add=None):
                 offset += LIMIT
                 if depth == 0:
                     check_alive(cw)
-        process_ids(ids, info, imgs, cw, depth)
+        process_ids(ids, info, imgs, session, cw, depth)
     elif '/tags/' in url or 'search.php' in url: # Search
         q = unquote(re.find(r'/tags/([^/]+)', url) or re.find('[?&]word=([^&]*)', url, err='no tags'))
         info['title'] = '{} (pixiv_search_{})'.format(q, q.replace(' ', '+'))
@@ -373,10 +396,10 @@ def get_info(url, cw=None, depth=0, tags_add=None):
             if not c:
                 break
             p += 1
-        process_ids(ids, info, imgs, cw, depth)
+        process_ids(ids, info, imgs, session, cw, depth)
     elif 'bookmark_new_illust.php' in url or 'bookmark_new_illust_r18.php' in url: # Newest works: Following
         r18 = 'bookmark_new_illust_r18.php' in url
-        id_ = my_id()
+        id_ = my_id(session)
         process_user(id_, info, api)
         info['title'] = '{} (pixiv_following_{}{})'.format(info['artist'], 'r18_' if r18 else '', info['artist_id'])
         ids = []
@@ -394,7 +417,7 @@ def get_info(url, cw=None, depth=0, tags_add=None):
             if not c:
                 break
             p += 1
-        process_ids(ids, info, imgs, cw, depth)
+        process_ids(ids, info, imgs, session, cw, depth)
     elif api.user_id(url): # User illusts
         m = re.search(r'/users/[0-9]+/([\w]+)/?([^\?#/]*)', url)
         type_ = {'illustrations': 'illusts', 'manga': 'manga'}.get(m and m.groups()[0])
@@ -420,9 +443,10 @@ def get_info(url, cw=None, depth=0, tags_add=None):
                 continue
             ids += list(illusts.keys())
         ids = sorted(ids, key=int, reverse=True)
+        print_(f'ids: {len(ids)}')
         if not ids:
             raise Exception('no imgs')
-        process_ids(ids, info, imgs, cw, depth, tags_add=[tag] if tag else None)
+        process_ids(ids, info, imgs, session, cw, depth, tags_add=[tag] if tag else None)
     else:
         raise NotImplementedError()
     info['imgs'] = imgs[:max_pid]
@@ -438,20 +462,23 @@ def parse_time(ds):
     return time - dt
 
 
-def my_id():
-    sid = Session().cookies.get('PHPSESSID', domain='.pixiv.net')
+def my_id(session):
+    sid = session.cookies.get('PHPSESSID', domain='.pixiv.net')
     if not sid:
         raise errors.LoginRequired()
-    return re.find(r'^([0-9]+)', sid, err='no userid')
+    userid = re.find(r'^([0-9]+)', sid)
+    if userid is None:
+        raise errors.LoginRequired()
+    return userid
 
 
 def process_user(id_, info, api):
     info['artist_id'] = id_
-    data_user = api.user(id_)
-    info['artist'] = data_user['name']
+    data_user = api.top(id_)
+    info['artist'] = data_user['extraData']['meta']['ogp']['title']
 
 
-def process_ids(ids, info, imgs, cw, depth=0, tags_add=None):
+def process_ids(ids, info, imgs, session, cw, depth=0, tags_add=None):
     print_ = get_print(cw)
     max_pid = get_max_range(cw)
     class Thread(threading.Thread):
@@ -475,7 +502,7 @@ def process_ids(ids, info, imgs, cw, depth=0, tags_add=None):
                     sleep(.1)
                     continue
                 try:
-                    info_illust = get_info('https://www.pixiv.net/en/artworks/{}'.format(id_), cw, depth=depth+1, tags_add=tags_add)
+                    info_illust = get_info('https://www.pixiv.net/en/artworks/{}'.format(id_), session, cw, depth=depth+1, tags_add=tags_add)
                     res[i] = info_illust['imgs']
                 except Exception as e:
                     if depth == 0 and (e.args and e.args[0] == '不明なエラーが発生しました' or type(e) == errors.LoginRequired): # logout during extraction
@@ -497,7 +524,7 @@ def process_ids(ids, info, imgs, cw, depth=0, tags_add=None):
             queue.append((id_illust, res, j))
             Thread.add_rem(1)
         while Thread.rem:
-            sleep(.001, cw)
+            sleep(.01, cw)
         for imgs_ in res:
             if isinstance(imgs_, Exception):
                 raise imgs_

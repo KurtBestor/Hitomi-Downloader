@@ -8,7 +8,7 @@ from translator import tr_
 import json
 
 
-class Page(object):
+class Page:
 
     def __init__(self, url, title, p):
         self.url = url
@@ -16,7 +16,7 @@ class Page(object):
         self.p = p
 
 
-class Image(object):
+class Image:
 
     def __init__(self, url, page, p):
         ext = get_ext(url)
@@ -25,7 +25,7 @@ class Image(object):
         self.url = LazyUrl(page.url, lambda _: url, self)
 
 
-class Info(object):
+class Info:
 
     def __init__(self, id, title, artist):
         self.id = id

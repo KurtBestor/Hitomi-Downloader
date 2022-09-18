@@ -1,14 +1,15 @@
 import downloader
 import ree as re
-from utils import Session, LazyUrl, Soup, Downloader, try_n, get_print, clean_title, print_error, urljoin, get_imgs_already
+from utils import Session, LazyUrl, Soup, Downloader, try_n, get_print, clean_title, print_error, urljoin, get_imgs_already, check_alive
 from time import sleep
 from translator import tr_
 import page_selector
 import json
 import clf2
+from ratelimit import limits, sleep_and_retry
 
 
-class Page(object):
+class Page:
 
     def __init__(self, id_, title):
         self.id_ = id_
@@ -16,12 +17,18 @@ class Page(object):
         self.url = 'https://page.kakao.com/viewer?productId={}'.format(id_)
 
 
-class Image(object):
+class Image:
 
     def __init__(self, url, page, p):
-        self.url = LazyUrl('https://page.kakao.com/', lambda _: url, self)
+        self._url = url
+        self.url = LazyUrl('https://page.kakao.com/', self.get, self)
         ext = '.jpg'
         self.filename = '{}/{:04}{}'.format(clean_title(page.title), p, ext)
+
+    @sleep_and_retry
+    @limits(5, 1)
+    def get(self, _):
+        return self._url
 
 
 
@@ -31,6 +38,7 @@ class Downloader_kakaopage(Downloader):
     MAX_CORE = 4
     MAX_SPEED = 4.0
     display_name = 'KakaoPage'
+    ACCEPT_COOKIES = [r'(.*\.)?kakao\.com']
 
     def init(self):
         self.session = Session()
@@ -64,12 +72,13 @@ def get_id(url):
 
 
 
-def get_pages(url, session):
+def get_pages(url, session, cw=None):
     id_ = get_id(url)
 
     pages = []
     ids = set()
     for p in range(500): #2966
+        check_alive(cw)
         url_api = 'https://api2-page.kakao.com/api/v5/store/singles'
         data = {
             'seriesid': id_,
@@ -124,7 +133,7 @@ def get_imgs_page(page, session):
     imgs = []
     for file in data['downloadData']['members']['files']:
         url = file['secureUrl']
-        url = urljoin('https://page-edge-jz.kakao.com/sdownload/resource/', url)
+        url = 'https://page-edge.kakao.com/sdownload/resource?kid=' + url #5176
         img = Image(url, page, len(imgs))
         imgs.append(img)
     return imgs
@@ -132,7 +141,7 @@ def get_imgs_page(page, session):
 
 def get_info(url, session, cw=None):
     print_ = get_print(cw)
-    pages = get_pages(url, session)
+    pages = get_pages(url, session, cw)
     pages = page_selector.filter(pages, cw)
     if not pages:
         raise Exception('no pages')
@@ -164,9 +173,8 @@ def get_info(url, session, cw=None):
     imgs = []
 
     for i, page in enumerate(pages):
+        check_alive(cw)
         if cw is not None:
-            if not cw.alive:
-                return
             cw.setTitle('{} {} / {}  ({} / {})'.format(tr_('읽는 중...'), info['title'], page.title, i + 1, len(pages)))
 
         #3463

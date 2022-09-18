@@ -61,7 +61,7 @@ class Downloader_nijie(Downloader):
 
 
 
-class Image(object):
+class Image:
     def __init__(self, id, url, p, lazy=True, img=None):
         self.id = id
         self.p = p

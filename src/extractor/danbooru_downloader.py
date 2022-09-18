@@ -60,7 +60,7 @@ class Downloader_danbooru(Downloader):
         self.title = self.name
 
 
-class Image(object):
+class Image:
     def __init__(self, id, url, cw):
         self._cw = cw
         self.id = id

@@ -31,7 +31,7 @@ RESOLS[32] = '480p'
 RESOLS[16] = '360p'
 
 
-class Video(object):
+class Video:
 
     def __init__(self, url, referer, id, p):
         ext = os.path.splitext(url.split('?')[0])[1]

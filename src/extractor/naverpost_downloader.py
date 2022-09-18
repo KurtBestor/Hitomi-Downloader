@@ -42,7 +42,7 @@ import page_selector
 from utils import Downloader, Soup, clean_title
 
 
-class Page(object):
+class Page:
     def __init__(self, title, url) -> None:
         self.title = clean_title(title)
         self.url = url

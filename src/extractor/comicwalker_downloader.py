@@ -21,7 +21,7 @@ def decode(s, hash):
     return s2
 
 
-class Image(object):
+class Image:
     def __init__(self, src, hash, p, page):
         def f(_):
             f = BytesIO()
@@ -36,7 +36,7 @@ class Image(object):
         self.filename = u'{}/{:04}.jpg'.format(page.title, p)
 
 
-class Page(object):
+class Page:
     def __init__(self, url, title):
         self.url = url
         self.title = clean_title(title)

@@ -67,7 +67,7 @@ def get_video(url, cw=None):
     return video
 
 
-class Video(object):
+class Video:
     def __init__(self, url, url_thumb, referer, title):
         self.url = LazyUrl(referer, lambda x: url, self)
         self.url_thumb = url_thumb

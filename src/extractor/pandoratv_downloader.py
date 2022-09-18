@@ -48,7 +48,7 @@ def extract(name, html, cw=None):
     return value
 
 
-class Video(object):
+class Video:
     _url_video = None
 
     def __init__(self, url, format='title', cw=None):

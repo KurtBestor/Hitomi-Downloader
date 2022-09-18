@@ -1,4 +1,3 @@
-from __future__ import division, print_function, unicode_literals
 import downloader
 import ree as re
 from utils import Soup, LazyUrl, Downloader, try_n, compatstr, get_print, Session, get_max_range, format_filename, json
@@ -8,6 +7,7 @@ from translator import tr_
 from timee import sleep
 from error_printer import print_error
 import ytdl
+from urllib.parse import unquote
 PATTERN_VID = '/(v|video)/(?P<id>[0-9]+)'
 SHOW = True
 
@@ -46,24 +46,34 @@ class Downloader_tiktok(Downloader):
 
         def parse_video_url(info, item):
             if 'tiktok.com' in self.url.lower(): # TikTok
-                return 'https://www.tiktok.com/@{}/video/{}'.format(info['uid'], item['id'])
+                return 'https://www.tiktok.com/@{}/video/{}'.format(info.get('uid', ''), item['id']) #5235
             else: # Douyin
                 return 'https://www.douyin.com/video/{}'.format(item['id'])
 
-        if re.search(PATTERN_VID, self.url) is None:
+        if re.search(PATTERN_VID, self.url): # single video
+            video = Video(self.url, self.session, format, self.cw)
+            video.url()
+            self.urls.append(video.url)
+            self.title = video.title
+        elif 'tiktok.com/tag/' in self.url or 'douyin.com/search/' in self.url: # tag search
+            tag = re.find(r'/(tag|search)/([^/#\?]+)', self.url)[1]
+            tag = unquote(tag)
+            title = '#{}'.format(tag)
+            info = read_channel(self.url, self.session, self.cw, title=title)
+            items = info['items']
+            videos = [Video(parse_video_url(info, item), self.session, format, self.cw) for item in items]
+            video = self.process_playlist(title, videos)
+        elif 'tiktok.com/@' in self.url or 'douyin.com/user/' in self.url: # channel
             info = read_channel(self.url, self.session, self.cw)
             items = info['items']
             videos = [Video(parse_video_url(info, item), self.session, format, self.cw) for item in items]
             title = '{} (tiktok_{})'.format(info['nickname'], info['uid'])
             video = self.process_playlist(title, videos)
         else:
-            video = Video(self.url, self.session, format, self.cw)
-            video.url()
-            self.urls.append(video.url)
-            self.title = video.title
+            raise NotImplementedError()
 
 
-class Video(object):
+class Video:
     _url = None
 
     def __init__(self, url, session, format, cw):
@@ -91,7 +101,7 @@ class Video(object):
         return self._url
 
 
-def read_channel(url, session, cw=None):
+def read_channel(url, session, cw=None, title=None):
     print_ = get_print(cw)
 
     info = {}
@@ -173,7 +183,11 @@ def read_channel(url, session, cw=None):
         else:
             print_('empty')
             sd['count_empty'] += 1
-        msg = '{}  {} (tiktok_{}) - {}'.format(tr_('읽는 중...'), info.get('nickname'), info.get('uid'), len(info['items']))
+        if title is None:
+            foo = '{} (tiktok_{})'.format(info.get('nickname'), info.get('uid'))
+        else:
+            foo = title
+        msg = '{}  {} - {}'.format(tr_('읽는 중...'), foo, len(info['items']))
         if cw:
             if not cw.alive:
                 raise Exception('cw dead')

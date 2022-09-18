@@ -1,4 +1,3 @@
-from __future__ import division, print_function, unicode_literals
 import downloader
 from utils import Soup, urljoin, Downloader, LazyUrl, get_print, clean_url, clean_title, check_alive, Session, try_n, format_filename, tr_, get_ext
 import ree as re
@@ -10,7 +9,7 @@ PATTERN_ID = r'videos/([0-9a-zA-Z_-]+)'
 
 
 
-class File(object):
+class File:
     thumb = None
 
     def __init__(self, type, url, title, referer, p=0, multi_post=False):
@@ -30,7 +29,7 @@ class File(object):
         self.title = title
 
 
-class LazyFile(object):
+class LazyFile:
     _url = None
     thumb = None
 

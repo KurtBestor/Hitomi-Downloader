@@ -8,7 +8,7 @@ from m3u8_tools import M3u8_stream
 from random import randrange
 
 
-class Video(object):
+class Video:
 
     def __init__(self, info, stream):
         self.info = info

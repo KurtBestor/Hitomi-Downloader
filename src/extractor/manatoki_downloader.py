@@ -7,24 +7,37 @@ from time import sleep
 import clf2
 import ree as re
 from ratelimit import limits, sleep_and_retry
+from PIL import Image as Image_
 
 
-class Image(object):
+class Image:
     def __init__(self, url, page, p):
         ext = get_ext(url)
         if ext.lower()[1:] not in ['jpg', 'jpeg', 'bmp', 'png', 'gif', 'webm', 'webp']:
             ext = '.jpg'
         self.filename = '{}/{:04}{}'.format(page.title, p, ext)
         self._url = url
-        self.url = LazyUrl(page.url, self.get, self)
+        self.url = LazyUrl(page.url, self.get, self, pp=self.pp)
+        self.url.show_pp = False
 
     @sleep_and_retry
     @limits(2, 1)
     def get(self, _):
         return self._url
 
+    def pp(self, filename): #5233
+        img = Image_.open(filename)
+        nf = getattr(img, 'n_frames', 1)
+        loop = img.info.get('loop')
+        if nf > 1 and loop:
+            img.seek(nf-1)
+            img.save(filename)
+        img.close()
+        return filename
+            
 
-class Page(object):
+
+class Page:
     def __init__(self, title, url):
         self.title = clean_title(title)
         self.url = url
@@ -36,6 +49,7 @@ class Downloader_manatoki(Downloader):
     type = 'manatoki'
     URLS = [r'regex:(mana|new)toki[0-9]*\.(com|net)']
     MAX_CORE = 4
+    ACCEPT_COOKIES = [r'(.*\.)?(mana|new)toki[0-9]*\.(com|net)']
 
     @try_n(2)
     def init(self):

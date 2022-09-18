@@ -1,5 +1,4 @@
 #coding:utf8
-from __future__ import division, print_function, unicode_literals
 import downloader
 import ree as re
 from utils import Soup, urljoin, LazyUrl, Downloader, try_n, join, get_ext
@@ -21,9 +20,10 @@ class Downloader_nhentai(Downloader):
     URLS = ['nhentai.net']
     MAX_CORE = 16
     display_name = 'nhentai'
+    ACCEPT_COOKIES = [r'(.*\.)?nhentai\.net']
 
     def init(self):
-        self.session = clf2.solve(self.url)['session'] #4541
+        self.session = clf2.solve(self.url, cw=self.cw)['session'] #4541
 
     @classmethod
     def fix_url(cls, url):
@@ -65,14 +65,14 @@ class LazyUrl_nhentai(LazyUrl):
         return img.url
 
 
-class Image(object):
+class Image:
     def __init__(self, url_page, url_img, p):
         self.p = p
         self.url = LazyUrl_nhentai(url_page, lambda _: url_img, self)
         self.filename = '{:04}{}'.format(p, get_ext(url_img))
 
 
-class Info(object):
+class Info:
     def __init__(self, host, id, id_media, title, p, artists, groups, seriess, lang, type, formats):
         self.host = host
         self.id = id

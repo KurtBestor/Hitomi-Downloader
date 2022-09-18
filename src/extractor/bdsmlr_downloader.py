@@ -45,7 +45,7 @@ class Downloader_bdsmlr(Downloader):
         self.title = u'{} (bdsmlr_{})'.format(clean_title(info['username']), self.id_)
 
 
-class Post(object):
+class Post:
     def __init__(self, url, referer, id, p):
         self.id = id
         self.url = LazyUrl(referer, lambda x: url, self)

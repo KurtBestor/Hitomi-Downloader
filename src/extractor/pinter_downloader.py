@@ -1,5 +1,5 @@
 import downloader
-from utils import Session, Downloader, LazyUrl, clean_url, try_n, Soup, clean_title, get_ext, get_max_range
+from utils import Session, Downloader, LazyUrl, clean_url, try_n, Soup, clean_title, get_ext, get_max_range, get_print
 import json, os, ree as re
 from timee import sleep
 from translator import tr_
@@ -30,6 +30,8 @@ class Downloader_pinter(Downloader):
         self.print_('type: {}'.format(self.type_pinter))
         if self.type_pinter in ['board', 'section']:
             self.info = get_info(username, board, self.api)
+        elif self.type_pinter == 'pin':
+            pass #5132
         else:
             raise NotImplementedError(self.type_pinter)
 
@@ -50,7 +52,7 @@ class Downloader_pinter(Downloader):
     def read(self):
         if self.type_pinter == 'pin':
             self.single = True
-            id = int(self._pin_id)
+            id = self._pin_id
         else:
             id = self.info['id']
         self.title = self.name
@@ -82,15 +84,18 @@ def get_info(username, board, api):
 
 
 class PinterestAPI:
-    HEADERS = {'Accept': 'application/json, text/javascript, */*, q=0.01',
-       'Accept-Language': 'en-US,en;q=0.5',
-       'X-Pinterest-AppState': 'active',
-       'X-APP-VERSION': 'cb1c7f9',
-       'X-Requested-With': 'XMLHttpRequest',
-       'Origin': BASE_URL + '/'}
+    HEADERS = {
+        'Accept': 'application/json, text/javascript, */*, q=0.01',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Referer': BASE_URL + '/',
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-APP-VERSION' : '31461e0',
+        'X-Pinterest-AppState': 'active',
+        'Origin': BASE_URL,
+        }
 
     def __init__(self):
-        self.session = Session()
+        self.session = Session('chrome')
         self.session.headers.update(self.HEADERS)
 
     def pin(self, pin_id):
@@ -130,15 +135,17 @@ class PinterestAPI:
         print('_call: {}, {}'.format(url, params))
         r = self.session.get(url, params=params)
         print(r)
+        global R
+        R = r
         s = r.text
         status_code = r.status_code
         try:
             data = json.loads(s)
         except ValueError:
             data = {}
-        else:
-            if status_code < 400 and not r.history:
-                return data
+        
+        if status_code < 400 and not r.history:
+            return data
 
         if status_code == 404 or r.history:
             raise Exception('Not Found')
@@ -159,7 +166,7 @@ class PinterestAPI:
                 return
 
 
-class Image(object):
+class Image:
 
     def __init__(self, img):
         self.id = img['id']
@@ -184,6 +191,7 @@ class Image(object):
 
 
 def get_imgs(id, api, cw=None, title=None, type='board'):
+    print_ = get_print(cw)
     n = get_max_range(cw)
     imgs = []
     ids = set()
@@ -201,6 +209,8 @@ def get_imgs(id, api, cw=None, title=None, type='board'):
             print('skip img:', img['id'])
             continue
         img = Image(img)
+        if type == 'pin' and img.id != id:
+            raise AssertionError('id mismatch')
         if img.id in ids:
             print('duplicate:', img.id)
             continue

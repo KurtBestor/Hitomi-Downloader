@@ -14,6 +14,7 @@ class Downloader_vlive(Downloader):
 
     @classmethod
     def fix_url(cls, url):
+        url = url.replace('.kakao.com/m/', '.kakao.com/')
         return url.split('?')[0].strip('/')
 
     def read(self):
@@ -29,7 +30,7 @@ class Downloader_vlive(Downloader):
 
 
 
-class Video(object):
+class Video:
     _url = None
 
     def __init__(self, url, cw=None):

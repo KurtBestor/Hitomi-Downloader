@@ -91,7 +91,7 @@ def get_info(url, session, cw=None):
     return info
 
 
-class Video(object):
+class Video:
     def __init__(self, url, session, data=None):
         self.id_ = re.find('/video/([0-9]+)', url, err='no id')
         self._session = session

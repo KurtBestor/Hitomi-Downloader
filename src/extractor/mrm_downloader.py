@@ -9,7 +9,7 @@ import ree as re
 import clf2#
 
 
-class Image(object):
+class Image:
     def __init__(self, url, p, page, cw):
         self.cw = cw
         ext = get_ext(url)
@@ -23,7 +23,7 @@ class Image(object):
         return self._url#'tmp://' + clf2.download(self._url, cw=self.cw)
 
 
-class Page(object):
+class Page:
     def __init__(self, title, url, soup=None):
         self.title = clean_title(title)
         self.url = url
@@ -37,6 +37,7 @@ class Downloader_mrm(Downloader):
     _soup = None
     MAX_CORE = 4
     display_name = 'MyReadingManga'
+    ACCEPT_COOKIES = [r'(.*\.)?myreadingmanga\.info']
 
     def init(self):
         self.session = get_session(self.url, self.cw)

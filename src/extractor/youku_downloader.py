@@ -1,4 +1,3 @@
-from __future__ import division, print_function, unicode_literals
 import downloader
 import ytdl
 from m3u8_tools import M3u8_stream
@@ -22,7 +21,7 @@ class Downloader_youku(Downloader):
         self.title = video.title
 
 
-class Video(object):
+class Video:
     _url = None
 
     def __init__(self, url, cw=None):

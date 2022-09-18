@@ -9,7 +9,7 @@ from translator import tr_
 
 
 
-class Page(object):
+class Page:
     def __init__(self, url, title, date, p):
         self.url = url
         self.title = clean_title(u'[{:04}] {}'.format(p, title), n=-4)

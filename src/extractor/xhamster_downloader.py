@@ -11,12 +11,8 @@ from io import BytesIO
 
 class Downloader_xhamster(Downloader):
     type = 'xhamster'
-    __name = r'(xhamster|xhwebsite|xhofficial|xhlocal|xhopen|xhtotal|megaxh|xhwide)[0-9]*' #3881, #4332, #4826
-    URLS = [
-     r'regex:{}\.[a-z0-9]+/videos/'.format(__name),
-     r'regex:{}\.[a-z0-9]+/users/'.format(__name),
-     r'regex:{}\.[a-z0-9]+/photos/gallery/'.format(__name),
-     ]
+    __name = r'([^/]*\.)?(xhamster|xhwebsite|xhofficial|xhlocal|xhopen|xhtotal|megaxh|xhwide)[0-9]*' #3881, #4332, #4826, #5029
+    URLS = [r'regex:{}\.[a-z0-9]+/(videos|users|photos/gallery)/'.format(__name)]
     single = True
     display_name = 'xHamster'
 
@@ -28,11 +24,13 @@ class Downloader_xhamster(Downloader):
 
     @classmethod
     def fix_url(cls, url):
-        return re.sub(cls.__name, r'\1', url, 1)
+        url = re.sub(cls.__name, r'\2', url, 1)
+        url = re.sub(r'(/users/[^/]+/videos)/[0-9]+', r'\1', url, 1) #5029
+        return url
 
     @classmethod
     def key_id(cls, url):
-        return re.sub(cls.__name+r'\.[^/]+', 'domain', url, 1)
+        return re.sub(cls.__name+r'\.[^/]+', 'domain', url, 1).replace('http://', 'https://')
 
     def read(self):
         cw = self.cw
@@ -63,7 +61,7 @@ class Downloader_xhamster(Downloader):
         self.setIcon(thumb)
 
 
-class Video(object):
+class Video:
     _url = None
 
     def __init__(self, url):
@@ -182,7 +180,7 @@ def read_channel(url, cw=None):
     return info
 
 
-class Image(object):
+class Image:
     def __init__(self, url, id, referer):
         self.id = id
         self._url = url

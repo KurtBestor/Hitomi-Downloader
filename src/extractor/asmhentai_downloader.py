@@ -25,13 +25,15 @@ class Downloader_asmhentai(Downloader):
     MAX_CORE = 8
     display_name = 'AsmHentai'
 
+    def init(self):
+        self.session = Session()
+
     @classmethod
     def fix_url(cls, url):
         id_ = get_id(url)
         return 'https://asmhentai.com/g/{}/'.format(id_)
 
     def read(self):
-        self.session = Session()
         info = get_info(self.url, self.session, self.cw)
 
         # 1225
@@ -115,7 +117,7 @@ def get_info(url, session, cw):
         't_pages': str(t_pages),
         'type': '1',
         }
-        r = session.post('https://asmhentai.com/load_thumbs', data=data)
+        r = session.post('https://asmhentai.com/inc/thumbs_loader.php', data=data)
         soup_more = Soup(r.text)
         read_imgs(soup_more)
 

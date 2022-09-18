@@ -2,7 +2,6 @@
 '''
 Pornhub Downloader
 '''
-from __future__ import division, print_function, unicode_literals
 from io import BytesIO
 import os
 import downloader
@@ -17,10 +16,11 @@ import errors
 import json
 import functools
 import operator
+from error_printer import print_error
 
 
 
-class File(object):
+class File:
     '''
     File
     '''
@@ -47,7 +47,7 @@ class File(object):
         print('filename:', self.filename)
 
 
-class Video(object):
+class Video:
     '''
     Video
     '''
@@ -86,7 +86,8 @@ class Video(object):
                 print_('Locked player')
                 raise Exception('Locked player')
             url = url_test
-        except: #3511
+        except Exception as e: #3511
+            print_(print_error(e)[0])
             url = url.replace('pornhub.com', 'pornhubpremium.com')
             html = downloader.read_html(url, session=session)
 
@@ -324,6 +325,7 @@ class Downloader_pornhub(Downloader):
     single = True
     strip_header = False
     URLS = ['pornhub.com', 'pornhubpremium.com', 'pornhubthbh7ap3u.onion']
+    ACCEPT_COOKIES = [r'.*(pornhub|phncdn).*']
 
     @classmethod
     def fix_url(cls, url):
@@ -355,7 +357,7 @@ class Downloader_pornhub(Downloader):
     @try_n(2)
     def read(self):
         cw = self.cw
-        
+
         session = self.session = Session() # 1791
         if 'pornhubpremium.com' in self.url.lower() and\
            not is_login(session, cw):
@@ -421,7 +423,7 @@ def fix_soup(soup, url, session=None, cw=None):
 
 
 
-class Photo(object):
+class Photo:
     '''
     Photo
     '''

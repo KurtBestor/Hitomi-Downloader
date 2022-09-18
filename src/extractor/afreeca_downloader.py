@@ -9,7 +9,7 @@ from m3u8_tools import playlist2stream, M3u8_stream
 import errors
 
 
-class Video(object):
+class Video:
 
     def __init__(self, stream, referer, id, title, url_thumb):
         self.url = LazyUrl(referer, lambda x: stream, self)

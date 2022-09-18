@@ -11,7 +11,7 @@ import clf2
 downloader.REPLACE_UA[r'\.luscious\.net'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36'
 
 
-class Image(object):
+class Image:
     def __init__(self, item, referer):
         self.item = item
         self.id = str(item['id'])
@@ -25,7 +25,7 @@ class Image(object):
         return img
 
 
-class Video(object):
+class Video:
     def __init__(self, url, title, url_thumb):
         self.url = url
         self.title = title

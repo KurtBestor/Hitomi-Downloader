@@ -45,7 +45,7 @@ class Downloader_tokyomotion(Downloader):
         self.title = self.name
 
 
-class Video(object):
+class Video:
     def __init__(self, url, url_thumb, referer, filename):
         self.url = LazyUrl(referer, lambda x: url, self)
         self.url_thumb = url_thumb
@@ -76,7 +76,7 @@ def get_video(url, soup=None):
     return video
 
 
-class Image(object):
+class Image:
     def __init__(self, url, referer):
         self.url = LazyUrl(referer, lambda x: url, self)
         self.filename = os.path.basename(url.split('?')[0])

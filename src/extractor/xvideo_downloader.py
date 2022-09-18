@@ -18,7 +18,7 @@ def get_id(url):
     return re.find(r'xvideos[0-9]*\.[^/]+/video([0-9]+)', url, err='no id')
 
 
-class Video(object):
+class Video:
     _url = None
 
     def __init__(self, url_page):

@@ -1,5 +1,4 @@
 #coding:utf8
-from __future__ import division, print_function, unicode_literals
 import downloader, json, os
 from error_printer import print_error
 from translator import tr_
@@ -8,7 +7,7 @@ from utils import Downloader, Soup, get_print, lazy, Session, try_n, LazyUrl, cl
 import clf2
 
 
-class Image(object):
+class Image:
 
     def __init__(self, post_url, date, url, page):
         self.post_url = post_url
@@ -27,6 +26,7 @@ class Downloader_artstation(Downloader):
     type = 'artstation'
     URLS = ['artstation.com']
     display_name = 'ArtStation'
+    ACCEPT_COOKIES = [r'(.*\.)?artstation\.(com|co)']
 
     def init(self):
         self.url_main = 'https://www.artstation.com/{}'.format(self.id.replace('artstation_', '', 1).replace('／', '/'))

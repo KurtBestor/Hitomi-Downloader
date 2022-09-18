@@ -22,7 +22,7 @@ def b58decode(s):
 
 
 
-class Image(object):
+class Image:
     def __init__(self, photo):
         self.photo = photo
         self.id = photo.id

@@ -16,7 +16,7 @@ def get_id(url):
         return re.find('/watch/([a-zA-Z0-9]+)', url)
 
 
-class Video(object):
+class Video:
     def __init__(self, session, info, format, cw):
         self.session = session
         self.info = info

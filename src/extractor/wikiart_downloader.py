@@ -8,7 +8,7 @@ from translator import tr_
 
 
 
-class Image(object):
+class Image:
     def __init__(self, url, referer, title, id):
         self.url = LazyUrl(referer, lambda _: url, self)
         ext = os.path.splitext(url.split('?')[0])[1]

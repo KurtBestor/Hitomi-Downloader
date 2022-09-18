@@ -11,6 +11,7 @@ import json
 class Downloader_pawoo(Downloader):
     type = 'pawoo'
     URLS = ['pawoo.net']
+    ACCEPT_COOKIES = [r'(.*\.)?pawoo\.net']
 
     def init(self):
         self.url = 'https://pawoo.net/{}'.format(self.id_)

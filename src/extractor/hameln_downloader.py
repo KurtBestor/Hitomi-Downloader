@@ -1,5 +1,4 @@
 #coding: utf8
-from __future__ import division, print_function, unicode_literals
 import downloader
 import os
 import utils
@@ -16,6 +15,7 @@ class Downloader_hameln(Downloader):
     URLS = ['syosetu.org']
     MAX_CORE = 2
     detect_removed = False
+    ACCEPT_COOKIES = [r'(.*\.)?syosetu\.org']
 
     def init(self):
         id_ = re.find('/novel/([^/]+)', self.url)
@@ -58,7 +58,7 @@ class Downloader_hameln(Downloader):
             self.cw.pbar.setFormat('[%v/%m]')
 
 
-class Text(object):
+class Text:
     def __init__(self, page, p):
         self.page = page
         self.url = LazyUrl(page.url, self.get, self)
@@ -72,7 +72,7 @@ class Text(object):
         return f
 
 
-class Page(object):
+class Page:
     def __init__(self, title, url):
         self.title = clean_title(title)
         self.url = url
@@ -148,5 +148,5 @@ def get_info(url, soup=None):
     info['artist'] = soup.find('span', {'itemprop':'author'}).text.strip()
     info['title'] = soup.find('span', {'itemprop':'name'}).text.strip()
     sss = get_sss(soup)
-    info['novel_ex'] = get_text(sss[-2], '')
+    info['novel_ex'] = get_text(sss[-2])
     return info

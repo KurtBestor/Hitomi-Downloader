@@ -56,7 +56,7 @@ def get_video(url, cw=None):
     return video
 
 
-class Video(object):
+class Video:
     def __init__(self, f, info, cw=None):
         self.title = title = info['title']
         self.id = info['id']

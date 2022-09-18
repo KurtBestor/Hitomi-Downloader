@@ -1,4 +1,3 @@
-from __future__ import division, print_function, unicode_literals
 import downloader
 import ree as re
 from io import BytesIO
@@ -32,7 +31,7 @@ class Downloader_youporn(Downloader):
         self.title = video.title
 
 
-class Video(object):
+class Video:
     @try_n(4)
     def __init__(self, url, cw=None):
         ydl = ytdl.YoutubeDL(cw=cw)

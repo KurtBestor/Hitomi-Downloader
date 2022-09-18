@@ -1,5 +1,4 @@
 #coding:utf8
-from __future__ import print_function
 import downloader
 from utils import Soup, cut_pair, LazyUrl, Downloader, get_print, get_max_range, try_n, clean_title, check_alive
 import json
@@ -68,7 +67,7 @@ def get_imgs(url, html=None, cw=None):
     return imgs
 
 
-class Image_single(object):
+class Image_single:
     def __init__(self, url ,referer, p):
         self._url = url
         self.p = p
@@ -80,7 +79,7 @@ class Image_single(object):
         return self._url
 
 
-class Image(object):
+class Image:
     def __init__(self, url, referer, id, p):
         self.id = id
         self.p = p

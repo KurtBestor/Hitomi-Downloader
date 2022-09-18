@@ -28,7 +28,7 @@ class Downloader_vimeo(Downloader):
         self.title = video.title
 
 
-class Video(object):
+class Video:
     _url = None
 
     def __init__(self, url, cw=None):

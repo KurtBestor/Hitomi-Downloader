@@ -26,7 +26,7 @@ class Downloader_wayback_machine(Downloader):
         self.title = filter_.title
 
 
-class WaybackMachineAPI(object):
+class WaybackMachineAPI:
     def __init__(self, session, cw=None):
         self.session = session
         self.cw = cw
@@ -49,7 +49,7 @@ class WaybackMachineAPI(object):
         return data[1:]
 
 
-class Filter(object):
+class Filter:
     domains = [
         'twitter.com'
     ]
@@ -81,7 +81,7 @@ class Filter(object):
         ][self.mode]()
 
 
-class Bitmap(object):
+class Bitmap:
     bitmask = [0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80]
 
     def __init__(self, size=0, cw=None):

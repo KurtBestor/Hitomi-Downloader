@@ -38,7 +38,7 @@ class Downloader_fc2(Downloader):
         self.title = info['title']
 
 
-class Video(object):
+class Video:
 
     def __init__(self, url, url_thumb, referer, title, id_, session):
         self._url = url
