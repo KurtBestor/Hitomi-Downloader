@@ -13,10 +13,8 @@ import clf2
 import utils
 from m3u8_tools import playlist2stream, M3u8_stream
 import errors
-import json
-import functools
-import operator
 from error_printer import print_error
+import ytdl
 
 
 
@@ -24,10 +22,11 @@ class File:
     '''
     File
     '''
+    _thumb = None
 
     def __init__(self, id_, title, url, url_thumb, artist=''):
         self.id_ = id_
-        self.title = clean_title('{}'.format(title))
+        self.title = clean_title(f'{title}')
         self.url = url
 
         ext = get_ext(self.url)
@@ -38,13 +37,20 @@ class File:
                 self.url = M3u8_stream(self.url, n_thread=4)
 
         self.url_thumb = url_thumb
-        self.thumb = BytesIO()
-        downloader.download(self.url_thumb, buffer=self.thumb)
 
         if ext.lower() == '.m3u8':
             ext = '.mp4'
         self.filename = format_filename(self.title, self.id_, ext, artist=artist)
-        print('filename:', self.filename)
+
+    def thumb(self):
+        if self._thumb is None:
+            f = BytesIO()
+            downloader.download(self.url_thumb, buffer=f)
+            self._thumb = f
+        else:
+            f = self._thumb
+        f.seek(0)
+        return f
 
 
 class Video:
@@ -73,9 +79,11 @@ class Video:
             return self._url
 
         id_ = re.find(r'viewkey=(\w+)', url, re.IGNORECASE) or \
-              re.find(r'/embed/(\w+)', url, re.IGNORECASE, err='no id')
+              re.find(r'/embed/(\w+)', url, re.IGNORECASE)
         print_('id: {}'.format(id_))
         if 'viewkey=' not in url.lower() and '/gif/' not in url.lower():
+            if id_ is None:
+                raise Exception('no id')
             url = urljoin(url, '/view_video.php?viewkey={}'.format(id_))
 
         url_test = url.replace('pornhubpremium.com', 'pornhub.com')
@@ -87,7 +95,7 @@ class Video:
                 raise Exception('Locked player')
             url = url_test
         except Exception as e: #3511
-            print_(print_error(e)[0])
+            print_(print_error(e))
             url = url.replace('pornhub.com', 'pornhubpremium.com')
             html = downloader.read_html(url, session=session)
 
@@ -123,174 +131,42 @@ class Video:
             print_('Video')
 
             # 1968
-            #title = j['video_title']
-            title = soup.find('h1', class_='title').text.strip()
-
-            video_urls = []
-            video_urls_set = set()
-
-            def int_or_none(s):
-                try:
-                    return int(s)
-                except:
-                    return None
-
-            def url_or_none(url):
-                if not url or not isinstance(url, str):
-                    return None
-                url = url.strip()
-                return url if re.match(r'^(?:(?:https?|rt(?:m(?:pt?[es]?|fp)|sp[su]?)|mms|ftps?):)?//', url) else None
-
-            flashvars  = json.loads(re.find(r'var\s+flashvars_\d+\s*=\s*({.+?});', html, err='no flashvars'))
-            url_thumb = flashvars.get('image_url')
-            media_definitions = flashvars.get('mediaDefinitions')
-            if isinstance(media_definitions, list):
-                for definition in media_definitions:
-                    if not isinstance(definition, dict):
-                        continue
-                    video_url = definition.get('videoUrl')
-                    if not video_url or not isinstance(video_url, str):
-                        continue
-                    if video_url in video_urls_set:
-                        continue
-                    video_urls_set.add(video_url)
-                    video_urls.append(
-                        (video_url, int_or_none(definition.get('quality'))))
-
-            def extract_js_vars(webpage, pattern, default=object()):
-                assignments = re.find(pattern, webpage, default=default)
-                if not assignments:
-                    return {}
-
-                assignments = assignments.split(';')
-
-                js_vars = {}
-
-                def remove_quotes(s):
-                    if s is None or len(s) < 2:
-                        return s
-                    for quote in ('"', "'", ):
-                        if s[0] == quote and s[-1] == quote:
-                            return s[1:-1]
-                    return s
-
-                def parse_js_value(inp):
-                    inp = re.sub(r'/\*(?:(?!\*/).)*?\*/', '', inp)
-                    if '+' in inp:
-                        inps = inp.split('+')
-                        return functools.reduce(
-                            operator.concat, map(parse_js_value, inps))
-                    inp = inp.strip()
-                    if inp in js_vars:
-                        return js_vars[inp]
-                    return remove_quotes(inp)
-
-                for assn in assignments:
-                    assn = assn.strip()
-                    if not assn:
-                        continue
-                    assn = re.sub(r'var\s+', '', assn)
-                    vname, value = assn.split('=', 1)
-                    js_vars[vname] = parse_js_value(value)
-                return js_vars
-
-            def add_video_url(video_url):
-                v_url = url_or_none(video_url)
-                if not v_url:
-                    return
-                if v_url in video_urls_set:
-                    return
-                video_urls.append((v_url, None))
-                video_urls_set.add(v_url)
-
-            def parse_quality_items(quality_items):
-                q_items = json.loads(quality_items)
-                if not isinstance(q_items, list):
-                    return
-                for item in q_items:
-                    if isinstance(item, dict):
-                        add_video_url(item.get('url'))
-
-            if not video_urls:
-                print_('# extract video_urls 2')
-                FORMAT_PREFIXES = ('media', 'quality', 'qualityItems')
-                js_vars = extract_js_vars(
-                    html, r'(var\s+(?:%s)_.+)' % '|'.join(FORMAT_PREFIXES),
-                    default=None)
-                if js_vars:
-                    for key, format_url in js_vars.items():
-                        if key.startswith(FORMAT_PREFIXES[-1]):
-                            parse_quality_items(format_url)
-                        elif any(key.startswith(p) for p in FORMAT_PREFIXES[:2]):
-                            add_video_url(format_url)
-                if not video_urls and re.search(
-                        r'<[^>]+\bid=["\']lockedPlayer', html):
-                    raise Exception('Video is locked')
-
-##            if not video_urls:
-##                print_('# extract video_urls 3')
-##                js_vars = extract_js_vars(
-##                    dl_webpage('tv'), r'(var.+?mediastring.+?)</script>')
-##                add_video_url(js_vars['mediastring'])
-
-            for mobj in re.finditer(
-                    r'<a[^>]+\bclass=["\']downloadBtn\b[^>]+\bhref=(["\'])(?P<url>(?:(?!\1).)+)\1',
-                    html):
-                video_url = mobj.group('url')
-                if video_url not in video_urls_set:
-                    video_urls.append((video_url, None))
-                    video_urls_set.add(video_url)
-
-            video_urls_ = video_urls
-            video_urls = []
-            for video_url, height in video_urls_:
-                if '/video/get_media' in video_url:
-                    print_(video_url)
-                    medias = downloader.read_json(video_url, url, session=session)
-                    if isinstance(medias, list):
-                        for media in medias:
-                            if not isinstance(media, dict):
-                                continue
-                            video_url = url_or_none(media.get('videoUrl'))
-                            if not video_url:
-                                continue
-                            height = int_or_none(media.get('quality'))
-                            video_urls.append((video_url, height))
-                else:
-                    video_urls.append((video_url, height))
-
-
-            videos = []
-            for video_url, height in video_urls:
-                video = {}
-                video['height'] = height or int_or_none(re.find(r'(?P<height>\d+)[pP]?_\d+[kK]', video_url))
-                video['quality'] = video['height'] or 0
-                video['videoUrl'] = video_url
-                ext = get_ext(video_url)
-                video['ext'] = ext
-                if ext.lower() == '.m3u8':
-                    video['quality'] -= 1
-                print_('[{}p] {} {}'.format(video['height'], video['ext'], video['videoUrl']))
-                videos.append(video)
-
-            if not videos:
-                raise Exception('No videos')
-
-            videos = sorted(videos, key=lambda video: video['quality'])
-
-            res = get_resolution()
-
-            videos_good = [video for video in videos if video['quality'] <= res]
-            if videos_good:
-                video = videos_good[-1]
-            else:
-                video = videos[0]
-            print_('\n[{}p] {} {}'.format(video['height'], video['ext'], video['videoUrl']))
+            title = soup.find('h1', class_='title')
+            for item in title.findAll(class_='phpFree'):
+                item.decompose()
+            title = title.text.strip()
 
             #4940
             artist = soup.find('div', class_='userInfo').find('div', class_='usernameWrap').text.strip()
 
-            file = File(id_, title, video['videoUrl'].strip(), url_thumb, artist)
+            ydl = ytdl.YoutubeDL(cw=cw)
+            info = ydl.extract_info(url)
+            session.headers.update(info['http_headers'])
+
+            fs = []
+            for f in info['formats']:
+                f['quality'] = f.get('height') or 0
+                ext = get_ext(f['url'])
+                if f['protocol'].startswith('m3u8'):
+                    f['quality'] -= 1
+                print_('[{}p] {} {}'.format(f['height'], f['protocol'], f['url']))
+                fs.append(f)
+
+            if not fs:
+                raise Exception('No formats')
+
+            fs = sorted(fs, key=lambda f: f['quality'])
+
+            res = get_resolution()
+
+            fs_good = [f for f in fs if f['quality'] <= res]
+            if fs_good:
+                f = fs_good[-1]
+            else:
+                f = fs[0]
+            print_('\n[{}p] {} {}'.format(f['height'], f['protocol'], f['url']))
+
+            file = File(id_, title, f['url'], info['thumbnail'], artist)
 
         self._url = file.url
         self.title = file.title
@@ -359,6 +235,7 @@ class Downloader_pornhub(Downloader):
         cw = self.cw
 
         session = self.session = Session() # 1791
+        self.purge_cookies()
         if 'pornhubpremium.com' in self.url.lower() and\
            not is_login(session, cw):
             raise errors.LoginRequired()
@@ -387,7 +264,7 @@ class Downloader_pornhub(Downloader):
              '/embed/' not in self.url.lower() and\
              '/gif/' not in self.url.lower():
             self.print_('videos')
-            info = get_videos(self.url, cw)
+            info = get_videos(self.url, session, cw)
             hrefs = info['hrefs']
             self.print_('videos: {}'.format(len(hrefs)))
 
@@ -396,13 +273,13 @@ class Downloader_pornhub(Downloader):
 
             videos = [Video(href, cw, session) for href in hrefs]
             video = self.process_playlist(info['title'], videos)
-            self.setIcon(video.thumb)
+            self.setIcon(video.thumb())
             self.enableSegment()
         else:
             video = Video(self.url, cw, session)
             video.url()
             self.urls.append(video.url)
-            self.setIcon(video.thumb)
+            self.setIcon(video.thumb())
             self.title = video.title
             self.enableSegment()
 
@@ -418,6 +295,7 @@ def fix_soup(soup, url, session=None, cw=None):
     print_('invalid soup: {}'.format(url))
 
     res = clf2.solve(url, session=session, cw=cw)
+    session.purge(Downloader_pornhub.ACCEPT_COOKIES)
 
     return Soup(res['html'])
 
@@ -431,8 +309,8 @@ class Photo:
     def __init__(self, id_, url, referer):
         self.id_ = id_
         self.url = LazyUrl(referer, lambda x: url, self)
-        ext = os.path.splitext(url.split('?')[0])[1]
-        self.filename = '{}{}'.format(id_, ext)
+        ext = get_ext(url)
+        self.filename = f'{id_}{ext}'
 
 
 @try_n(8)
@@ -491,7 +369,7 @@ def read_photo(url, session=None):
 
 
 @try_n(4)
-def get_videos(url, cw=None):
+def get_videos(url, session, cw=None):
     '''
     get_videos
     '''
@@ -516,8 +394,6 @@ def get_videos(url, cw=None):
         raise Exception('Not supported url')
     username = username.split('?')[0].split('#')[0]
 
-    session = Session()
-
     domain = utils.domain(url)
 
     if mode in ['pornstar']:
@@ -534,8 +410,7 @@ def get_videos(url, cw=None):
         print_('free: {}'.format(free))
 
     # Range
-    max_pid = get_max_range(cw, 500)
-    max_pid = min(max_pid, 2000)#
+    max_pid = get_max_range(cw)
 
     html = downloader.read_html(url, session=session)
     soup = fix_soup(Soup(html), url, session, cw)
@@ -546,7 +421,7 @@ def get_videos(url, cw=None):
     h1 = soup.find('h1')
     if h1:
         header = 'Playlist'
-        title = h1.find(id='watchPlaylist')
+        title = h1.parent.find(id='watchPlaylist')
     else:
         title = None
     if not title:
@@ -658,6 +533,7 @@ def get_videos(url, cw=None):
 
     if cw:
         hrefs = filter_range(hrefs, cw.range)
+        cw.fped = True
 
     info['hrefs'] = hrefs
 

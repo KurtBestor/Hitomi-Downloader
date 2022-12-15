@@ -18,6 +18,7 @@ from error_printer import print_error
 from constants import clean_url
 from ratelimit import limits, sleep_and_retry
 from urllib.parse import quote
+import errors
 
 
 
@@ -183,7 +184,7 @@ class Image:
                 url = urljoin(url, highres['href'] if highres else soup.find(id='image')['src'])
                 break
             except Exception as e:
-                e_msg = print_error(e)[0]
+                e_msg = print_error(e)
                 if '429 Too many requests'.lower() in html.lower():
                     t_sleep = 120 * min(try_ + 1, 2)
                     e = '429 Too many requests... wait {} secs'.format(t_sleep)
@@ -224,8 +225,6 @@ def wait(cw):
 
 
 def get_imgs(url, title=None, cw=None, d=None, types=['img', 'gif', 'video'], session=None):
-    if False:#
-        raise NotImplementedError('Not Implemented')
     print_ = get_print(cw)
     print_('types: {}'.format(', '.join(types)))
     if 'chan.sankakucomplex' in url:
@@ -274,7 +273,7 @@ def get_imgs(url, title=None, cw=None, d=None, types=['img', 'gif', 'video'], se
         try:
             html = downloader.read_html(url, referer=url_old, session=session)
         except Exception as e: #3366
-            print_(print_error(e)[0])
+            print_(print_error(e))
             break
         if '429 Too many requests'.lower() in html.lower():
             print_('429 Too many requests... wait 120 secs')
@@ -283,6 +282,9 @@ def get_imgs(url, title=None, cw=None, d=None, types=['img', 'gif', 'video'], se
         page += 1
         url_old = url
         soup = Soup(html)
+        err = soup.find('div', class_='post-premium-browsing_error')
+        if err and not imgs:
+            raise errors.LoginRequired(err.text.strip())
         articles = soup.findAll('span', {'class': 'thumb'})
 
         if not articles:
@@ -331,7 +333,7 @@ def get_imgs(url, title=None, cw=None, d=None, types=['img', 'gif', 'video'], se
 ##            if p > 100:
 ##                break
         except Exception as e:
-            print_(print_error(e)[-1])
+            print_(print_error(e))
             #url = setPage(url, page)
             break
 

@@ -132,18 +132,15 @@ class PinterestAPI:
     def _call(self, resource, options):
         url = ('{}/resource/{}Resource/get/').format(BASE_URL, resource)
         params = {'data': json.dumps({'options': options}), 'source_url': ''}
-        print('_call: {}, {}'.format(url, params))
+        #print('_call: {}, {}'.format(url, params))
         r = self.session.get(url, params=params)
-        print(r)
-        global R
-        R = r
         s = r.text
         status_code = r.status_code
         try:
             data = json.loads(s)
         except ValueError:
             data = {}
-        
+
         if status_code < 400 and not r.history:
             return data
 

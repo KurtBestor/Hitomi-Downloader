@@ -8,10 +8,11 @@ import filesize as fs
 from datetime import datetime
 import errors
 import ips
+import order
+from cacher import Cache
 torrent = None
 TIMEOUT = 600
 CACHE_INFO = True
-TOO_MANY = 1000
 
 
 def isInfoHash(s):
@@ -22,7 +23,7 @@ def isInfoHash(s):
         return True
     except:
         return False
-    
+
 
 
 class Downloader_torrent(Downloader):
@@ -92,7 +93,7 @@ class Downloader_torrent(Downloader):
     @classmethod
     def key_id(cls, url):
         if torrent is None:
-            print('torrent is None')
+            #print('torrent is None')
             return url
         id_, e = torrent.key_id(url)
         if e:
@@ -132,23 +133,23 @@ class Downloader_torrent(Downloader):
             except Exception as e:
                 self.update_pause()
                 if not cw.paused:
-                    raise errors.Invalid('Faild to read metadata: {}'.format(self.url), fail=True)
+                    raise errors.Invalid(f'Faild to read metadata: {self.url}', fail=True)
         if self._info is None:
             cw.paused = True
         if cw.paused:
             return
         hash_ = self._info.hash.hex()
-        self.print_('v2: {}'.format(self._info.v2))
-        self.print_('Hash: {}'.format(hash_))
+        self.print_(f'v2: {self._info.v2}')
+        self.print_(f'Hash: {hash_}')
         if not self._info.v2:
-            self.url = 'magnet:?xt=urn:btih:{}'.format(hash_)#
+            self.url = f'magnet:?xt=urn:btih:{hash_}'#
         date = datetime.fromtimestamp(self._info.creation_date())
         date = date.strftime('%y-%m-%d %H:%M:%S')
-        self.print_('Created on: {}'.format(date))
-        self.print_('Total size: {}'.format(fs.size(self._info.total_size())))
-        self.print_('Pieces: {} x {}'.format(self._info.num_pieces(), fs.size(self._info.piece_length())))
-        self.print_('Creator: {}'.format(self._info.creator()))
-        self.print_('Comment: {}'.format(self._info.comment()))
+        self.print_(f'Created on: {date}')
+        self.print_(f'Total size: {fs.size(self._info.total_size())}')
+        self.print_(f'Pieces: {self._info.num_pieces()} x {fs.size(self._info.piece_length())}')
+        self.print_(f'Creator: {self._info.creator()}')
+        self.print_(f'Comment: {self._info.comment()}')
         cw.setTotalFileSize(self._info.total_size())
 
         cw.imgs.clear()
@@ -169,9 +170,15 @@ class Downloader_torrent(Downloader):
         if not files:
             raise Exception('No files')
         cw.single = self.single = len(files) <= 1
-        for file in files:
+        index = [0]*len(files)
+        filesize = []
+        for i, file in enumerate(files):
             filename = os.path.join(self.dir, file.path)
             cw.imgs.append(filename)
+            index[file.index] = i
+            filesize.append(file.size)
+        self._torrent_index = index
+        self._torrent_filesize = filesize
 
     def update_pause(self):
         cw = self.cw
@@ -193,6 +200,7 @@ class Downloader_torrent(Downloader):
         cw.setColor('reading')
         cw.downloader_pausable = True
         self._seeding = False
+        pr = cw.get_extra('pr')
         if cw.paused:
             data = cw.pause_data
             cw.paused = False
@@ -213,8 +221,47 @@ class Downloader_torrent(Downloader):
                 self.size_upload = Size()
                 cw.pbar.setMaximum(self._info.total_size())
                 cw.setColor('reading')
-                torrent.download(self._info, save_path=self.dir, callback=self.callback, cw=cw)
-                self.update_progress(self._h, False)
+                if pr is None and utils.ui_setting.torrentSelectFiles.isChecked():
+                    from Qt import QApplication, QStyle, QIcon
+                    cache_icon = Cache(1024)
+                    files = torrent.get_files(self._info)
+                    icon_size = QApplication.style().pixelMetric(QStyle.PM_ListViewIconSize)
+                    def _getIcon(name):
+                        ext = os.path.splitext(name)[1]
+                        key_icon = icon_size, ext.lower()
+                        icon = cache_icon.get(key_icon)
+                        if icon is None:
+                            pixmap = utils.image_reader.getFilePixmap(name, size=icon_size, pad=0)
+                            icon = QIcon()
+                            icon.addPixmap(pixmap)
+                            cache_icon.set(key_icon, icon)
+                        return icon
+                    done = False
+                    res = None
+                    def f():
+                        nonlocal done, res
+                        try:
+                            while True:
+                                res = order.getOrder([[True, file.path] for file in files], utils.ui.listWidget, self.title, tr_('파일을 고르세요:'), True, size=(600, 600), icon=_getIcon, move=False)
+                                if res is None or any(item[0] for item in res):
+                                    break
+                                messageBox('No files selected', self.title, icon=QMessageBox.Warning, parent=utils.ui.listWidget)
+                        finally:
+                            done = True
+                    utils.exec_queue.run(f)
+                    while True:
+                        sleep(1, cw)
+                        if done:
+                            break
+                    if res:
+                        pr = [None] * len(files)
+                        for file, item in zip(files, res):
+                            pr[file.index] = int(item[0])
+                        cw.set_extra('pr', pr)
+                    else:
+                        raise errors.Invalid(f'Canceled: {self.url}')
+                torrent.download(self._info, save_path=self.dir, callback=self.callback, cw=cw, pr=pr)
+                self.update_progress(self._h)
                 cw.setSpeed(0.0)
                 cw.setUploadSpeed(0.0)
             if not cw.alive:
@@ -227,8 +274,8 @@ class Downloader_torrent(Downloader):
                 cw.pbar.setMaximum(len(cw.imgs))
         finally:
             cw.clearPieces()
-            try:
-                cw.set_extra('torrent_progress', torrent.get_file_progress(self._h, self._info, True))
+            try: # for Item.showFiles
+                cw.set_extra('torrent_progress', torrent.get_file_progress(self._h, self._info, False))
             except Exception as e:
                 cw.remove_extra('torrent_progress')
                 self.print_error(e)
@@ -242,7 +289,7 @@ class Downloader_torrent(Downloader):
                 break
             sleep(.5)
 
-    def update_progress(self, h, fast):
+    def update_progress(self, h):
         if self._info is None:
             return
         cw = self.cw
@@ -250,23 +297,6 @@ class Downloader_torrent(Downloader):
         if not cw.imgs: #???
             self.print_('???')
             self.update_files()
-
-        sizes = torrent.get_file_progress(h, self._info, fast)
-        for i, (file, size) in enumerate(zip(cw.names, sizes)):
-            if i > 0 and fast:
-                break#
-            file = os.path.realpath(file)
-            if file in cw.dones:
-                continue
-            if size[0] == size[1]:
-                cw.dones.add(file)
-                file = constants.compact(file).replace('\\', '/')
-                files = file.split('/')
-                file = ' / '.join(files[1:])
-                msg = 'Completed: {} | {}'.format(file, fs.size(size[1]))
-                self.print_(msg)
-                if i == 0 and size[0]:
-                    self._updateIcon()
 
         cw.setPieces(torrent.pieces(h, self._info))
 
@@ -290,75 +320,96 @@ class Downloader_torrent(Downloader):
 
         if self._state != s.state_str:
             self._state = s.state_str
-            self.print_('state: {}'.format(s.state_str))
+            self.print_(f'state: {s.state_str}')
 
-##        for alert in alerts:
-##            self.print_('⚠️ {}'.format(alert))
 
         title = (self._dn or self.url) if self._info is None else self.name
 
-        if cw.alive and cw.valid and not cw.pause_lock:
-            seeding = False
-            cw._torrent_s = s
-            fast = len(cw.imgs) > TOO_MANY
-            self.update_progress(h, fast)
+        try:
+            if cw.alive and cw.valid and not cw.pause_lock:
+                seeding = False
+                cw._torrent_s = s
+                self.update_progress(h)
 
-            filesize = s.total_done
-            upload = s.total_upload
-            color = 'downloading'
-            if s.state_str in ('downloading', 'seeding'):
-                # init filesize
-                if not self._filesize_init:
+                filesize = s.total_done
+                upload = s.total_upload
+                color = 'downloading'
+                if s.state_str in ('downloading', 'seeding'):
+                    # init filesize
+                    if not self._filesize_init:
+                        self._filesize_prev = filesize
+                        self._filesize_init = True
+                        self.print_(f'init filesize: {fs.size(filesize)}')
+
+                    # download
+                    d_size = filesize - self._filesize_prev
                     self._filesize_prev = filesize
-                    self._filesize_init = True
-                    self.print_('init filesize: {}'.format(fs.size(filesize)))
-
-                # download
-                d_size = filesize - self._filesize_prev
-                self._filesize_prev = filesize
-                self.size += d_size
-                downloader.total_download_size_torrent += d_size
-                # upload
-                d_size = upload - self._upload_prev
-                self._upload_prev = upload
-                self.size_upload += d_size
-                downloader.total_upload_size_torrent += d_size
-            if self._info is not None:
-                cw.pbar.setValue(s.progress * self._info.total_size())
-            if s.state_str == 'queued':
-                color = 'reading'
-                title_ = 'Waiting... {}'.format(title)
-            elif s.state_str == 'checking files':
-                color = 'reading'
-                title_ = 'Checking files... {}'.format(title)
-                self._filesize_prev = filesize
-            elif s.state_str == 'downloading':
-                title_ = '{}'.format(title)
-                cw.setFileSize(filesize)
-                cw.setSpeed(self.size.speed)
-                cw.setUploadSpeed(self.size_upload.speed)
-            elif s.state_str == 'seeding':
-                cw.setFileSize(filesize)
-                if not cw.seeding:
+                    self.size += d_size
+                    downloader.total_download_size_torrent += d_size
+                    # upload
+                    d_size = upload - self._upload_prev
+                    self._upload_prev = upload
+                    self.size_upload += d_size
+                    downloader.total_upload_size_torrent += d_size
+                if self._info is not None:
+                    cw.pbar.setValue(s.progress * self._info.total_size())
+                if s.state_str == 'queued':
+                    color = 'reading'
+                    title_ = f'{tr_("대기 중...")} {title}'
+                elif s.state_str == 'checking files':
+                    color = 'reading'
+                    title_ = f'{tr_("파일 체크 중...")} {title}'
+                    self._filesize_prev = filesize
+                elif s.state_str == 'downloading':
+                    title_ = f'{title}'
+                    cw.setFileSize(filesize)
+                    cw.setSpeed(self.size.speed)
+                    cw.setUploadSpeed(self.size_upload.speed)
+                elif s.state_str == 'seeding':
+                    cw.setFileSize(filesize)
+                    if not cw.seeding:
+                        return 'abort'
+                    seeding = True
+                    title_ = f'{tr_("시딩...")} {title}'
+                    cw.setSpeed(self.size_upload.speed)
+                elif s.state_str == 'reading':
+                    color = 'reading'
+                    title_ = f'{tr_("읽는 중...")} {title}'
+                elif s.state_str == 'finished':
                     return 'abort'
-                seeding = True
-                title_ = 'Seeding... {}'.format(title)
-                cw.setSpeed(self.size_upload.speed)
-            elif s.state_str == 'reading':
-                color = 'reading'
-                title_ = 'Reading... {}'.format(title)
-            elif s.state_str == 'finished':
-                return 'abort'
+                else:
+                    title_ = f'{s.state_str.capitalize()}... {title}'
+                cw.setTitle(title_, update_filter=False)
+                cw.setColor(color)
+                self._seeding = seeding
             else:
-                title_ = '{}... {}'.format(s.state_str.capitalize(), title)
-            cw.setTitle(title_, update_filter=False)
-            cw.setColor(color)
-            self._seeding = seeding
-        else:
-            self.print_('abort')
-            if cw:
-                cw._torrent_s = None
-            return 'abort'
+                self.print_('abort')
+                if cw:
+                    cw._torrent_s = None
+                return 'abort'
+        finally:
+            if alerts:
+                if not cw.imgs: #???
+                    self.print_('??? 2')
+                    self.update_files()
+                names = cw.names
+                for alert in alerts:
+                    what = alert['what']
+                    if what == 'file_completed':
+                        index = alert['index']
+                        index = self._torrent_index[index]
+                        file = os.path.realpath(names[index])
+                        cw.dones.add(file)
+                        file = constants.compact(file).replace('\\', '/')
+                        files = file.split('/')
+                        file = ' / '.join(files[1:])
+                        filesize = self._torrent_filesize[index]
+                        msg = f'Completed: {file} | {fs.size(filesize)}'
+                        self.print_(msg)
+                        if index == 0:
+                            self._updateIcon()
+                    else:
+                        raise NotImplementedError(what)
 
 
 @utils.actions('torrent')

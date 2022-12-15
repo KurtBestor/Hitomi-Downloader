@@ -3,8 +3,7 @@ import downloader
 import ree as re
 from utils import Soup, urljoin, Downloader, join, LazyUrl, Session, get_print
 import os
-from timee import sleep
-from translator import tr_
+from ratelimit import limits, sleep_and_retry
 
 
 
@@ -12,10 +11,7 @@ def get_id(url):
     try:
         return int(url)
     except:
-        if '/gallery/' in url:
-            return int(re.find('/gallery/[0-9]+/([0-9]+)', url))
-        else:
-            return int(re.find('/g/([0-9]+)', url))
+        return int(re.find('/(g|gallery)/([0-9]+)', url)[1])
 
 
 
@@ -35,24 +31,37 @@ class Downloader_asmhentai(Downloader):
 
     def read(self):
         info = get_info(self.url, self.session, self.cw)
+        self.print_(info)
 
         # 1225
-        artist = join(info['artists'])
+        artist = join(info['artist'])
         self.artist = artist
-        group = join(info['groups']) if info['groups'] else u'N／A'
-        lang = info['language'][0] if info['language'] else u'N／A'
-        series = info['parodies'][0] if info['parodies'] else u'N／A'
+        group = join(info['group']) if info['group'] else 'N／A'
+        lang = info['language'][0] if info['language'] else 'N／A'
+        series = info['parody'][0] if info['parody'] else 'N／A'
         title = self.format_title(info['category'][0], info['id'], info['title'], artist, group, series, lang)
 
-        self.urls += [img.url for img in info['imgs']]
+        for i in range(info['n']):
+            url = f'https://asmhentai.com/gallery/{info["id"]}/{i+1}/'
+            self.urls.append(Image(url, self.url, self.session, len(self.urls)).url)
 
         self.title = title
 
 
 class Image:
-    def __init__(self, url, referer):
-        self.url = LazyUrl(referer, lambda _:url, self)
-        self.filename = os.path.basename(url)
+    def __init__(self, url, referer, session, p):
+        self._url = url
+        self.url = LazyUrl(referer, self.get, self)
+        self.session = session
+
+    @sleep_and_retry
+    @limits(4, 1)
+    def get(self, referer):
+        soup = downloader.read_soup(self._url, referer, session=self.session)
+        img = soup.find('img', id='fimg')
+        url = img['data-src']
+        self.filename = os.path.basename(url).split('?')[0]
+        return url
 
 
 def get_info(url, session, cw):
@@ -82,43 +91,10 @@ def get_info(url, session, cw):
         else:
             info[key] = [value]
 
-    for key in ['artists', 'groups', 'parodies', 'tags', 'characters']:
+    for key in ['artist', 'group', 'parody', 'tag', 'character']:
         if key not in info:
             info[key] = []
 
-    info['imgs'] = []
-    def read_imgs(soup):
-        c = 0
-        for img in soup.findAll('div', class_='preview_thumb'):
-            img = img.find('img').attrs.get('data-src') or img.find('img').attrs.get('src')
-            img = urljoin(url, img).replace('t.jpg', '.jpg')
-            img = Image(img, url)
-            info['imgs'].append(img)
-            c += 1
-        if not c:
-            raise Exception('no imgs')
-
-    read_imgs(soup)
-
-    csrf = soup.find('meta', {'name':'csrf-token'})['content']
-    print_(f'csrf: {csrf}')
-    t_pages = int(soup.find('input', type='hidden', id='t_pages')['value'])
-    print_(f't_pages: {t_pages}')
-
-    while len(info['imgs']) < t_pages: #4971
-        print_('imgs: {}'.format(len(info['imgs'])))
-        sleep(1, cw)
-        cw.setTitle('{} {} - {} / {}'.format(tr_('읽는 중...'), info['title'], len(info['imgs']), t_pages))
-        data = {
-        '_token': csrf,
-        'id': str(info['id']),
-        'dir': soup.find('input', type='hidden', id='dir')['value'],
-        'v_pages': len(info['imgs']),
-        't_pages': str(t_pages),
-        'type': '1',
-        }
-        r = session.post('https://asmhentai.com/inc/thumbs_loader.php', data=data)
-        soup_more = Soup(r.text)
-        read_imgs(soup_more)
+    info['n'] = int(soup.find('input', id='t_pages')['value'])
 
     return info

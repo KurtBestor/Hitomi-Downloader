@@ -1,6 +1,6 @@
 #coding:utf8
 import downloader
-from utils import Soup, urljoin, LazyUrl, Downloader, try_n, Session, clean_title, get_print
+from utils import Soup, urljoin, LazyUrl, Downloader, try_n, Session, clean_title, get_print, print_error
 import os
 from translator import tr_
 import page_selector
@@ -19,7 +19,7 @@ class Image:
         ext = os.path.splitext(url)[1]
         if ext.lower()[1:] not in ['jpg', 'jpeg', 'bmp', 'png', 'gif', 'webm', 'webp']:
             ext = '.jpg'
-        self.filename = u'{}/{:04}{}'.format(page.title, p, ext)
+        self.filename = '{}/{:04}{}'.format(page.title, p, ext)
 
     def get(self, _):
         return self._url
@@ -60,7 +60,7 @@ class Downloader_lhscan(Downloader):
     def init(self):
         self._soup, self.session = get_soup_session(self.url, self.cw)
         if not self.soup.find('ul', class_='manga-info'):
-            raise errors.Invalid(u'{}: {}'.format(tr_(u'목록 주소를 입력해주세요'), self.url))
+            raise errors.Invalid('{}: {}'.format(tr_('목록 주소를 입력해주세요'), self.url))
 
     @classmethod
     def fix_url(cls, url):
@@ -89,7 +89,7 @@ class Downloader_lhscan(Downloader):
         return clean_title(title)
 
     def read(self):
-        self.title = tr_(u'읽는 중... {}').format(self.name)
+        self.title = tr_('읽는 중... {}').format(self.name)
 
         imgs = get_imgs(self.url, self.name, self.session, self.soup, self.cw)
 
@@ -109,7 +109,10 @@ def get_imgs_page(page, referer, session, cw=None):
         html = clf2.solve(page.url, session, cw)['html']
     if not html:
         raise Exception('empty html')
-    html = html.replace('{}='.format(re.find(r"\$\(this\)\.attr\('(.+?)'", html, err='no cn')), 'data-src=')
+    try:
+        html = html.replace('{}='.format(re.find(r"\$\(this\)\.attr\('(.+?)'", html, err='no cn')), 'data-src=')
+    except: #5351
+        pass
     soup = Soup(html)
 
     view = soup.find('div', class_='chapter-content')
@@ -119,7 +122,7 @@ def get_imgs_page(page, referer, session, cw=None):
 
     imgs = []
     for img in soup.findAll('img', class_='chapter-img'):
-        src = img.get('data-pagespeed-lazy-src') or img.get('data-src') or img.get('data-srcset') or img.get('data-aload') or img['src']
+        src = img.get('data-pagespeed-lazy-src') or img.get('data-src') or img.get('data-srcset') or img.get('data-aload') or img.get('data-original') or img['src']
         try:
             src = base64.b64decode(src).strip().decode('utf8')
         except:
@@ -137,7 +140,9 @@ def get_imgs_page(page, referer, session, cw=None):
             continue
         if '/uploads/lazy_loading.gif' in src:
             continue
-        src = 'https://welovekai.com/proxy.php?link=' + src.replace('\n', '').replace('\r', '') #5238
+        src = src.replace('\n', '').replace('\r', '') #5238
+        if 'proxy.php?link=' not in src: #5351
+            src = 'https://welovekai.com/proxy.php?link=' + src #5238
         if not imgs:
             print_(src0)
             print_(src)
@@ -188,7 +193,7 @@ def get_imgs(url, title, session, soup=None, cw=None):
     imgs = []
     for i, page in enumerate(pages):
         imgs += get_imgs_page(page, url, session, cw)
-        s = u'{} {} / {}  ({} / {})'.format(tr_(u'읽는 중...'), title, page.title, i+1, len(pages))
+        s = '{} {} / {}  ({} / {})'.format(tr_('읽는 중...'), title, page.title, i+1, len(pages))
         if cw is not None:
             if not cw.alive:
                 return

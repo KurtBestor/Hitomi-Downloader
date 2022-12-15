@@ -1,9 +1,7 @@
 #coding:utf8
-import downloader
-from utils import Soup, Downloader, lazy, clean_title
+from utils import Downloader, clean_title, Session
+from mastodon import get_info
 import ree as re
-from translator import tr_
-from mastodon import get_imgs
 
 
 
@@ -19,34 +17,18 @@ class Downloader_baraag(Downloader):
     ACCEPT_COOKIES = [r'(.*\.)?baraag\.net']
 
     def init(self):
-        self.referer = self.url
+        self.session = Session()
 
     @classmethod
     def fix_url(cls, url):
         id_ = get_id(url) or url
-        return 'https://baraag.net/{}'.format(id_)
-
-    @lazy
-    def id(self):
-        return get_id(self.url)
-
-    @lazy
-    def soup(self):
-        return Soup(downloader.read_html(self.url))
-
-    @property
-    def name(self):
-        title = self.soup.find('h1').text.strip().split('\n')[0].strip()
-        title = u'{} (baraag_{})'.format(title, self.id)
-        return clean_title(title)
+        return f'https://baraag.net/{id_}'
 
     def read(self):
-        self.title = tr_(u'읽는 중... {}').format(self.name)
+        id_ = get_id(self.url)
+        info = get_info('baraag.net', id_, f'baraag_{id_}', self.session, self.cw)
 
-        imgs = get_imgs('baraag.net', self.id, self.name, cw=self.cw)
-
-        for img in imgs:
+        for img in info['imgs']:
             self.urls.append(img.url)
-            self.filenames[img.url] = img.filename
 
-        self.title = self.name
+        self.title = clean_title('{} (baraag_{})'.format(info['title'], id_))

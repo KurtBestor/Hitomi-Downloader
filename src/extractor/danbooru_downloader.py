@@ -6,14 +6,19 @@ from translator import tr_
 from urllib.parse import quote
 from urllib.parse import urlparse, parse_qs
 from ratelimit import limits, sleep_and_retry
+import clf2
 
 
 
 class Downloader_danbooru(Downloader):
     type='danbooru'
     URLS = ['danbooru.donmai.us']
-    MAX_CORE = 8
+    MAX_CORE = 6
     _name = None
+    ACCEPT_COOKIES = [r'(.*\.)?donmai\.us']
+
+    def init(self):
+        self.session = clf2.solve(self.url, cw=self.cw)['session'] #5336
 
     @classmethod
     def fix_url(cls, url):
@@ -24,6 +29,8 @@ class Downloader_danbooru(Downloader):
             while '++' in url:
                 url = url.replace('++', '+')
             url = 'https://danbooru.donmai.us/?tags={}'.format(quote(url))
+        if 'donmai.us/posts/' in url:
+            url = url.split('?')[0]
         return url.strip('+')
 
     @property
@@ -38,8 +45,10 @@ class Downloader_danbooru(Downloader):
                     raise AssertionError('[Fav] User id is not specified')
                 id = 'fav_{}'.format(id)
             elif 'donmai.us/explore/posts/popular' in self.url: #4160
-                soup = read_soup(self.url, self.cw)
+                soup = read_soup(self.url, self.session, self.cw)
                 id = soup.find('h1').text
+            elif 'donmai.us/posts/' in self.url:
+                id = re.find(r'donmai\.us/posts/([0-9]+)', self.url, err='no id')
             else:
                 tags = qs.get('tags', [])
                 tags.sort()
@@ -52,7 +61,10 @@ class Downloader_danbooru(Downloader):
     def read(self):
         self.title = self.name
 
-        imgs = get_imgs(self.url, self.name, cw=self.cw)
+        if 'donmai.us/posts/' in self.url:
+            self.single = True
+
+        imgs = get_imgs(self.url, self.session, self.name, cw=self.cw)
 
         for img in imgs:
             self.urls.append(img.url)
@@ -61,13 +73,14 @@ class Downloader_danbooru(Downloader):
 
 
 class Image:
-    def __init__(self, id, url, cw):
+    def __init__(self, id, url, session, cw):
         self._cw = cw
         self.id = id
+        self._session = session
         self.url = LazyUrl(url, self.get, self)
 
     def get(self, url):
-        soup = read_soup(url, self._cw)
+        soup = read_soup(url, self._session, self._cw)
         ori = soup.find('li', id='post-option-view-original')
         if ori:
             img = ori.find('a')['href']
@@ -109,17 +122,19 @@ def setPage(url, page):
 
 
 @try_n(4) #4103
-def read_soup(url, cw):
+def read_soup(url, session, cw):
     check_alive(cw)
     wait(cw)
-    return downloader.read_soup(url)
+    return downloader.read_soup(url, session=session)
 
 
-def get_imgs(url, title=None, range_=None, cw=None):
+def get_imgs(url, session, title=None, range_=None, cw=None):
     if 'donmai.us/artists' in url:
-        raise NotImplementedError('Not Implemented')
+        raise NotImplementedError()
     if 'donmai.us/posts/' in url:
-        raise NotImplementedError('Not Implemented')
+        id = re.find(r'donmai\.us/posts/([0-9]+)', url, err='no id')
+        img = Image(id, url, session, cw)
+        return [img]
 
     print_ = get_print(cw)
 
@@ -139,7 +154,7 @@ def get_imgs(url, title=None, range_=None, cw=None):
         p = range_[i]
         url = setPage(url, p)
         print_(url)
-        soup = read_soup(url, cw)
+        soup = read_soup(url, session, cw)
         articles = soup.findAll('article')
         if articles:
             empty_count_global = 0
@@ -165,7 +180,7 @@ def get_imgs(url, title=None, range_=None, cw=None):
             #print(url_img)
             if url_img not in url_imgs:
                 url_imgs.add(url_img)
-                img = Image(id, url_img, cw)
+                img = Image(id, url_img, session, cw)
                 imgs.append(img)
 
         if len(imgs) >= max_pid:

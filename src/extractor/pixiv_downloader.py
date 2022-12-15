@@ -38,10 +38,27 @@ class Downloader_pixiv(Downloader):
     ACCEPT_COOKIES = [r'(.*\.)?pixiv\.(com|co|net)']
 
     def init(self):
+        setattr(self.cw, 'sid?', None)
         res = clf2.solve(self.url, cw=self.cw)
         self.session = res['session'] #5105
-        
+
         soup = Soup(res['html'])
+
+        if soup.find('a', href=lambda h: h and '/login.php' in h):
+            self.print_('yee')
+            def f(html, browser=None):
+                soup = Soup(html)
+                for div in soup.findAll('div'):
+                    if div.get('data-page-name') == 'LoginPage':
+                        browser.show()
+                        return False
+                browser.hide()
+                return True
+            res = clf2.solve('https://accounts.pixiv.net/login', session=self.session, cw=self.cw, f=f, delay=3)
+            self.print_('yeee')
+            res = clf2.solve(self.url, session=self.session, cw=self.cw)
+            soup = Soup(res['html'])
+
         err = soup.find('p', class_='error-message')
         if err: #5223
             raise errors.Invalid('{}: {}'.format(err.text.strip(), self.url))
@@ -78,6 +95,9 @@ class Downloader_pixiv(Downloader):
             info = get_info(self.url, self.session, self.cw)
             self.artist = info.get('artist') #4897
             for img in info['imgs']:
+                if isinstance(img, str): # local
+                    self.urls.append(img)
+                    continue
                 self.urls.append(img.url)
             self.title = clean_title(info['title'])
         finally:
@@ -91,7 +111,7 @@ class HTTPError(Exception): pass
 
 class PixivAPI:
 
-    def __init__(self, session):
+    def __init__(self, session, cw):
         self.session = session
         hdr = {
             'Accept': 'application/json',
@@ -100,7 +120,7 @@ class PixivAPI:
             'Cache-Control': 'no-cache',
             'Pragma': 'no-cache',
             'Referer': 'https://www.pixiv.net/',
-            'X-User-Id': my_id(session),
+            'X-User-Id': my_id(session, cw),
             }
         self.session.headers.update(hdr)
 
@@ -120,8 +140,6 @@ class PixivAPI:
         try:
             info = downloader.read_json(url, session=self.session)
         except requests.exceptions.HTTPError as e:
-            utils.SD['pixiv'] = {}
-            utils.SD['pixiv']['err'] = self.session
             code = e.response.status_code
             if code in (403, 404):
                 e_ = HTTPError('{} Client Error'.format(code))
@@ -281,7 +299,7 @@ def tags_matched(tags_illust, tags_add, cw=None):
 
 def get_info(url, session, cw=None, depth=0, tags_add=None):
     print_ = get_print(cw)
-    api = PixivAPI(session)
+    api = PixivAPI(session, cw)
     info = {}
     imgs = []
 
@@ -324,8 +342,8 @@ def get_info(url, session, cw=None, depth=0, tags_add=None):
     elif '/bookmarks/' in url or 'bookmark.php' in url: # User bookmarks
         id_ = api.user_id(url)
         if id_ is None: #
-            id_ = my_id(session)
-        if id_ == my_id(session):
+            id_ = my_id(session, cw)
+        if id_ == my_id(session, cw):
             rests = ['show', 'hide']
         else:
             rests = ['show']
@@ -399,7 +417,7 @@ def get_info(url, session, cw=None, depth=0, tags_add=None):
         process_ids(ids, info, imgs, session, cw, depth)
     elif 'bookmark_new_illust.php' in url or 'bookmark_new_illust_r18.php' in url: # Newest works: Following
         r18 = 'bookmark_new_illust_r18.php' in url
-        id_ = my_id(session)
+        id_ = my_id(session, cw)
         process_user(id_, info, api)
         info['title'] = '{} (pixiv_following_{}{})'.format(info['artist'], 'r18_' if r18 else '', info['artist_id'])
         ids = []
@@ -462,10 +480,17 @@ def parse_time(ds):
     return time - dt
 
 
-def my_id(session):
-    sid = session.cookies.get('PHPSESSID', domain='.pixiv.net')
+@try_n(4, sleep=.5) #5469
+def my_id(session, cw):
+    print_ = get_print(cw)
+    sid = session.cookies.get('PHPSESSID', domain='.pixiv.net', path='/')
     if not sid:
         raise errors.LoginRequired()
+    if cw is not None:
+        _ = getattr(cw, 'sid?', None)
+        if _ is None:
+            setattr(cw, 'sid?', sid)
+            print_(f'sid: {sid}')
     userid = re.find(r'^([0-9]+)', sid)
     if userid is None:
         raise errors.LoginRequired()
@@ -481,6 +506,21 @@ def process_user(id_, info, api):
 def process_ids(ids, info, imgs, session, cw, depth=0, tags_add=None):
     print_ = get_print(cw)
     max_pid = get_max_range(cw)
+
+    names = cw.names_old
+    table = {}
+    for name in names:
+        id = re.find(r'([0-9]+)_p[0-9]+.*\.(jpg|png|bmp)$', os.path.basename(name))
+        if id is None:
+            continue
+        id = id[0]
+        if id in table:
+            table[id].append(name)
+        else:
+            table[id] = [name]
+
+    c_old = 0
+
     class Thread(threading.Thread):
         alive = True
         rem = 0
@@ -495,6 +535,7 @@ def process_ids(ids, info, imgs, session, cw, depth=0, tags_add=None):
             cls.rem += x
 
         def run(self):
+            nonlocal c_old
             while self.alive:
                 try:
                     id_, res, i = self.queue.popleft()
@@ -502,12 +543,17 @@ def process_ids(ids, info, imgs, session, cw, depth=0, tags_add=None):
                     sleep(.1)
                     continue
                 try:
-                    info_illust = get_info('https://www.pixiv.net/en/artworks/{}'.format(id_), session, cw, depth=depth+1, tags_add=tags_add)
-                    res[i] = info_illust['imgs']
+                    names = table.get(str(id_))
+                    if names is not None:
+                        res[i] = utils.natural_sort(names)
+                        c_old += 1
+                    else:
+                        info_illust = get_info('https://www.pixiv.net/en/artworks/{}'.format(id_), session, cw, depth=depth+1, tags_add=tags_add)
+                        res[i] = info_illust['imgs']
                 except Exception as e:
                     if depth == 0 and (e.args and e.args[0] == '不明なエラーが発生しました' or type(e) == errors.LoginRequired): # logout during extraction
                         res[i] = e
-                    print_('process_ids error (id: {}, d:{}):\n{}'.format(id_, depth, print_error(e)[0]))
+                    print_('process_ids error (id: {}, d:{}):\n{}'.format(id_, depth, print_error(e)))
                 finally:
                     Thread.add_rem(-1)
     queue = deque()
@@ -540,3 +586,5 @@ def process_ids(ids, info, imgs, session, cw, depth=0, tags_add=None):
             check_alive(cw)
     for t in ts:
         t.alive = False
+
+    print_(f'c_old: {c_old}')

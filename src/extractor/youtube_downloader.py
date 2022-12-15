@@ -2,8 +2,7 @@
 import ytdl
 import downloader
 import downloader_v3
-from io import BytesIO
-from constants import empty_thumbnail, isdeleted
+from constants import isdeleted
 from error_printer import print_error
 from timee import sleep
 import ree as re
@@ -20,6 +19,7 @@ from translator import tr, tr_
 from datetime import datetime
 import threading
 from putils import DIR
+import errors
 
 
 def print_streams(streams, cw):
@@ -62,15 +62,17 @@ class Video:
             max_abr = 0
 
         print('max_res: {}'.format(max_res))
-        for try_ in range(8):
+        for try_ in range(4):
             try:
-                yt = ytdl.YouTube(url, cw=self.cw)
+                yt = ytdl.YouTube(url, cw=cw)
                 break
+            except errors.Retry as e:
+                raise e
             except Exception as e:
                 e_ = e
-                s = print_error(e)[-1]
+                s = print_error(e)
                 print_('### youtube retry...\n{}'.format(s))
-                sleep(try_/2, cw)
+                sleep(try_, cw)
         else:
             raise e_
 
@@ -172,7 +174,6 @@ class Video:
         self.username = yt.info['uploader']
         self.stream_audio = None
         self.audio = None
-        self.thumb = None
         self.thumb_url = None
         self.subs = yt.subtitles
 
@@ -213,22 +214,13 @@ class Video:
                 self.audio = self.audio()
 
         # Thumbnail
-        for quality in ['sddefault', 'hqdefault', 'mqdefault', 'default']:
-            print('####', yt.thumbnail_url)
-            self.thumb_url = yt.thumbnail_url.replace('default', quality)
-            f = BytesIO()
-            try:
-                downloader.download(self.thumb_url, session=self.session, buffer=f)
-                data = f.read()
-                if len(data) == 0:
-                    raise AssertionError('Zero thumbnail')
-                if data == empty_thumbnail:
-                    raise AssertionError('Empty thumbnail')
-                f.seek(0)
-                break
-            except Exception as e:
-                print(print_error(e)[-1])
-        self.thumb = f
+        self._thumb = None
+        def thumb():
+            if self._thumb is None:
+                self.thumb_url, self._thumb = ytdl.download_thumb(yt.thumbnail_url, cw, self.session)
+            self._thumb.seek(0)
+            return self._thumb
+        self.thumb = thumb
 
         #
         _url = self.stream.url
@@ -241,6 +233,7 @@ class Video:
         self.title = title
         ext = '.' + self.stream.subtype
         self.filename = format_filename(title, self.id, ext, artist=self.username) #4953
+        print_(f'filename: {self.filename}')
 
         if type == 'audio':
             self.filename0 = self.filename
@@ -314,10 +307,9 @@ class Video:
 
         if self.type == 'audio' and ui_setting.albumArt.isChecked():
             try:
-                self.thumb.seek(0)#
-                ffmpeg.add_cover(filename_new, self.thumb, {'artist':self.username, 'title':self.title}, cw=cw)
+                ffmpeg.add_cover(filename_new, self.thumb(), {'artist':self.username, 'title':self.title}, cw=cw)
             except Exception as e:
-                s = print_error(e)[-1]
+                s = print_error(e)
                 print_(s)
 
         utils.pp_subtitle(self, filename_new, cw)
@@ -325,8 +317,8 @@ class Video:
         return filename_new
 
 
-def get_id(url):    
-    id_ = re.find(r'youtu.be/([0-9A-Za-z-_]{10,})', url) or re.find(r'[?&]v=([0-9A-Za-z-_]{10,})', url) or re.find(r'/(v|embed)/([0-9A-Za-z-_]{10,})', url) or re.find(r'%3Fv%3D([0-9A-Za-z-_]{10,})', url)
+def get_id(url):
+    id_ = re.find(r'youtu.be/([0-9A-Za-z-_]{10,})', url) or re.find(r'[?&]v=([0-9A-Za-z-_]{10,})', url) or re.find(r'/(v|embed|shorts)/([0-9A-Za-z-_]{10,})', url) or re.find(r'%3Fv%3D([0-9A-Za-z-_]{10,})', url)
     if isinstance(id_, tuple):
         id_ = id_[-1]
     return id_
@@ -371,7 +363,16 @@ class Downloader_youtube(Downloader):
         qs = query_url(url)
         if 'v' in qs:
             url = url.split('?')[0] + '?v={}'.format(qs['v'][0])
-        return url
+
+        for header in ['channel', 'user', 'c']: #5365, #5374
+            tab = re.find(rf'/{header}/[^/]+/?(.+)?', url, re.IGNORECASE)
+            if tab == 'playlists':
+                url = re.sub(rf'(/{header}/[^/]+/?)(.+)?', r'\1', url, flags=re.IGNORECASE)
+                tab = ''
+            if tab in ['', 'featured'] and '/{}/'.format(header) in url.lower():
+                username = re.find(r'/{}/([^/\?]+)'.format(header), url, re.IGNORECASE)
+                url = urljoin(url, '/{}/{}/videos'.format(header, username))
+        return url.strip('/')
 
     @classmethod
     def key_id(cls, url):
@@ -402,7 +403,7 @@ class Downloader_youtube(Downloader):
                 break
             except Exception as e:
                 e_ = e
-                self.print_(print_error(e)[0])
+                self.print_(print_error(e))
                 videos.remove(video)
         else:
             raise e_
@@ -416,7 +417,7 @@ class Downloader_youtube(Downloader):
                 self.lock = False
 
         self.artist = video.username
-        self.setIcon(video.thumb)
+        self.setIcon(video.thumb())
 
 
 def int_(x):
@@ -432,18 +433,20 @@ def get_videos(url, session, type='video', only_mp4=False, audio_included=False,
 
     n = get_max_range(cw)
 
-    if '/channel/' in url or '/user/' in url or '/c/' in url:
+    if '/channel/' in url or '/user/' in url or '/c/' in url or ''.join(url.split('/')[3:4]).startswith('@'): #5445
         info = read_channel(url, n=n, cw=cw)
         info['type'] = 'channel'
         info['title'] = '[Channel] {}'.format(info['uploader'])
         if cw:
             info['urls'] = filter_range(info['urls'], cw.range)
+            cw.fped = True
     elif '/playlist' in url:
         info = read_playlist(url, n=n, cw=cw)
         info['type'] = 'playlist'
         info['title'] = '[Playlist] {}'.format(info['title'])
         if cw:
             info['urls'] = filter_range(info['urls'], cw.range)
+            cw.fped = True
     elif get_id(url):
         info['type'] = 'single'
         info['urls'] = [url]
@@ -463,10 +466,6 @@ def read_channel(url, n, cw=None):
 @try_n(2)
 def read_playlist(url, n, cw=None):
     print_ = get_print(cw)
-    for header in ['channel', 'user', 'c']:
-        if '/{}/'.format(header) in url.lower():
-            username = re.find(r'/{}/([^/\?]+)'.format(header), url, re.IGNORECASE)
-            url = urljoin(url, '/{}/{}/videos'.format(header, username))
 
     options = {
             'extract_flat': True,

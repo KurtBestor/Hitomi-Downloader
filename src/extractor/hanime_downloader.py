@@ -21,9 +21,10 @@ class Video:
         downloader.download(self.url_thumb, buffer=self.thumb)
         ext = os.path.splitext(self.url.split('?')[0].split('#')[0])[1]
         if ext.lower() == '.m3u8':
-            print('read m3u8:', self.url)
             ext = '.mp4'
             self.url = M3u8_stream(self.url, n_thread=4)
+            for i, seg in self.url.urls[-20:]:
+                seg._ignore_err = True #5272
         else:
             size = downloader.get_size(self.url)
             if size <= 0:
@@ -40,6 +41,7 @@ class Downloader_hanime(Downloader):
     URLS = ['hanime.tv/hentai-videos/', 'hanime.tv/videos/']
     single = True
     display_name = 'hanime.tv'
+    ACCEPT_COOKIES = [r'(.*\.)?hanime\.tv']
 
     def read(self):
         video, session = get_video(self.url, cw=self.cw)

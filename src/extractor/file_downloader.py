@@ -13,11 +13,13 @@ class Downloader_file(Downloader):
 
     @classmethod
     def fix_url(cls, url):
-        if '://' not in url:
+        if url and '://' not in url:
             url = 'https://' + url.lstrip('/')
         return url
 
     def read(self):
+        if not self.url.strip():
+            raise Exception('empty url')
         qs = query_url(self.url)
         for key in qs:
             if key.lower() in ('file', 'filename'):

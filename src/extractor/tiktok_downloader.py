@@ -136,13 +136,13 @@ def read_channel(url, session, cw=None, title=None):
                     st = soup.find('h1', class_=lambda c: c and 'ShareSubTitle' in c)
                 info['nickname'] = st.text.strip()
             except Exception as e:
-                print_(print_error(e)[0])
+                print_(print_error(e))
         else: # Douyin
             try:
                 info['uid'] = re.find(r'''uniqueId%22%3A%22(.+?)%22''', html, err='no uid')
                 info['nickname'] = json.loads(re.find(r'''"name"\s*:\s*(".+?")''', html, err='no nickname'))
             except Exception as e:
-                print_(print_error(e)[0])
+                print_(print_error(e))
         c = 0
         ids_now = set()
         if 'tiktok.com' in url.lower(): # TikTok

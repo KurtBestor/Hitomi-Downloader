@@ -68,7 +68,10 @@ class Downloader_twitch(Downloader):
 
         self.artist = video.artist
 
-        self.setIcon(video.thumb)
+        thumb = BytesIO()
+        downloader.download(video.url_thumb, buffer=thumb) #5418
+
+        self.setIcon(thumb)
 
 
 @try_n(2)
@@ -173,7 +176,5 @@ class Video:
                 ext = '.mp4'
         self.filename = format_filename(self.title, id, ext, artist=self.artist)
         self.url_thumb = info['thumbnail']
-        self.thumb = BytesIO()
-        downloader.download(self.url_thumb, buffer=self.thumb)
         self._url = video
         return self._url

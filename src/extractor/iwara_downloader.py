@@ -112,7 +112,7 @@ class Downloader_iwara(Downloader):
             self.title = title
 
         if file.thumb is not None:
-            self.setIcon(file.thumb)
+            self.setIcon(file.thumb())
 
 
 @try_n(4)
@@ -214,9 +214,11 @@ def get_files(url, session, multi_post=False, cw=None):
             print_('invalid video')
             raise Exception('Invalid video')
         file = File(type, url_video, title, url)
-        file.url_thumb = url_thumb
-        file.thumb = BytesIO()
-        downloader.download(url_thumb, buffer=file.thumb, referer=url)
+        def thumb():
+            f = BytesIO()
+            downloader.download(url_thumb, buffer=f, referer=url)
+            return f
+        file.thumb = thumb
         files.append(file)
     else:
         raise NotImplementedError(type)

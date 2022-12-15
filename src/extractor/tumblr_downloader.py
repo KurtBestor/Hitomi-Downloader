@@ -1,7 +1,7 @@
 #coding:utf8
 import downloader
 from translator import tr_
-from utils import Soup, Session, query_url, get_max_range, Downloader, clean_title, update_url_query, get_print, get_ext, LazyUrl
+from utils import Soup, Session, query_url, get_max_range, Downloader, clean_title, update_url_query, get_print, get_ext, LazyUrl, urljoin
 import ree as re
 import errors
 from ratelimit import limits, sleep_and_retry
@@ -28,7 +28,7 @@ class Image:
             try:
                 ext = downloader.get_ext(url, referer=_)
             except Exception as e: #3235
-                print_('Err: {}, {}\n'.format(self.id_, url)+print_error(e)[0])
+                print_('Err: {}, {}\n'.format(self.id_, url)+print_error(e))
         self.filename = '{}_p{}{}'.format(self.id_, self.p, ext)
         return url
 
@@ -46,6 +46,10 @@ class Downloader_tumblr(Downloader):
 
     @classmethod
     def fix_url(cls, url):
+        qs = query_url(url)
+        path = qs.get('redirect_to')
+        if path:
+            url = urljoin('https://tumblr.com', path[0])
         id = get_id(url)
         return 'https://{}.tumblr.com'.format(id)
 

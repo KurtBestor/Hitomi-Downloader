@@ -3,7 +3,7 @@ import downloader, json, os
 from error_printer import print_error
 from translator import tr_
 from timee import sleep
-from utils import Downloader, Soup, get_print, lazy, Session, try_n, LazyUrl, clean_title
+from utils import Downloader, Soup, get_print, lazy, Session, try_n, LazyUrl, clean_title, check_alive
 import clf2
 
 
@@ -82,47 +82,58 @@ def get_imgs(id, title, session, type=None, cw=None):
     referer = 'https://www.artstation.com/{}'.format(id)
     html = downloader.read_html(referer, session=session)
     print(session.cookies.keys())
+
+    url = f'https://www.artstation.com/users/{id}/quick.json'
+    j = downloader.read_json(url, referer, session=session)
+    uid = j['id']
+    aids = [a['id'] for a in j['albums_with_community_projects']]
+    print_(f'albums: {aids}')
+
     datas = []
-    p = 1
-    while p < 1000:
-        url = 'https://www.artstation.com/users/{}/{}.json?page={}'.format(id, type, p)
-        print(url)
-        for try_ in range(4):
-            try:
-                html = downloader.read_html(url, session=session, referer=referer)
+    ids = set()
+    for aid in aids:
+        p = 1
+        while p < 1000:
+            check_alive(cw)
+            url = f'https://www.artstation.com/users/{id}/projects.json?album_id={aid}&page={p}&user_id={uid}'
+            print(url)
+            for try_ in range(4):
+                try:
+                    j = downloader.read_json(url, referer, session=session)
+                    break
+                except Exception as e:
+                    print(e)
+
+            else:
+                raise
+
+            data = j['data']
+            if not data:
                 break
-            except Exception as e:
-                print(e)
+            for d in data:
+                if d['id'] not in ids:
+                    ids.add(d['id'])
+                    datas.append(d)
+            if cw:
+                cw.setTitle(('{}  {} - {}').format(tr_('페이지 읽는 중...'), title, len(datas)))
+            else:
+                print(len(datas))
+            p += 1
 
-        else:
-            raise
-
-        j = json.loads(html)
-        data = j['data']
-        if not data:
-            break
-        datas += data
-        if cw:
-            if not cw.alive:
-                return []
-            cw.setTitle(('{}  {} - {}').format(tr_('페이지 읽는 중...'), title, len(datas)))
-        else:
-            print(len(datas))
-        p += 1
+    datas = sorted(datas, key=lambda data: int(data['id']), reverse=True)
 
     imgs = []
     i = 0
     while i < len(datas):
+        check_alive(cw)
         data = datas[i]
         date = data['created_at'][2:10]
         post_url = data['permalink']
-        print('post_url', post_url)
+        #print('post_url', post_url)
         id_art = get_id_art(post_url)
         imgs += get_imgs_page(id_art, session, date=date, cw=cw)
         if cw:
-            if not cw.alive:
-                return []
-            cw.setTitle(('{}  {} - {}').format(tr_('이미지 읽는 중...'), title, len(imgs)))
+            cw.setTitle(('{}  {} - {} / {}  ({})').format(tr_('이미지 읽는 중...'), title, i+1, len(datas), len(imgs)))
         else:
             print(len(imgs))
         i += 1
@@ -174,7 +185,7 @@ def get_imgs_page(id_art, session, date=None, cw=None):
         data = json.loads(html)
         imgs_ = data['assets']
     except Exception as e:
-        print_(print_error(e)[(-1)])
+        print_(print_error(e))
         return []
 
     if date is None:

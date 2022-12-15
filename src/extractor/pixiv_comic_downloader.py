@@ -1,5 +1,5 @@
 import downloader, requests
-from utils import Soup, urljoin, Session, LazyUrl, Downloader, try_n, get_imgs_already, clean_title, get_ext
+from utils import Soup, urljoin, Session, LazyUrl, Downloader, try_n, get_imgs_already, clean_title, get_ext, get_print
 import ree as re, json, os
 from translator import tr_
 from timee import sleep
@@ -33,21 +33,21 @@ class Downloader_pixiv_comic(Downloader):
     URLS = ['comic.pixiv.net/works', 'comic.pixiv.net/viewer/']
     _soup = None
     display_name = 'pixivコミック'
+    ACCEPT_COOKIES = [r'(.*\.)?pixiv\.net']
 
     def init(self):
         if '/viewer/' in self.url:
             raise errors.Invalid(tr_('목록 주소를 입력해주세요: {}').format(self.url))
 
-    @property
-    def soup(self):
-        if self._soup is None:
-            self.session = Session()
-            self._soup = get_soup(self.url, session=self.session, cw=self.cw)
-        return self._soup
+    @try_n(4) #5329
+    def read(self):
+        self.session = Session()
+        def f(html):
+            return '/viewer/stories/' in html #5498
+        html = clf2.solve(self.url, session=self.session, cw=self.cw, f=f, timeout=30, show='fake')['html']
+        soup = Soup(html)
+        self.purge_cookies()
 
-    @property
-    def name(self):
-        soup = self.soup
         title = soup.find('h1').text.strip()
         artist = get_artist(soup)
         if artist:
@@ -55,36 +55,19 @@ class Downloader_pixiv_comic(Downloader):
         else:
             artist = 'N/A'
         self.dirFormat = self.dirFormat.replace('0:id', '').replace('id', '').replace('()', '').replace('[]', '').strip()
-        self.print_('dirFormat: {}'.format(self.dirFormat))
+        self.print_(f'dirFormat: {self.dirFormat}')
         title = self.format_title('N/A', 'id', title, artist, 'N/A', 'N/A', 'Japanese')
         while '  ' in title:
             title = title.replace('  ', ' ')
 
-        return title
-
-    def read(self):
-        name = self.name
-        self.imgs = get_imgs(self.url, name, self.soup, self.session, cw=self.cw)
+        self.imgs = get_imgs(self.url, title, soup, self.session, cw=self.cw)
         for img in self.imgs:
             if isinstance(img, Image):
                 self.urls.append(img.url)
             else:
                 self.urls.append(img)
 
-        self.title = name
-
-
-def get_soup(url, session=None, cw=None):
-    html = read_html(url, session=session, cw=cw)
-    soup = Soup(html)
-    return soup
-
-
-def read_html(url, session=None, cw=None):
-    r = clf2.solve(url, session=session, cw=cw)
-    html = r['html']
-
-    return html
+        self.title = title
 
 
 def get_artist(soup):
@@ -93,24 +76,27 @@ def get_artist(soup):
         artist = soup.find('div', class_=lambda c: c and c.startswith('Header_author'))
     if artist:
         return artist.text.strip()
-    else:
-        html = soup.html.replace('\\"', utils.esc('"')) #4936
-        artist = re.find(r'"author" *: *(".*?")', html) # 4389
+    html = soup.html.replace('\\"', utils.esc('"')) #4936
+    artist = re.find(r'"author" *: *(".*?")', html) # 4389
+    if artist:
+        artist = json.loads(artist).replace(utils.esc('"'), '"')
+    if not artist: #5278
+        artist = soup.find(class_=lambda c: c=='mt-4 typography-14 text-text2')
         if artist:
-            artist = json.loads(artist).replace(utils.esc('"'), '"')
-        return artist or None
+            artist = artist.text.strip()
+    return artist or None
 
 
-@try_n(2)
-def get_pages(soup, url):
+def get_pages(soup, url, cw=None):
+    print_ = get_print(cw)
     pages = []
     hrefs = set()
     titles = set()
     for a in soup.findAll(lambda tag: tag.name == 'a' and '/viewer/stories/' in tag.get('href', ''))[::-1]:
         href = urljoin(url, a.attrs['href'])
+        print_(href)
         if href in hrefs:
             continue
-        hrefs.add(href)
         divs = a.div.findAll('div', recursive=False) #5158
         if not divs: #5158
             continue
@@ -126,11 +112,12 @@ def get_pages(soup, url):
             title0 = title
             i = 2
             while title in titles:
-                title = title0 + ' ({})'.format(i)
+                title = title0 + f' ({i})'
                 i += 1
         titles.add(title)
         page = Page(href, title)
         pages.append(page)
+        hrefs.add(href)
     if not pages:
         raise Exception('no pages')
 
@@ -142,19 +129,14 @@ def get_pages(soup, url):
 def f(url):
     if '/viewer/' in url:
         raise Exception(tr_('목록 주소를 입력해주세요'))
-    html = read_html(url)
+    html = clf2.solve(url, show='fake')['html']
     soup = Soup(html)
     pages = get_pages(soup, url)
     return pages
 
 
-def get_imgs(url, title, soup=None, session=None, cw=None):
-    if soup is None:
-        soup = get_soup(url, cw=cw)
-    if session is None:
-        session = Session()
-        html = read_html(url, session=session)
-    pages = get_pages(soup, url)
+def get_imgs(url, title, soup, session, cw=None):
+    pages = get_pages(soup, url, cw)
     pages = page_selector.filter(pages, cw)
     imgs = []
     for i, page in enumerate(pages):
@@ -174,7 +156,7 @@ def get_imgs(url, title, soup=None, session=None, cw=None):
 @try_n(4)
 def get_imgs_page(page, session):
     id = re.find('/viewer/.+?/([0-9]+)', page.url)
-    url_api = 'https://comic.pixiv.net/api/app/episodes/{}/read'.format(id)
+    url_api = f'https://comic.pixiv.net/api/app/episodes/{id}/read'
     local_time = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S+00:00')
     headers = {
         'X-Client-Time': local_time,

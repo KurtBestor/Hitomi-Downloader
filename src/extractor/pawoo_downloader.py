@@ -1,10 +1,12 @@
 #coding:utf8
-import downloader
-from utils import Downloader, lazy, clean_title
+from utils import Downloader, clean_title, Session
+from mastodon import get_info
 import ree as re
-from translator import tr_
-from mastodon import get_imgs
-import json
+
+
+
+def get_id(url):
+    return re.find('pawoo.net/([^/]+)', url.lower())
 
 
 
@@ -14,31 +16,18 @@ class Downloader_pawoo(Downloader):
     ACCEPT_COOKIES = [r'(.*\.)?pawoo\.net']
 
     def init(self):
-        self.url = 'https://pawoo.net/{}'.format(self.id_)
-        self.referer = self.url
+        self.session = Session()
 
-    @property
-    def id_(self):
-        return re.find('pawoo.net/([^/]+)', self.url.lower(), default=self.url)
-
-    @lazy
-    def soup(self):
-        return downloader.read_soup(self.url)
-
-    @property
-    def name(self):
-        name_raw = re.find(r'''['"]name['"] *: *['"](.+?)['"]''', str(self.soup), err='no name')
-        name = json.loads('"{}"'.format(name_raw))
-        title = '{} (pawoo_{})'.format(name, self.id_)
-        return clean_title(title)
+    @classmethod
+    def fix_url(cls, url):
+        id_ = get_id(url) or url
+        return f'https://pawoo.net/{id_}'
 
     def read(self):
-        self.title = tr_('읽는 중... {}').format(self.name)
+        id_ = get_id(self.url)
+        info = get_info('pawoo.net', id_, f'pawoo_{id_}', self.session, self.cw)
 
-        imgs = get_imgs('pawoo.net', self.id_, self.name, cw=self.cw)
-
-        for img in imgs:
+        for img in info['imgs']:
             self.urls.append(img.url)
-            self.filenames[img.url] = img.filename
 
-        self.title = self.name
+        self.title = clean_title('{} (pawoo{})'.format(info['title'], id_))

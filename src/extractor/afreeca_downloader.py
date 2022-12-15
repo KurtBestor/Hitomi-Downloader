@@ -28,13 +28,15 @@ class Downloader_afreeca(Downloader):
     single = True
     display_name = 'AfreecaTV'
 
+    def init(self):
+        self.session = Session()
+
     @classmethod
     def fix_url(cls, url):
         return url.rstrip(' /')
 
     def read(self):
-        session = Session()
-        video = get_video(self.url, session, self.cw)
+        video = get_video(self.url, self.session, self.cw)
         self.urls.append(video.url)
 
         self.setIcon(video.thumb)
@@ -59,6 +61,10 @@ def get_video(url, session, cw):
     html = downloader.read_html(url, session=session)
     if "document.location.href='https://login." in html:
         raise errors.LoginRequired()
+    if len(html) < 2000:
+        alert = re.find(r'''alert\(['"](.+?)['"]\)''', html)
+        if alert:
+            raise errors.LoginRequired(alert)
     soup = Soup(html)
     url_thumb = soup.find('meta', {'property': 'og:image'}).attrs['content']
     print_('url_thumb: {}'.format(url_thumb))

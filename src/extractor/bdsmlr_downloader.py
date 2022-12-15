@@ -59,7 +59,7 @@ def foo(url, soup, info, reblog=False):
         try:
             id = int(re.find('[0-9]+', post.attrs['class'][1]))
         except Exception as e:
-            print(print_error(e)[-1])
+            print(print_error(e))
             continue
         if id in info['ids']:
             continue

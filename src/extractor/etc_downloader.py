@@ -1,6 +1,6 @@
 import downloader
 import ytdl
-from utils import Downloader, Session, try_n, LazyUrl, get_ext, format_filename, clean_title, get_print, get_resolution
+from utils import Downloader, Session, try_n, LazyUrl, get_ext, format_filename, get_print, get_resolution
 from io import BytesIO
 import ree as re
 from m3u8_tools import playlist2stream, M3u8_stream
@@ -64,7 +64,7 @@ def get_video(url, session, cw, ie_key=None):
         if isinstance(video, Exception):
             raise video
         if isinstance(video.url(), M3u8_stream):
-            c = video.url().segs[0].download(cw)
+            c = video.url().segs[0].download(2, cw)
             if not c:
                 raise Exception('invalid m3u8')
         return video
@@ -214,11 +214,19 @@ class Video:
                 url = playlist2stream(self.url, referer, session=session, n_thread=4, res=res)
             except:
                 url = M3u8_stream(self.url, referer=referer, session=session, n_thread=4)
+            if url.live is not None: #5110
+                url = url.live
+            ext = '.mp4'
+        elif ext.lower() == '.mpd': # Tver
+            hdr = session.headers.copy()
+            if referer:
+                hdr['Referer'] = referer
+            url = utils.LiveStream(self.url, headers=hdr)
             ext = '.mp4'
         else:
             url = self.url
         self.url = LazyUrl(referer, lambda x: url, self, pp=self.pp)
-        self.filename = format_filename(title, self.id, ext, header=self.header)
+        self.filename = format_filename(title, self.id, info.get('ext') or ext, header=self.header)
 
     def pp(self, filename):
         if self.f_audio:

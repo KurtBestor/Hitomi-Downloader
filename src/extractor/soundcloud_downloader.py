@@ -59,28 +59,35 @@ class Audio:
         self.title = '{} - {}'.format(self.username, info['title'])
         self.filename = '{}{}'.format(clean_title(self.title, allow_dot=True, n=-4), '.mp3')
 
-        thumb = None
-        for t in info['thumbnails'][::-1]:
-            width = t.get('width', 1080)
-            if not 100 <= width <= 500:
-                continue
-            url_thumb = t['url']
-            thumb = BytesIO()
-            try:
-                downloader.download(url_thumb, buffer=thumb)
-                break
-            except Exception as e:
-                print(e)
-                thumb = None
+        self._thumb = None
+        def thumb():
+            if self._thumb is None:
+                for t in info['thumbnails'][::-1]:
+                    width = t.get('width', 1080)
+                    if not 100 <= width <= 500:
+                        continue
+                    url_thumb = t['url']
+                    f = BytesIO()
+                    try:
+                        downloader.download(url_thumb, buffer=f)
+                        break
+                    except Exception as e:
+                        print(e)
+                        f = None
+                self._thumb = f
+            else:
+                f = self._thumb
+            if f is not None:
+                f.seek(0)
+            return f
         self.thumb = thumb
 
         self._url = url_audio
         return self._url
 
     def pp(self, filename):
-        if self.thumb and self.album_art:
-            self.thumb.seek(0)#
-            ffmpeg.add_cover(filename, self.thumb, {'artist':self.username, 'title':self.info['title']}, cw=self.cw)
+        if self.thumb() and self.album_art:
+            ffmpeg.add_cover(filename, self.thumb(), {'artist':self.username, 'title':self.info['title']}, cw=self.cw)
 
 
 
@@ -97,7 +104,7 @@ class Downloader_soundcloud(Downloader):
             self.url = self.url.replace('http://', 'https://')
         else:
             self.url = 'https://soundcloud.com/{}'.format(self.url)
-            
+
     @classmethod
     def fix_url(cls, url):
         return url.split('?')[0]
@@ -130,7 +137,7 @@ class Downloader_soundcloud(Downloader):
             self.title = audio.title
 
         self.artist = audio.username
-        self.setIcon(audio.thumb)
+        self.setIcon(audio.thumb())
 
 
 @try_n(2)

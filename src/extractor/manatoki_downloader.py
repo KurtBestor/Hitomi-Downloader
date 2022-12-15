@@ -34,7 +34,7 @@ class Image:
             img.save(filename)
         img.close()
         return filename
-            
+
 
 
 class Page:
@@ -53,7 +53,7 @@ class Downloader_manatoki(Downloader):
 
     @try_n(2)
     def init(self):
-        self.session, self.soup, url = get_soup(self.url)
+        self.session, self.soup, url = get_soup(self.url, cw=self.cw)
         self.url = self.fix_url(url)
 
         # 2377
@@ -67,7 +67,7 @@ class Downloader_manatoki(Downloader):
                     break
             else:
                 raise Exception('no selected option')
-            self.session, self.soup, url = get_soup(url)
+            self.session, self.soup, url = get_soup(url, cw=self.cw)
             url_page = self.fix_url(url)
 
             for i, page in enumerate(get_pages(url_page, self.soup)):
@@ -115,7 +115,7 @@ class Downloader_manatoki(Downloader):
 
 
 def get_artist(soup):
-    view = soup.find('div', class_='view-title')
+    view = soup.find('div', class_='view-title', err='no title')
     text = view.text.replace('\n', '#')
     artist = re.find(r'작가[ #]*:[ #]*(.+?)#', text, default='N/A').strip()
     return artist
@@ -123,17 +123,22 @@ def get_artist(soup):
 
 @sleep_and_retry
 @limits(1, 10)
-def get_soup(url, session=None):
+def get_soup(url, session=None, cw=None):
     if session is None:
         session = Session()
+    virgin = True
     def f(html, browser=None):
+        nonlocal virgin
         soup = Soup(html)
         if soup.find('form', {'name':'fcaptcha'}): #4660
             browser.show()
+            if virgin:
+                virgin = False
+                browser.runJavaScript('window.scrollTo({top: document.getElementsByClassName("form-box")[0].getBoundingClientRect().top-150})') #5504
             return False
         browser.hide()
         return True
-    res = clf2.solve(url, session=session, f=f)
+    res = clf2.solve(url, session=session, f=f, cw=cw)
     soup = Soup(res['html'], apply_css=True)
 
     return session, soup, res['url']
@@ -198,7 +203,7 @@ def get_imgs(url, title, soup=None, session=None, cw=None):
     print_ = get_print(cw)
 
     if soup is None or session is None:
-        session, soup, url = get_soup(url, session)
+        session, soup, url = get_soup(url, session, cw)
 
     pages = get_pages(url, soup)
     pages = page_selector.filter(pages, cw)
@@ -233,7 +238,7 @@ def get_imgs_page(page, title, referer, session, cw):
     #soup = Soup(html)
 
     # 2183
-    session, soup, page.url = get_soup(page.url, session)
+    session, soup, page.url = get_soup(page.url, session, cw)
 
     title_page = page.title#clean_title(soup.find('span', class_='page-desc').text.strip())
     if page.title != title_page:

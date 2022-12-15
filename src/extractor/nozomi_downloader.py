@@ -26,7 +26,8 @@ def read_post(id, referer):
     j = downloader.read_json(url_post, referer)
     imgs = []
     for p, url in enumerate(j['imageurls']):
-        url = urljoin(referer, url['imageurl'])
+        did = url['dataid']
+        url = 'https://i.nozomi.la/{}/{}/{}.{}'.format(did[-1], did[-3:-1], did, url['type']) #5340
         img = Image(id, url, referer, p)
         imgs.append(img)
     return imgs
@@ -61,6 +62,7 @@ class Downloader_nozomi(Downloader):
         qs = query_url(self.url)
         q = qs['q'][0]
         ids = get_ids_multi(q, self._popular, self.cw)
+        self.print_(f'ids: {len(ids)}')
         p = ThreadPool(6)
         step = 10
         for i in range(int(ceil(len(ids)/step))):

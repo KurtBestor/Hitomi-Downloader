@@ -1,27 +1,29 @@
 #coding: utf8
 import downloader
-from utils import Downloader, Session, Soup, LazyUrl, urljoin, get_ext, clean_title, try_n
+from utils import Downloader, Session, Soup, LazyUrl, urljoin, get_ext, clean_title, try_n, get_outdir
 import ree as re
 from translator import tr_
 import clf2
 from ratelimit import limits, sleep_and_retry
 from m3u8_tools import M3u8_stream
 from timee import sleep
+import os
 
 
 
 class Image:
-
     def __init__(self, url, referer, p, session):
         self._url = url
+        self._referer = referer
         self._p = p
-        self.url = LazyUrl(referer, self.get, self)
+        self.url = LazyUrl(url, self.get, self)
         self.session = session
 
+    @try_n(3, 5)
     @sleep_and_retry
     @limits(1, 1)
-    def get(self, referer):
-        soup = downloader.read_soup(self._url, referer, session=self.session)
+    def get(self, _=None):
+        soup = downloader.read_soup(self._url, self._referer, session=self.session)
         div = soup.find('div', id='display_image_detail') or soup.find('ul', id='detail_list')
         parent = div.find('img').parent
         while not parent.get('href'):
@@ -109,7 +111,7 @@ class Downloader_hentaicosplay(Downloader):
             if page == self.url:
                 soup_page =  soup
             else:
-                soup_page = downloader.read_soup(page, session=self.session)
+                soup_page = try_n(3, 5)(downloader.read_soup)(page, session=self.session)
             view = soup_page.find('div', id='post') or soup_page.find('ul', id='detail_list')
             for img in view.findAll('img'):
                 href = img.parent.get('href') or img.parent.parent.get('href')
@@ -121,7 +123,22 @@ class Downloader_hentaicosplay(Downloader):
             self.print_(f'imgs: {len(imgs)}')
             self.cw.setTitle('{} {} ({} / {})'.format(tr_('읽는 중...'), title, i+1, len(pages)))
 
-        for img in imgs:
-            self.urls.append(img.url)
+        names = {}
+        dirname = os.path.join(get_outdir(self.type), clean_title(title))
+        try:
+            files = os.listdir(dirname)
+        except:
+            files = []
+        for file in files:
+            name, ext = os.path.splitext(file)
+            names[name] = ext
+
+        for p, img in enumerate(imgs):
+            name = '{:04}'.format(p)
+            ext = names.get(name)
+            if ext:
+                self.urls.append(os.path.join(dirname, '{}{}'.format(name, ext)))
+            else:
+                self.urls.append(img.url)
 
         self.title = clean_title(title)

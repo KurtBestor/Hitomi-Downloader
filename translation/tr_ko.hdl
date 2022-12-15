@@ -77,6 +77,7 @@
     "#task_title#": "Title",
     "#task_type#": "Type",
     "#task_url#": "URL",
-    "#task_zipfile#": "ZipFile"
+    "#task_zipfile#": "ZipFile",
+    "#torrent_anon#": "A generic user-agent will be used for trackers (except for private torrents).<br>Your local IPv4 and IPv6 address won't be sent as query string parameters to private trackers.<br>If announce_ip is configured, it will not be sent to trackers.<br>The client version will not be sent to peers in the extension handshake.<br>The DHT node will be disabled."
   }
 }
