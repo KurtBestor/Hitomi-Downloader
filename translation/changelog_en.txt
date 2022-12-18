@@ -1,132 +1,132 @@
-3.8    【Dec 16, 2022】
+3.8    2022-12-16
 
-[버그 해결 / 사이트 변경에 의한 수정]
+[Bug Resolution / Fix due to site change]
 
-- Twitch 음소거된 부분 복구하지 못할 경우 느리게 다운로드되는 문제 해결
+- Twitch: fix slow download
 
-- pixivコミック 작가명 인식 안 되는 문제 해결 (#5278)
+- pixivコミック: fix author's name not being recognized (#5278)
 
-- Nozomi.la 업데이트 대응 (#5340)
+- Nozomi.la: update response  (#5340)
 
-- Danbooru 업데이트 대응 (#5336)
+- Danbooru: update response  (#5336)
 
-- Danbooru 단일 포스트 다운로드
+- Danbooru: allow download of single post
 
-- Niconico 업데이트 대응 (#5332)
+- Niconico: update response (#5332)
 
-- Niconico 로그인 방식 변경 - 쿠키 필요
+- Niconico: cookie required for login
 
-- YouTube 채널 탭 인식 (#5365)
+- YouTube: channel tab support (shorts, live) (#5365)
 
-- Bilibili 업데이트 대응 (#5383)
+- Bilibili: update response (#5383)
 
-- PornHub 업데이트 대응 (#5384)
+- PornHub: update response (#5384)
 
-- Cloudflare DDoS protection 업데이트 대응 (#5392, #5404)
+- Cloudflare DDoS protection: update response (#5392, #5404)
 
-- pixivコミック 안정화 (#5329, #5498)
+- pixivコミック: stability fix(#5329, #5498)
 
-- LHScan 업데이트 대응 (#5351)
+- LHScan: update response (#5351)
 
-- Twitch 메모리 문제 해결 (#5418)
+- Twitch: troubleshooting memory (#5418)
 
-- PornHub GIF 다운로드 안 되는 문제 해결
+- PornHub GIF: fix download error
 
-- E(x)Hentai 업데이트 대응
+- E(x)Hentai: update response
 
-- #5095
+- YouTube: fixed list download (#5095)
 
-- #5299
+- Instagram: fix download error (#5299)
 
-- 일부 동영상 사이트 플레이리스트 메모리 문제 해결 (#5423)
+- Troubleshooting some video site playlist memory (#5423)
 
-- XnView MP 연결파일 실행 문제 해결 (#5224)
+- XnView MP: Troubleshooting connection file execution  (#5224)
 
-- 중복 이미지 찾기 프리징 문제 해결 (#4493)
+- Troubleshooting freesing finding suplicate images  (#4493)
 
-- hanime.tv 업데이트 대응 (#5272)
+- hanime.tv: update response (#5272)
 
-- baraag.net 업데이트 대응 (#5435)
+- baraag.net: update response (#5435)
 
-- Pawoo 업데이트 대응
+- Pawoo: update response
 
-- ArtStation 여러 앨범 있을 경우 하나만 다운로드하는 문제 해결 (#5473)
+- ArtStation: troubleshoot downloading only one album if you have multiple albums (#5473)
 
-- Flickr 다운로드 안 되는 문제 해결 (#5492)
+- Flickr: fix download error (#5492)
 
-- KakaoPage 업데이트 대응 (#5268)
+- KakaoPage: update response (#5268)
 
-- #5488
+- PornHub: increase maximum videos download (#5488)
 
-- AsmHentai 업데이트 대응
+- AsmHentai: update response
 
-- 기타 자잘한 것들
+- Other small changes
 
 
-[변경/추가된 기능]
+[Changed/Added Features]
 
-- Hiyobi.me 지원 (#5425)
+- Hiyobi.me: support (#5425)
 
-- YouTube Handles 지원 (#5445)
+- YouTube Handles: support (#5445)
 
-- Pixiv 쿠키가 없다면 로그인 창 띄움
+- Pixiv: window open if no cookies are loaded
 
-- Pixiv "다시 시작" 할 때 이미 다운로드한 파일들 생략하고 더 빠르게 읽음 (#5281)
+- Pixiv: "Restart" skip files already downloaded and read faster (#5281)
 
-- 필터 북마크 내보내기 / 가져오기 (#5298)
+- Export/Import Filter Bookmarks (#5298)
 
-- 설정 파일 (*.ini) 읽는 중 오류가 생기면 자동 저장 해제
+- Turn off auto-save if errors occur while reading the settings file (*.ini)
 
-- Torrent 다운로드하기 전에 파일 고르기 옵션 (#4328)
+- Torrent: added option to select file before downloading (#4328)
 
-- Torrent 트래커 추가
-    옵션 - 설정 - Torrent - 트래커 추가
+- Torrent: option to add tracker
+     Options - Settings - Torrent - Add Tracker
 
-- 설정 검색
+- Settings: you can now search settings
 
-- #5436
+- UX: Keyboard interface improvement (#5436)
 
-- thunder:// 링크 지원
+- thunder:// link support added
 
-- YouTube "파일명 형식" 에서 하위폴더 인식 (#5177)
+- YouTube: recognize subfolders in "File Name Format" (#5177)
 
-- #5126
+- E(x)Hentai: restarting the task now download corrupted or missing images (#5126)
 
-- SankakuComplex 로그인 필요시 알림 (#5341)
+- SankakuComplex: notification when login is needed (#5341)
 
-- YouTube 생방송 시작할 때까지 기다렸다가 다운로드
+- YouTube: wait for the live broadcast to start before downloading
 
-- WebP 변환 (#5444)
+- WebP: conversion option added (#5444)
 
-- 선택한 작업 이미지 포맷 변환 (#5444)
-    마우스 우 클릭 - 이미지 포맷 변환...
+- Conversion: image format (#5444)
+     Right-click - Image Format Conversion...
 
-- 컨텍스트 메뉴 레이아웃 변경
+- Context menu: layout modified 
 
-- 잘못된 프록시 주소 자동 수정 & 프록시 연결 여부 표시
+- Auto-correct invalid proxy address & indicate proxy connection
 
-- 프록시 TOR 지원
+- TOR proxy support
 
-- 창 위치 크기 기억 (#3548)
+- UX: remember window location size  (#3548)
 
-- "클립보드에서 자동 추가" 알림 창 뜬 상태에서도 계속 동작하게 수정
+- Modify the "Auto-Add from Clipboard" notification window to continue to work even when it appears
 
-- 메시지 창 여러개 떴을 때 자동 포커스 (#5458)
+- Automatic focus when multiple message windows appear (#5458)
 
-- Tumblr URL redirect 지원 (#5501)
+- Tumblr URL redirect support (#5501)
 
-- 성능 최적화 (#5510)
+- Performance Optimization (#5510)
 
-- 기타 자잘한 것들
+- Other small changes
 
 
 
 --------------------------------------------------------------------------------------------------------------------------------------------
-3.7p    【Sep 20, 2022】
+3.7p    2022-09-20
 
-[버그 해결 / 사이트 변경에 의한 수정]
+[Bug Resolution / Fix due to site change]
 
-- YouTube shorts 인식 안 되는 문제 해결 (#5260)
+- YouTube shorts: now properly recognized (#5260)
 
 
 
