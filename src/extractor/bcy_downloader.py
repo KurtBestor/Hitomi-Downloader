@@ -22,9 +22,9 @@ class Downloader_bcy(Downloader):
     def name(self):
         info = self.info
         if '/detail/' in self.url:
-            title = u'{} (bcy_{}) - {}'.format(clean_title(info['artist']), info['uid'], info['id'])
+            title = '{} (bcy_{}) - {}'.format(clean_title(info['artist']), info['uid'], info['id'])
         else:
-            title = u'{} (bcy_{})'.format(clean_title(info['artist']), info['uid'])
+            title = '{} (bcy_{})'.format(clean_title(info['artist']), info['uid'])
         return title
 
     def read(self):
@@ -60,7 +60,7 @@ def get_imgs(url, html=None, cw=None):
 
     for m in multi:
         path = m['original_path']
-        img = json.loads(u'"{}"'.format(path))
+        img = json.loads('"{}"'.format(path))
         img = Image_single(img, url, len(imgs))
         imgs.append(img)
 
@@ -88,7 +88,7 @@ class Image:
 
     def get(self, referer):
         ext = get_ext(self._url, referer)
-        self.filename = u'{}_p{}{}'.format(self.id, self.p, ext)
+        self.filename = '{}_p{}{}'.format(self.id, self.p, ext)
         return self._url
 
 
@@ -148,13 +148,13 @@ def get_imgs_channel(url, html=None, cw=None):
                 continue
             c += 1
             ids.add(id)
-            url_single = u'https://bcy.net/item/detail/{}'.format(id)
+            url_single = 'https://bcy.net/item/detail/{}'.format(id)
             imgs_single = get_imgs(url_single, cw=cw)
             print_(str(id))
             for p, img in enumerate(imgs_single):
                 img = Image(img._url, url_single, id, p)
                 imgs.append(img)
-            s = u'{} {} - {}'.format(tr_(u'읽는 중...'), info['artist'], min(len(imgs), max_pid))
+            s = '{} {} - {}'.format(tr_('읽는 중...'), info['artist'], min(len(imgs), max_pid))
             if cw:
                 cw.setTitle(s)
             else:

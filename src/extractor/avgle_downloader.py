@@ -50,7 +50,7 @@ def get_video(url, cw=None):
     s = base64.b64decode(data).decode('utf8')
     urls = json.loads(s)
 
-    print_(u'\n'.join(urls[:4]))
+    print_('\n'.join(urls[:4]))
 
     referer_seg = 'auto' if 'referer=force' in urls[0] else None # 1718
 
@@ -75,4 +75,4 @@ class Video:
         downloader.download(url_thumb, referer=referer, buffer=self.thumb)
         self.title = title
         ext = '.mp4'
-        self.filename = u'{}{}'.format(clean_title(title, n=-len(ext)), ext)
+        self.filename = '{}{}'.format(clean_title(title, n=-len(ext)), ext)

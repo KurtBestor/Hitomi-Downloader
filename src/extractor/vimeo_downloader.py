@@ -14,7 +14,7 @@ class Downloader_vimeo(Downloader):
 
     def init(self):
         if 'vimeo.com' not in self.url.lower():
-            self.url = u'https://vimeo.com/{}'.format(self.url)
+            self.url = 'https://vimeo.com/{}'.format(self.url)
 
     def read(self):
         video = Video(self.url, cw=self.cw)

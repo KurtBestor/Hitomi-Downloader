@@ -71,7 +71,7 @@ def get_video(url, soup=None):
     video = soup.find('video', id='vjsplayer').find('source').attrs['src']
     url_thumb = soup.find('video', id='vjsplayer').attrs['poster']
     title = get_title(soup)
-    filename = u'{}.mp4'.format(clean_title(title))
+    filename = '{}.mp4'.format(clean_title(title))
     video = Video(video, url_thumb, url, filename)
     return video
 

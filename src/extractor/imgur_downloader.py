@@ -1,5 +1,5 @@
 import downloader
-from utils import Downloader, Soup, try_n, urljoin, get_max_range, clean_title, cut_pair
+from utils import Downloader, Soup, try_n, urljoin, get_max_range, clean_title, cut_pair, check_alive
 import ree as re, json, os
 from timee import sleep
 from translator import tr_
@@ -28,14 +28,14 @@ class Downloader_imgur(Downloader):
         for img in imgs:
             ext = os.path.splitext(img.split('?')[0])[1]
             if len(imgs) > 1:
-                self.filenames[img] = (u'{:04}{}').format(len(self.urls), ext)
+                self.filenames[img] = '{:04}{}'.format(len(self.urls), ext)
             else:
                 self.filenames[img] = clean_title(self.name, n=-len(ext)) + ext
             self.urls.append(img)
 
         self.single = len(imgs) == 1
         self.referer = self.url
-        self.title = u'{} (imgur_{})'.format(self.name, self.id_)
+        self.title = '{} (imgur_{})'.format(self.name, self.id_)
 
 
 @try_n(4)
@@ -98,6 +98,7 @@ def get_imgs(url, info=None, cw=None):
 
             c = 0
             for post in soup.findAll('div', class_='post'):
+                check_alive(cw)
                 a = post.find('a', class_='image-list-link')
                 url_post = urljoin(url, a.attrs['href'])
                 if url_post in urls:
@@ -110,12 +111,9 @@ def get_imgs(url, info=None, cw=None):
                 except Exception as e:
                     print(e)
 
-                s = (u'{} {}  ({})').format(tr_(u'\uc77d\ub294 \uc911...'), info['title'], len(imgs))
+                s = '{} {}  ({})'.format(tr_('읽는 중...'), info['title'], len(imgs))
                 if cw is not None:
-                    if cw.alive:
-                        cw.setTitle(s)
-                    else:
-                        return []
+                    cw.setTitle(s)
                 else:
                     print(s)
 

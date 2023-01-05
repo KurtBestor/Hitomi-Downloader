@@ -113,7 +113,6 @@ class Downloader_bili(Downloader):
 
     def read(self):
         self.print_('CURRENT_QUALITY: {}'.format(self.session.cookies.get('CURRENT_QUALITY', domain='.bilibili.com')))
-        page = get_page(self.url)
         video, info = get_video(self.url, self.session, self.cw)
         self.urls.append(video.url)
 
@@ -121,8 +120,6 @@ class Downloader_bili(Downloader):
         downloader.download(info['url_thumb'], buffer=thumb)
         self.setIcon(thumb)
         title = info['title']
-        if page is not None:
-            title += '_p{}'.format(page)
         title = format_filename(title, self.id_, '.mp4')[:-4]
         n = int(math.ceil(8.0 / len([None])))
         self.print_('n_threads: {}'.format(n))
@@ -130,22 +127,6 @@ class Downloader_bili(Downloader):
         self.title = title
         ext = info['ext']
         video.filename = '{}{}'.format(title, ext)
-
-
-def get_page(url):
-    qs = query_url(url)
-    page = qs.get('p')
-    if page:
-        page = int(page[0])
-    else:
-        page = re.findall('_p([0-9]+)', url)
-        if page:
-            page = int(page[0])
-        else:
-            page = None
-    if page == 1:
-        page = None
-    return page
 
 
 @try_n(4)
@@ -157,17 +138,19 @@ def get_video(url, session, cw=None):
     anime_id = mobj.group('anime_id')
     print(video_id, anime_id)
     print_ = get_print(cw)
-    p = get_page(url)
-    if p is None:
-        p = 1
 
     options = {
-            'noplaylist': True,
+            #'noplaylist': True, #5562
             #'extract_flat': True,
             'playlistend': 1,
             }
     ydl = ytdl.YoutubeDL(options, cw=cw)
     info = ydl.extract_info(url)
+
+    #5562
+    entries = info.get('entries')
+    if entries:
+        info.update(entries[0])
 
     fs = info['formats']
     res = max(get_resolution(), min(f.get('height', 0) for f in fs))
@@ -196,7 +179,7 @@ def get_video(url, session, cw=None):
     if not ext.startswith('.'):
         ext = '.' + ext
 
-    session.headers.update(info['http_headers'])
+    session.headers.update(info.get('http_headers', {}))
 
     info = {
         'title': clean_title(title),
@@ -204,11 +187,3 @@ def get_video(url, session, cw=None):
         'ext': ext,
         }
     return video, info
-
-
-def get_pages(html):
-    s = re.find(r'__INITIAL_STATE__=(.+)', html)
-    data_raw = cut_pair(s)
-    data = json.loads(data_raw)
-    pages = data['videoData']['pages']
-    return pages

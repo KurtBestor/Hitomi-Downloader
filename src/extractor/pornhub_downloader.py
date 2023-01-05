@@ -8,7 +8,7 @@ import downloader
 import ree as re
 from utils import (Downloader, Soup, try_n, LazyUrl, urljoin, get_print,
                    Session, get_max_range, filter_range, get_ext,
-                   lock, format_filename, clean_title, get_resolution)
+                   lock, format_filename, clean_title, get_resolution, check_alive)
 import clf2
 import utils
 from m3u8_tools import playlist2stream, M3u8_stream
@@ -141,7 +141,7 @@ class Video:
 
             ydl = ytdl.YoutubeDL(cw=cw)
             info = ydl.extract_info(url)
-            session.headers.update(info['http_headers'])
+            session.headers.update(info.get('http_headers', {}))
 
             fs = []
             for f in info['formats']:
@@ -149,6 +149,8 @@ class Video:
                 ext = get_ext(f['url'])
                 if f['protocol'].startswith('m3u8'):
                     f['quality'] -= 1
+                if 'dash' in f['protocol'].lower(): #5554
+                    continue
                 print_('[{}p] {} {}'.format(f['height'], f['protocol'], f['url']))
                 fs.append(f)
 
@@ -447,6 +449,7 @@ def get_videos(url, session, cw=None):
     hrefs = []
     fail = 0
     for p in range(1, 1+100):
+        check_alive(cw)
         try:
             if mode in ['users', 'model']:
                 if mode == 'users':
@@ -498,9 +501,6 @@ def get_videos(url, session, cw=None):
                 break
         finally:
             print_('{}  ({})'.format(url_api, len(hrefs)))
-
-        if cw and not cw.alive:
-            return
 
         lis = soup.findAll('li', class_='videoblock')
         if not lis:

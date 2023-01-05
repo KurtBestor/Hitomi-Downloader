@@ -2,7 +2,7 @@
 import downloader
 import flickr_api
 from timee import sleep
-from utils import Downloader, LazyUrl, query_url, clean_title
+from utils import Downloader, LazyUrl, query_url, clean_title, check_alive
 import os
 from translator import tr_
 import ree as re
@@ -33,10 +33,10 @@ class Image:
             #url = 'https://flic.kr/p/{}'.format(b58encode(int(photo.id)))
             ext = os.path.splitext(url)[1]
             date = datetime.fromtimestamp(int(photo.dateuploaded))
-            date = u'{:02}-{:02}-{:02}'.format(date.year%100, date.month, date.day)
-            self.filename = u'[{}] {}{}'.format(date, self.id, ext)
+            date = '{:02}-{:02}-{:02}'.format(date.year%100, date.month, date.day)
+            self.filename = '[{}] {}{}'.format(date, self.id, ext)
             return url
-        self.url = LazyUrl(u'flickr_{}'.format(self.id), f, self)
+        self.url = LazyUrl('flickr_{}'.format(self.id), f, self)
 
 
 def find_ps(url):
@@ -71,10 +71,10 @@ class Downloader_flickr(Downloader):
             flickr_auth.get_api(url, self.cw)
             if '/albums/' in url:
                 user, ps = find_ps(url)
-                self._name = u'{} (flickr_album_{}_{})'.format(ps.title, user.id, ps.id)
+                self._name = '{} (flickr_album_{}_{})'.format(ps.title, user.id, ps.id)
             else:
                 user = flickr_api.Person.findByUrl(url)
-                self._name = u'{} (flickr_{})'.format(user.username, user.id)
+                self._name = '{} (flickr_{})'.format(user.username, user.id)
         return clean_title(self._name)
 
 
@@ -106,15 +106,14 @@ def get_imgs(url, title=None, cw=None):
 
     per_page = 500
     for page in range(1, 200):
+        check_alive(cw)
         photos_new = handle.getPhotos(per_page=per_page, page=page)
         photos += photos_new
         if len(photos_new) < per_page:
             break
 
-        msg = u'{}  {} - {}'.format(tr_(u'읽는 중...'), title, len(photos))
+        msg = '{}  {} - {}'.format(tr_('읽는 중...'), title, len(photos))
         if cw:
-            if not cw.alive:
-                break
             cw.setTitle(msg)
         else:
             print(msg)

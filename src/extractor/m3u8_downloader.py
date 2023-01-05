@@ -1,4 +1,4 @@
-from utils import Downloader, LazyUrl, clean_title, Session
+from utils import Downloader, LazyUrl, clean_title, Session, get_ext
 import utils
 from m3u8_tools import playlist2stream, M3u8_stream
 import os
@@ -7,10 +7,14 @@ from translator import tr_
 DEFAULT_N_THREAD = 2
 
 
+def suitable(url):
+    ext = get_ext(url).lower()
+    return ext in ('.m3u8', '.mpd')
+
 
 class Downloader_m3u8(Downloader):
     type = 'm3u8'
-    URLS = ['.m3u8']
+    URLS = [suitable]
     single = True
     display_name = 'M3U8'
 
@@ -31,20 +35,35 @@ class Downloader_m3u8(Downloader):
 class Video:
     def __init__(self, url, n_thread):
         session = Session()
-        session.purge([r'(.*\.)?{}'.format(utils.domain(url))])
-        try:
-            m = playlist2stream(url, n_thread=n_thread, session=session)
-        except:
-            m = M3u8_stream(url, n_thread=n_thread, session=session)
-        if m.live is not None: #5110
+        session.purge([rf'(.*\.)?{utils.domain(url)}'])
+        if get_ext(url).lower() == '.mpd':
+            def m():
+                hdr = session.headers.copy()
+                hdr['Referer'] = url
+                return utils.LiveStream(url, headers=hdr)
+            ms = [m]
+        else:
+            ms = [
+                lambda: playlist2stream(url, n_thread=n_thread, session=session),
+                lambda: M3u8_stream(url, n_thread=n_thread, session=session),
+                ]
+        for m in ms:
+            try:
+                m = m()
+                break
+            except Exception as e:
+                e_ = e
+        else:
+            raise e_
+        if getattr(m, 'live', None) is not None: #5110
             m = m.live
             live = True
         else:
             live = False
         self.url = LazyUrl(url, lambda _: m, self)
-        self.title = os.path.splitext(os.path.basename(url))[0]
+        self.title = os.path.splitext(os.path.basename(url).split('?')[0])[0]
         self.id_ = md5(url.encode('utf8')).hexdigest()[:8]
-        tail = ' ({}).mp4'.format(self.id_)
+        tail = f' ({self.id_}).mp4'
         if live: #5110
             from datetime import datetime
             now = datetime.now()

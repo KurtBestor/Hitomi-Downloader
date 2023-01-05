@@ -1,5 +1,5 @@
 import downloader
-from utils import Session, Downloader, LazyUrl, clean_url, try_n, Soup, clean_title, get_ext, get_max_range, get_print
+from utils import Session, Downloader, LazyUrl, clean_url, try_n, Soup, clean_title, get_ext, get_max_range, get_print, check_alive
 import json, os, ree as re
 from timee import sleep
 from translator import tr_
@@ -47,7 +47,7 @@ class Downloader_pinter(Downloader):
             return self._pin_id
         username = self.info['owner']['username']
         name = self.info['name']
-        return clean_title((u'{}/{}').format(username, name))
+        return clean_title('{}/{}'.format(username, name))
 
     def read(self):
         if self.type_pinter == 'pin':
@@ -64,7 +64,7 @@ class Downloader_pinter(Downloader):
 
 def get_info(username, board, api):
     if '/' in board:
-        section = (u'/').join(board.split('/')[1:])
+        section = '/'.join(board.split('/')[1:])
         board = board.split('/')[0]
         info = api.board(username, board)
         for s in api.board_sections(info['id']):
@@ -76,7 +76,7 @@ def get_info(username, board, api):
 
         title = s['title']
         info.update(s)
-        info['name'] = (u'{}/{}').format(info['name'], title)
+        info['name'] = '{}/{}'.format(info['name'], title)
         print('section_id:', info['id'])
     else:
         info = api.board(username, board)
@@ -130,7 +130,7 @@ class PinterestAPI:
     @sleep_and_retry
     @limits(1, 4) # 1000 calls per hour
     def _call(self, resource, options):
-        url = ('{}/resource/{}Resource/get/').format(BASE_URL, resource)
+        url = '{}/resource/{}Resource/get/'.format(BASE_URL, resource)
         params = {'data': json.dumps({'options': options}), 'source_url': ''}
         #print('_call: {}, {}'.format(url, params))
         r = self.session.get(url, params=params)
@@ -182,8 +182,8 @@ class Image:
                 src = M3u8_stream(src)
             ext = '.mp4'
 
-        self.url = LazyUrl(('{}/pin/{}/').format(BASE_URL, self.id), lambda _: src, self)
-        self.filename = ('{}{}').format(self.id, ext)
+        self.url = LazyUrl('{}/pin/{}/'.format(BASE_URL, self.id), lambda _: src, self)
+        self.filename = f'{self.id}{ext}'
 
 
 
@@ -200,8 +200,9 @@ def get_imgs(id, api, cw=None, title=None, type='board'):
     elif type == 'pin':
         gen = [api.pin(id)]
     else:
-        raise Exception((u'Type "{}" is not supported').format(type))
+        raise Exception('Type "{}" is not supported'.format(type))
     for img in gen:
+        check_alive(cw)
         if 'images' not in img:
             print('skip img:', img['id'])
             continue
@@ -219,9 +220,7 @@ def get_imgs(id, api, cw=None, title=None, type='board'):
         if len(imgs) >= n:
             break
         if cw is not None:
-            if not cw.alive:
-                return []
-            cw.setTitle((u'{} {}  ({})').format(tr_(u'\uc77d\ub294 \uc911...'), title, len(imgs)))
+            cw.setTitle('{} {}  ({})'.format(tr_('읽는 중...'), title, len(imgs)))
 
     return imgs
 

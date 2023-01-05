@@ -81,7 +81,7 @@ class Video:
         return filename_new
 
     def __repr__(self):
-        return u'Video({})'.format(self.id)
+        return 'Video({})'.format(self.id)
 
 
 def suitable(url):

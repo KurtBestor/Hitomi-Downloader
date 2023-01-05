@@ -1,6 +1,6 @@
 #coding: utf-8
 import downloader
-from utils import Downloader, urljoin, get_max_range, query_url, Soup, Session, LazyUrl, get_print, clean_title, try_n, get_ext
+from utils import Downloader, urljoin, get_max_range, query_url, Soup, Session, LazyUrl, get_print, clean_title, try_n, get_ext, check_alive
 from translator import tr_
 from constants import clean_url
 import ree as re
@@ -46,7 +46,7 @@ class Downloader_nijie(Downloader):
 
     @property
     def name(self):
-        name = u'{} (nijie_{})'.format(get_name(self.soup), get_id(self.url))
+        name = '{} (nijie_{})'.format(get_name(self.soup), get_id(self.url))
         return clean_title(name)
 
     def read(self):
@@ -112,7 +112,7 @@ def get_imgs(url, title=None, cw=None):
     url = clean_url(url)
 
     id = get_id(url)
-    url = u'https://nijie.info/members_illust.php?id={}'.format(id)
+    url = 'https://nijie.info/members_illust.php?id={}'.format(id)
 
     # Range
     max_pid = get_max_range(cw)
@@ -131,6 +131,7 @@ def get_imgs(url, title=None, cw=None):
             break
         c = 0
         for post in posts:
+            check_alive(cw)
             url_img = urljoin(url, post.a.attrs['href'])
             if url_img in url_imgs:
                 print('duplicate:', url_img)
@@ -149,10 +150,8 @@ def get_imgs(url, title=None, cw=None):
             if len(imgs) >= max_pid:
                 break
 
-            msg = u'{}  {} - {}'.format(tr_(u'읽는 중...'), title, len(imgs))
+            msg = '{}  {} - {}'.format(tr_('읽는 중...'), title, len(imgs))
             if cw:
-                if not cw.alive:
-                    return
                 cw.setTitle(msg)
             else:
                 print(msg)

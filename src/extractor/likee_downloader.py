@@ -1,5 +1,5 @@
 import downloader
-from utils import Session, Downloader, get_ext, LazyUrl, get_print
+from utils import Session, Downloader, get_ext, LazyUrl, get_print, check_alive
 import ree as re
 import json
 from io import BytesIO
@@ -61,6 +61,7 @@ def get_info(url, session, cw=None):
     lastPostId = ''
     urls = set()
     while True:
+        check_alive(cw)
         url_api = 'https://likee.video/official_website/VideoApi/getUserVideo'
         r = session.post(url_api, data={'uid': info['uid'], 'count': '30', 'lastPostId': lastPostId})
         data = json.loads(r.text)
@@ -82,8 +83,6 @@ def get_info(url, session, cw=None):
 
         msg = '{} {} - {}'.format(tr_('읽는 중...'), info['title'], len(info['videos']))
         if cw:
-            if not cw.alive:
-                return
             cw.setTitle(msg)
         else:
             print(msg)

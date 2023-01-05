@@ -46,10 +46,10 @@ class Downloader_naver(Downloader):
     @property
     def name(self):
         username, pid = get_id(self.url)
-        return clean_title(u'{}/{}'.format(username, pid))
+        return clean_title('{}/{}'.format(username, pid))
 
     def read(self):
-        self.title = u'읽는 중... {}'.format(self.name)
+        self.title = '읽는 중... {}'.format(self.name)
 
         imgs = get_imgs(self.url)
 
@@ -114,7 +114,7 @@ def get_imgs(url):
         if url is None:
             url = img.attrs.get('thumburl', None)
         if url is None:
-            print(u'invalid img: {}'.format(url))
+            print('invalid img: {}'.format(url))
             continue
 
         if 'ssl.pstatic.net' in url: #

@@ -1,5 +1,5 @@
 import downloader
-from utils import Soup, try_n, Downloader, urljoin, get_print, Session, clean_url, clean_title, LazyUrl, get_ext, fix_title, lazy, get_imgs_already
+from utils import Soup, try_n, Downloader, urljoin, get_print, Session, clean_url, clean_title, LazyUrl, get_ext, fix_title, lazy, get_imgs_already, check_alive
 from translator import tr_
 import page_selector
 import utils
@@ -210,6 +210,7 @@ def get_imgs(url, title, soup=None, session=None, cw=None):
 
     imgs = []
     for i, page in enumerate(pages):
+        check_alive(cw)
         imgs_already = get_imgs_already('manatoki', title, page, cw)
         if imgs_already:
             imgs += imgs_already
@@ -221,8 +222,6 @@ def get_imgs(url, title, soup=None, session=None, cw=None):
         s = '{} {} / {}  ({} / {})'.format(tr_('읽는 중...'), title, page.title, i+1, len(pages))
         print_('{} {}'.format(page.title, len(imgs_)))
         if cw is not None:
-            if not cw.alive:
-                return
             cw.setTitle(s)
         else:
             print('read page... {}    ({})'.format(page.url, len(imgs)))

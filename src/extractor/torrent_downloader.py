@@ -47,6 +47,7 @@ class Downloader_torrent(Downloader):
     _proxy = '', '', 0, '', ''
     _seeding = False
     _virgin = True
+    STOP_READING = False
 
     @classmethod
     def fix_url(cls, url):

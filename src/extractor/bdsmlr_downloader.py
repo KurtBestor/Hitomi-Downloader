@@ -1,6 +1,6 @@
 #coding:utf8
 import downloader
-from utils import Session, Soup, LazyUrl, Downloader, get_max_range, try_n, get_print, clean_title
+from utils import Session, Soup, LazyUrl, Downloader, get_max_range, try_n, get_print, clean_title, check_alive
 from datetime import datetime
 import ree as re
 import os
@@ -18,8 +18,8 @@ class Downloader_bdsmlr(Downloader):
     display_name = 'BDSMlr'
 
     def init(self):
-        if u'bdsmlr.com/post/' in self.url:
-            raise errors.Invalid(tr_(u'개별 다운로드는 지원하지 않습니다: {}').format(self.url))
+        if 'bdsmlr.com/post/' in self.url:
+            raise errors.Invalid(tr_('개별 다운로드는 지원하지 않습니다: {}').format(self.url))
 
         self.url = 'https://{}.bdsmlr.com'.format(self.id_)
         self.session = Session()
@@ -42,7 +42,7 @@ class Downloader_bdsmlr(Downloader):
         for post in info['posts']:
             self.urls.append(post.url)
 
-        self.title = u'{} (bdsmlr_{})'.format(clean_title(info['username']), self.id_)
+        self.title = '{} (bdsmlr_{})'.format(clean_title(info['username']), self.id_)
 
 
 class Post:
@@ -50,7 +50,7 @@ class Post:
         self.id = id
         self.url = LazyUrl(referer, lambda x: url, self)
         ext = os.path.splitext(url)[1]
-        self.filename = u'{}_p{}{}'.format(id, p, ext)
+        self.filename = '{}_p{}{}'.format(id, p, ext)
 
 
 def foo(url, soup, info, reblog=False):
@@ -91,12 +91,13 @@ def get_imgs(user_id, session, cw=None):
     info['username'] = username
 
     token = soup.find('meta', {'name': 'csrf-token'}).attrs['content']
-    print_(u'token: {}'.format(token))
+    print_('token: {}'.format(token))
 
     max_pid = get_max_range(cw)
 
     n = len(info['ids'])
     for p in range(1000):
+        check_alive(cw)
         if p == 0:
             url_api = 'https://{}.bdsmlr.com/loadfirst'.format(user_id)
         else:
@@ -107,11 +108,12 @@ def get_imgs(user_id, session, cw=None):
             }
         if 'last' in info:
             data['last'] = str(info['last'])
-        print_(u'n:{}, scroll:{}, last:{}'.format(len(info['posts']), data['scroll'], data.get('last')))
+        print_('n:{}, scroll:{}, last:{}'.format(len(info['posts']), data['scroll'], data.get('last')))
         headers = {
             'Referer': url,
             'X-CSRF-TOKEN': token,
             }
+        _e = None
         for try_ in range(4):
             try:
                 r = session.post(url_api, data=data, headers=headers)
@@ -119,9 +121,11 @@ def get_imgs(user_id, session, cw=None):
                     r.raise_for_status()
                 break
             except Exception as e:
+                _e = e
                 print(e)
         else:
-            raise
+            if _e is not None:
+                raise _e
         soup = Soup(r.text)
         foo(url, soup, info)
         if len(info['ids']) == n:
@@ -129,10 +133,8 @@ def get_imgs(user_id, session, cw=None):
             break
         n = len(info['ids'])
 
-        s = u'{}  {} (tumblr_{}) - {}'.format(tr_(u'읽는 중...'), username, user_id, len(info['posts']))
+        s = '{}  {} (tumblr_{}) - {}'.format(tr_('읽는 중...'), username, user_id, len(info['posts']))
         if cw is not None:
-            if not cw.alive:
-                return
             cw.setTitle(s)
         else:
             print(s)

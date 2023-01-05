@@ -1,6 +1,6 @@
 #coding:utf8
 import downloader
-from utils import Soup, LazyUrl, urljoin, try_n, Downloader, get_print, clean_title, get_imgs_already
+from utils import Soup, LazyUrl, urljoin, try_n, Downloader, get_print, clean_title, get_imgs_already, check_alive
 import ree as re
 from itertools import cycle
 from io import BytesIO
@@ -33,7 +33,7 @@ class Image:
             f.seek(0)
             return f
         self.url = LazyUrl(page.url, f, self)
-        self.filename = u'{}/{:04}.jpg'.format(page.title, p)
+        self.filename = '{}/{:04}.jpg'.format(page.title, p)
 
 
 class Page:
@@ -126,7 +126,7 @@ def get_title(soup, cw=None):
 @try_n(4)
 def f(url):
     if '/viewer/' in url:
-        raise Exception(tr_(u'목록 주소를 입력해주세요'))
+        raise Exception(tr_('목록 주소를 입력해주세요'))
     pages = get_pages(url)
     return pages
 
@@ -143,15 +143,14 @@ def get_imgs(url, soup=None, cw=None):
 
     imgs = []
     for i, page in enumerate(pages):
+        check_alive(cw)
         imgs_already = get_imgs_already('comicwalker', title, page, cw)
         if imgs_already:
             imgs += imgs_already
             continue
 
         if cw is not None:
-            if not cw.alive:
-                return
-            cw.setTitle(u'{} {} / {}  ({} / {})'.format(tr_(u'읽는 중...'), title, page.title, i+1, len(pages)))
+            cw.setTitle('{} {} / {}  ({} / {})'.format(tr_('읽는 중...'), title, page.title, i+1, len(pages)))
 
         imgs += get_imgs_page(page)
 

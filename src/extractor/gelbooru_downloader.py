@@ -2,7 +2,7 @@
 import downloader
 import ree as re
 import os
-from utils import Downloader, urljoin, query_url, Soup, get_max_range, get_print, LazyUrl, get_ext, clean_title, Session
+from utils import Downloader, urljoin, query_url, Soup, get_max_range, get_print, LazyUrl, get_ext, clean_title, Session, check_alive
 from translator import tr_
 try:
     from urllib import quote # python2
@@ -18,13 +18,13 @@ def get_tags(url):
     qs = query_url(url)
     if 'page=favorites' in url:
         id = qs.get('id', ['N/A'])[0]
-        id = u'fav_{}'.format(id)
+        id = 'fav_{}'.format(id)
     else:
         tags = qs.get('tags', [])
         tags.sort()
-        id = u' '.join(tags)
+        id = ' '.join(tags)
     if not id:
-        id = u'N/A'
+        id = 'N/A'
     return id
 
 
@@ -97,7 +97,7 @@ class Image:
             raise Exception('no Original image')
         url = li.find('a')['href']
         ext = get_ext(url)
-        self.filename = u'{}{}'.format(self.id_, ext)
+        self.filename = '{}{}'.format(self.id_, ext)
         return url
 
 
@@ -143,6 +143,7 @@ def get_imgs(url, title=None, cw=None):
     ids = set()
     count_no_imgs = 0
     for p in range(500): #1017
+        check_alive(cw)
         url = setPage(url, len(ids))
         print_(url)
         html = downloader.read_html(url, cookies=cookies)
@@ -173,8 +174,6 @@ def get_imgs(url, title=None, cw=None):
             break
 
         if cw is not None:
-            if not cw.alive:
-                break
-            cw.setTitle(u'{}  {} - {}'.format(tr_(u'읽는 중...'), title, len(imgs)))
+            cw.setTitle('{}  {} - {}'.format(tr_('읽는 중...'), title, len(imgs)))
 
     return imgs[:max_pid]

@@ -1,6 +1,6 @@
 #coding:utf8
 import downloader
-from utils import Soup, urljoin, LazyUrl, Downloader, try_n, Session, clean_title, get_print, print_error
+from utils import Soup, urljoin, LazyUrl, Downloader, try_n, Session, clean_title, get_print, print_error, check_alive
 import os
 from translator import tr_
 import page_selector
@@ -192,11 +192,10 @@ def get_imgs(url, title, session, soup=None, cw=None):
 
     imgs = []
     for i, page in enumerate(pages):
+        check_alive(cw)
         imgs += get_imgs_page(page, url, session, cw)
         s = '{} {} / {}  ({} / {})'.format(tr_('읽는 중...'), title, page.title, i+1, len(pages))
         if cw is not None:
-            if not cw.alive:
-                return
             cw.setTitle(s)
         else:
             print(s)

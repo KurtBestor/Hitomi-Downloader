@@ -1,7 +1,7 @@
 import downloader
 import ree as re
 import os
-from utils import Downloader, urljoin, query_url, Soup, get_max_range, get_print, clean_title, try_n
+from utils import Downloader, urljoin, query_url, Soup, get_max_range, get_print, clean_title, try_n, check_alive
 from translator import tr_
 try:
     from urllib import quote # python2
@@ -18,13 +18,13 @@ def get_tags(url):
     qs = query_url(url)
     if 'page=favorites' in url:
         id = qs.get('id', ['N/A'])[0]
-        id = u'fav_{}'.format(id)
+        id = 'fav_{}'.format(id)
     else:
         tags = qs.get('tags', [])
         tags.sort()
-        id = u' '.join(tags)
+        id = ' '.join(tags)
     if not id:
-        id = u'N/A'
+        id = 'N/A'
     return id
 
 
@@ -46,7 +46,7 @@ class Downloader_rule34_xxx(Downloader):
                 url = url.replace('++', '+')
             url = quote(url)
             url = url.replace('%2B', '+')
-            url = u'https://rule34.xxx/index.php?page=post&s=list&tags={}'.format(url)
+            url = 'https://rule34.xxx/index.php?page=post&s=list&tags={}'.format(url)
         return url
 
     @property
@@ -72,7 +72,7 @@ class Image:
     def __init__(self, id_, url):
         self.url = url
         ext = os.path.splitext(url)[1]
-        self.filename = u'{}{}'.format(id_, ext)
+        self.filename = '{}{}'.format(id_, ext)
 
 
 def setPage(url, page):
@@ -107,6 +107,7 @@ def get_imgs(url, title=None, cw=None):
     imgs = []
     ids = set()
     for p in range(500): #1017
+        check_alive(cw)
         url = setPage(url, p)
         print_(url)
         html = try_n(4, sleep=30)(downloader.read_html)(url) #3340
@@ -128,7 +129,5 @@ def get_imgs(url, title=None, cw=None):
             break
 
         if cw is not None:
-            if not cw.alive:
-                break
-            cw.setTitle(u'{}  {} - {}'.format(tr_(u'읽는 중...'), title, len(imgs)))
+            cw.setTitle('{}  {} - {}'.format(tr_('읽는 중...'), title, len(imgs)))
     return imgs

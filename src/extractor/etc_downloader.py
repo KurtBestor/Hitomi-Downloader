@@ -226,7 +226,10 @@ class Video:
         else:
             url = self.url
         self.url = LazyUrl(referer, lambda x: url, self, pp=self.pp)
-        self.filename = format_filename(title, self.id, info.get('ext') or ext, header=self.header)
+        info_ext = info.get('ext')
+        if info_ext == 'unknown_video': #vk
+            info_ext = None
+        self.filename = format_filename(title, self.id, info_ext or ext, header=self.header)
 
     def pp(self, filename):
         if self.f_audio:

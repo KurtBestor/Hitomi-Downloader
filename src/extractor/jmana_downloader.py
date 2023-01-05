@@ -1,5 +1,5 @@
 import downloader
-from utils import Soup, urljoin, Downloader, fix_title, Session, get_print, LazyUrl, clean_title, get_imgs_already
+from utils import Soup, urljoin, Downloader, fix_title, Session, get_print, LazyUrl, clean_title, get_imgs_already, check_alive
 import ree as re
 from timee import sleep
 from translator import tr_
@@ -18,8 +18,8 @@ class Image:
     def __init__(self, url, page, p):
         self.url = LazyUrl(page.url, lambda _: url, self)
         ext = '.jpg'
-        name = (u'{:04}{}').format(p, ext)
-        self.filename = (u'{}/{}').format(page.title, name)
+        name = '{:04}{}'.format(p, ext)
+        self.filename = '{}/{}'.format(page.title, name)
 
 
 class Page:
@@ -175,7 +175,7 @@ def get_pages(url, session=None, soup=None):
 @try_n(4)
 def f(url):
     if re.search(PATTERN_ID, url):
-        raise Exception(tr_(u'목록 주소를 입력해주세요'))
+        raise Exception(tr_('목록 주소를 입력해주세요'))
     session = Session()
     pages = get_pages(url, session=session)
     return pages
@@ -191,6 +191,7 @@ def get_imgs(url, title, session, soup=None, cw=None):
     pages = page_selector.filter(pages, cw)
     imgs = []
     for i, page in enumerate(pages):
+        check_alive(cw)
         imgs_already = get_imgs_already('jmana', title, page, cw)
         if imgs_already:
             imgs += imgs_already
@@ -198,9 +199,7 @@ def get_imgs(url, title, session, soup=None, cw=None):
 
         imgs += get_imgs_page(page, url, session, cw)
         if cw is not None:
-            if not cw.alive:
-                return
-            cw.setTitle((u'{} {} / {}  ({} / {})').format(tr_(u'\uc77d\ub294 \uc911...'), title, page.title, i + 1, len(pages)))
+            cw.setTitle('{} {} / {}  ({} / {})'.format(tr_('읽는 중...'), title, page.title, i + 1, len(pages)))
 
     if not imgs:
         raise Exception('no imgs')

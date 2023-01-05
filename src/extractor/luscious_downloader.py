@@ -21,7 +21,7 @@ class Image:
     def get(self, url):
         img = urljoin(url, self.item['url_to_original'])
         ext = os.path.splitext(img.split('?')[0])[1]
-        self.filename = u'{}{}'.format(self.id, ext)
+        self.filename = '{}{}'.format(self.id, ext)
         return img
 
 
@@ -30,7 +30,7 @@ class Video:
         self.url = url
         self.title = title
         ext = os.path.splitext(url.split('?')[0])[1]
-        self.filename = u'{}{}'.format(clean_title(title), ext)
+        self.filename = '{}{}'.format(clean_title(title), ext)
         self.url_thumb = url_thumb
         self.thumb = BytesIO()
         downloader.download(self.url_thumb, buffer=self.thumb)
@@ -69,7 +69,7 @@ class Downloader_luscious(Downloader):
 
         title = clean_title(get_title(soup))
 
-        self.title = tr_(u'읽는 중... {}').format(title)
+        self.title = tr_('읽는 중... {}').format(title)
 
         if '/videos/' in self.url:
             video = get_video(self.url, soup)
@@ -98,7 +98,7 @@ class Downloader_luscious(Downloader):
 
 
 def update(cw, title, imgs):
-    s = u'{} {} - {}'.format(tr_(u'읽는 중...'), title, len(imgs))
+    s = '{} {} - {}'.format(tr_('읽는 중...'), title, len(imgs))
     if cw is not None:
         cw.setTitle(s)
     else:

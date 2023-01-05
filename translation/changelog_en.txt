@@ -1,3 +1,47 @@
+3.8a    【】
+
+[버그 해결 / 사이트 변경에 의한 수정]
+
+- #5469
+
+- #5533
+
+- PornHub 업데이트 대응 (#5554)
+
+- #5562
+
+- 작업 목록 필터링 대소문자 문제 해결 (#5569)
+
+- yt-dlp 문제 해결 (#5592)
+
+- 기타 자잘한 것들
+
+
+[변경/추가된 기능]
+
+- VLIVE 지원 종료
+
+- #5541
+
+- Instagram 로그인 안정화
+
+- 설정 레이아웃 변경
+
+- MPD URL 인식 & 다운로드
+
+- Twitter 읽기 속도 향상 (#5548)
+
+- #5559
+
+- 읽기 중지 기능
+
+- "빠른 실행 도구 모음" 에서 "트레이로 최소화" 동작하지 않는 문제 해결
+
+- 기타 자잘한 것들
+
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------
 3.8    2022-12-16
 
 [Bug Resolution / Fix due to site change]
@@ -101,7 +145,7 @@
 - Conversion: image format (#5444)
      Right-click - Image Format Conversion...
 
-- Context menu: layout modified 
+- Context menu: layout modified
 
 - Auto-correct invalid proxy address & indicate proxy connection
 

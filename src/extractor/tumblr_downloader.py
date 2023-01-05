@@ -1,7 +1,7 @@
 #coding:utf8
 import downloader
 from translator import tr_
-from utils import Soup, Session, query_url, get_max_range, Downloader, clean_title, update_url_query, get_print, get_ext, LazyUrl, urljoin
+from utils import Soup, Session, query_url, get_max_range, Downloader, clean_title, update_url_query, get_print, get_ext, LazyUrl, urljoin, check_alive
 import ree as re
 import errors
 from ratelimit import limits, sleep_and_retry
@@ -40,8 +40,8 @@ class Downloader_tumblr(Downloader):
     MAX_CORE = 4
 
     def init(self):
-        if u'tumblr.com/post/' in self.url:
-            raise errors.Invalid(tr_(u'개별 다운로드는 지원하지 않습니다: {}').format(self.url))
+        if 'tumblr.com/post/' in self.url:
+            raise errors.Invalid(tr_('개별 다운로드는 지원하지 않습니다: {}').format(self.url))
         self.session = Session()
 
     @classmethod
@@ -117,8 +117,7 @@ class TumblrAPI:
         ids = set()
         default_qs = True
         while True:
-            if self.cw and not self.cw.alive:
-                break
+            check_alive(self.cw)
             data = self.call(path, qs, default_qs=default_qs)
             for post in (post for post in data['posts'] if post['object_type'] != 'backfill_ad'):
                 id_ = post['id']
@@ -178,12 +177,11 @@ def get_imgs(username, session, cw=None):
     max_pid = get_max_range(cw)
     api = TumblrAPI(session, cw)
     for post in api.posts(username):
+        check_alive(cw)
         imgs += post.imgs
 
-        s = '{}  {} (tumblr_{}) - {}'.format(tr_(u'\uc77d\ub294 \uc911...'), artist, username, len(imgs))
+        s = '{}  {} (tumblr_{}) - {}'.format(tr_('읽는 중...'), artist, username, len(imgs))
         if cw:
-            if not cw.alive:
-                return
             cw.setTitle(s)
         else:
             print(s)

@@ -1,24 +1,24 @@
 #coding:utf8
-import downloader, json, os
+import os
+import json
+import downloader
 from error_printer import print_error
 from translator import tr_
-from timee import sleep
 from utils import Downloader, Soup, get_print, lazy, Session, try_n, LazyUrl, clean_title, check_alive
-import clf2
 
 
 class Image:
 
-    def __init__(self, post_url, date, url, page):
+    def __init__(self, post_url, date, url, page, name, data):
         self.post_url = post_url
         self.url = LazyUrl(post_url, lambda _: url.replace('/large/', '/4k/'), self, url)
         self.page = page
-        name = post_url.split('/')[(-1)]
+        self.data = data
         ext = os.path.splitext(url.split('?')[0])[1]
-        self.filename = '[{}] {}_p{}{}'.format(date, name, page, ext)
+        self.filename = f'[{date}] {name}_p{page}{ext}'
 
     def __repr__(self):
-        return 'Image({})'.format(self.filename)
+        return f'Image({self.filename})'
 
 
 
@@ -27,24 +27,25 @@ class Downloader_artstation(Downloader):
     URLS = ['artstation.com']
     display_name = 'ArtStation'
     ACCEPT_COOKIES = [r'(.*\.)?artstation\.(com|co)']
+    url_main = None
 
     def init(self):
-        self.url_main = 'https://www.artstation.com/{}'.format(self.id.replace('artstation_', '', 1).replace('／', '/'))
+        _ = self._id.replace('artstation_', '', 1)
+        self.url_main = f'https://www.artstation.com/{_}'
 
         if '/artwork/' in self.url or '/projects/' in self.url:
-            pass#raise NotImplementedError('Single post')
+            pass
         else:
             self.url = self.url_main
         self.print_(self.url)
 
         # 3849
         self.session = Session('chrome')
-        #clf2.solve(self.url, session=self.session, cw=self.cw)
 
     @lazy
-    def id(self):
-        id = get_id(self.url, self.cw)
-        return 'artstation_{}'.format(clean_title(id))
+    def _id(self):
+        _id = get_id(self.url, self.cw)
+        return f'artstation_{_id}'
 
     @lazy
     @try_n(2)
@@ -52,21 +53,19 @@ class Downloader_artstation(Downloader):
         html = downloader.read_html(self.url_main, session=self.session)
         soup = Soup(html)
         name = soup.find('meta', {'property': 'og:title'}).attrs['content']
-        return clean_title('{} ({})'.format(name, self.id))
+        return clean_title(f'{name} ({self._id})')
 
     def read(self):
         self.title = self.name
-        id = self.id.replace('artstation_', '', 1).replace('／', '/')
-        if '/' in id:
-            type = id.split('/')[1]
-            id = id.split('/')[0]
-        else:
-            type = None
+        id_ = self._id.replace('artstation_', '', 1)
+        if '/' in id_:
+            id_ = id_.split('/')[0]
+
         if '/artwork/' in self.url or '/projects/' in self.url:
             id_art = get_id_art(self.url)
             imgs = get_imgs_page(id_art, self.session, cw=self.cw)
         else:
-            imgs = get_imgs(id, self.title, self.session, type=type, cw=self.cw)
+            imgs = get_imgs(id_, self.title, self.session, cw=self.cw)
 
         for img in imgs:
             self.urls.append(img.url)
@@ -75,15 +74,13 @@ class Downloader_artstation(Downloader):
 
 
 @try_n(2)
-def get_imgs(id, title, session, type=None, cw=None):
+def get_imgs(id_, title, session, cw=None):
     print_ = get_print(cw)
-    if type is None:
-        type = 'projects'
-    referer = 'https://www.artstation.com/{}'.format(id)
-    html = downloader.read_html(referer, session=session)
-    print(session.cookies.keys())
+    referer = f'https://www.artstation.com/{id_}'
+    downloader.read_html(referer, session=session)
+    #print(session.cookies.keys())
 
-    url = f'https://www.artstation.com/users/{id}/quick.json'
+    url = f'https://www.artstation.com/users/{id_}/quick.json'
     j = downloader.read_json(url, referer, session=session)
     uid = j['id']
     aids = [a['id'] for a in j['albums_with_community_projects']]
@@ -95,17 +92,19 @@ def get_imgs(id, title, session, type=None, cw=None):
         p = 1
         while p < 1000:
             check_alive(cw)
-            url = f'https://www.artstation.com/users/{id}/projects.json?album_id={aid}&page={p}&user_id={uid}'
+            url = f'https://www.artstation.com/users/{id_}/projects.json?album_id={aid}&page={p}&user_id={uid}'
             print(url)
-            for try_ in range(4):
+            _e = None
+            for i in range(4):
                 try:
                     j = downloader.read_json(url, referer, session=session)
                     break
                 except Exception as e:
+                    _e = e
                     print(e)
-
             else:
-                raise
+                if _e is not None:
+                    raise _e
 
             data = j['data']
             if not data:
@@ -115,7 +114,7 @@ def get_imgs(id, title, session, type=None, cw=None):
                     ids.add(d['id'])
                     datas.append(d)
             if cw:
-                cw.setTitle(('{}  {} - {}').format(tr_('페이지 읽는 중...'), title, len(datas)))
+                cw.setTitle(f'{tr_("페이지 읽는 중...")}  {title} - {len(datas)}')
             else:
                 print(len(datas))
             p += 1
@@ -124,6 +123,7 @@ def get_imgs(id, title, session, type=None, cw=None):
 
     imgs = []
     i = 0
+    names = set()
     while i < len(datas):
         check_alive(cw)
         data = datas[i]
@@ -131,9 +131,9 @@ def get_imgs(id, title, session, type=None, cw=None):
         post_url = data['permalink']
         #print('post_url', post_url)
         id_art = get_id_art(post_url)
-        imgs += get_imgs_page(id_art, session, date=date, cw=cw)
+        imgs += get_imgs_page(id_art, session, date=date, cw=cw, names=names)
         if cw:
-            cw.setTitle(('{}  {} - {} / {}  ({})').format(tr_('이미지 읽는 중...'), title, i+1, len(datas), len(imgs)))
+            cw.setTitle(f'{tr_("이미지 읽는 중...")}  {title} - {i+1} / {len(datas)}  ({len(imgs)})')
         else:
             print(len(imgs))
         i += 1
@@ -156,30 +156,37 @@ def get_id(url, cw=None):
         return imgs[0].data['user']['username']
 
     if '.artstation.' in url and 'www.artstation.' not in url:
-        id = url.split('.artstation')[0].split('//')[-1]
-        type = None
+        id_ = url.split('.artstation')[0].split('//')[-1]
+        type_ = None
     elif 'artstation.com' in url:
         paths = url.split('artstation.com/')[1].split('/')
-        id = paths[0]
-        type = paths[1] if len(paths) > 1 else None
+        id_ = paths[0]
+        type_ = paths[1] if len(paths) > 1 else None
     else:
-        id = url.replace('artstation_', '').replace('／', '/')
-        type = None
+        id_ = url.replace('artstation_', '').replace('／', '/')
+        type_ = None
 
-    if type not in [None, 'likes']:
-        type = None
+    if type_ not in [None, 'likes']:
+        type_ = None
 
-    print_('type: {}, id: {}'.format(type, id))
+    print_(f'type: {type_}, id: {id_}')
 
-    if type:
-        return '{}/{}'.format(id, type)
-    return id
+    if type_:
+        return f'{id_}/{type_}'
+    return id_
 
 
-def get_imgs_page(id_art, session, date=None, cw=None):
+def get_imgs_page(id_art, session, date=None, cw=None, names=None):
     print_ = get_print(cw)
-    url_json = 'https://www.artstation.com/projects/{}.json'.format(id_art)
-    post_url = 'https://www.artstation.com/artwork/{}'.format(id_art)
+    url_json = f'https://www.artstation.com/projects/{id_art}.json'
+    post_url = f'https://www.artstation.com/artwork/{id_art}'
+
+    name = post_url.strip('/').split('/')[-1]
+    if names is not None:
+        while name.lower() in names:
+            name += '_'
+        names.add(name.lower())
+
     try:
         html = downloader.read_html(url_json, session=session, referer=post_url)
         data = json.loads(html)
@@ -202,31 +209,34 @@ def get_imgs_page(id_art, session, date=None, cw=None):
         if embed:
             soup = Soup(embed)
             url_embed = soup.find('iframe').attrs['src']
-            print_('embed: {}'.format(url_embed))
+            print_(f'embed: {url_embed}')
             try:
                 html = downloader.read_html(url_embed, session=session, referer=post_url)
                 soup = Soup(html)
-                url = soup.find('video').find('source').attrs['src']
+                v = soup.find('video')
+                if v:
+                    url = v.find('source').attrs['src']
             except Exception as e:
-                pass
+                print_(print_error(e))
             if not url:
                 try:
                     url = soup.find('link', {'rel': 'canonical'}).attrs['href']
-                    print_('YouTube: {}'.format(url))
+                    print_(f'YouTube: {url}')
                     raise Exception('YouTube')
 ##                    from extractor import youtube_downloader
 ##                    video = youtube_downloader.Video(url, cw=cw)
+##                    video.data = data
                 except Exception as e:
                     print(e)
                     url = None
         if not url:
             url = img['image_url']
+
         if video:
             img = video
         else:
-            img = Image(post_url, date, url, page)
+            img = Image(post_url, date, url, page, name, data)
 
-        img.data = data#
         imgs.append(img)
 
     return imgs

@@ -1,6 +1,6 @@
 #coding:utf8
 import downloader
-from utils import Soup, urljoin, Session, LazyUrl, Downloader, lazy, try_n, clean_title
+from utils import Soup, urljoin, Session, LazyUrl, Downloader, lazy, try_n, clean_title, check_alive
 import ree as re
 import os
 from translator import tr_
@@ -34,7 +34,7 @@ class Image:
 
             # https://www.hentai-foundry.com/pictures/user/DrGraevling/74069/Eversong-Interrogation-pg.-13
             if ext.lower() not in ['.bmp', '.png', '.gif', '.jpg', '.jpeg', '.webp', '.webm', '.avi', '.mp4', '.mkv', '.wmv']:
-                filename = u'{}.jpg'.format(name)
+                filename = '{}.jpg'.format(name)
 
             self.filename = filename
             return img
@@ -115,6 +115,7 @@ def get_imgs(username, title, session, cw=None):
 
     hrefs = []
     for p in range(100):
+        check_alive(cw)
         print(url)
         html = downloader.read_html(url, session=session)
         soup = Soup(html)
@@ -139,10 +140,8 @@ def get_imgs(username, title, session, cw=None):
             break
         url = urljoin(url, next.a.attrs['href'])
 
-        s = u'{}  {}  ({} / {})'.format(tr_(u'읽는 중...'), title, len(hrefs), n)
+        s = '{}  {}  ({} / {})'.format(tr_('읽는 중...'), title, len(hrefs), n)
         if cw:
-            if not cw.alive:
-                return []
             cw.setTitle(s)
         else:
             print(s)

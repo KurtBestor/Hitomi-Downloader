@@ -1,5 +1,5 @@
 import downloader, requests
-from utils import Soup, urljoin, Session, LazyUrl, Downloader, try_n, get_imgs_already, clean_title, get_ext, get_print
+from utils import Soup, urljoin, Session, LazyUrl, Downloader, try_n, get_imgs_already, clean_title, get_ext, get_print, check_alive
 import ree as re, json, os
 from translator import tr_
 from timee import sleep
@@ -140,13 +140,12 @@ def get_imgs(url, title, soup, session, cw=None):
     pages = page_selector.filter(pages, cw)
     imgs = []
     for i, page in enumerate(pages):
+        check_alive(cw)
         imgs_already = get_imgs_already('pixiv_comic', title, page, cw)
         if imgs_already:
             imgs += imgs_already
             continue
         if cw is not None:
-            if not cw.alive:
-                return
             cw.setTitle('{} {} / {}  ({} / {})'.format(tr_('읽는 중...'), title, page.title, i + 1, len(pages)))
         imgs += get_imgs_page(page, session)
 

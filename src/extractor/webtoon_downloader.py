@@ -1,5 +1,5 @@
 import downloader
-from utils import Soup, Session, LazyUrl, clean_title, get_ext, get_imgs_already, urljoin, try_n, Downloader
+from utils import Soup, Session, LazyUrl, clean_title, get_ext, get_imgs_already, urljoin, try_n, Downloader, check_alive
 import os
 import page_selector
 from translator import tr_
@@ -26,7 +26,7 @@ class Downloader_webtoon(Downloader):
 
     def read(self):
         title = clean_title(self.soup.find('h1').text.strip())
-        self.title = tr_(u'\uc77d\ub294 \uc911... {}').format(title)
+        self.title = tr_('읽는 중... {}').format(title)
         imgs = get_imgs_all(self.url, self.session, title, cw=self.cw)
         for img in imgs:
             if isinstance(img, Image):
@@ -132,16 +132,15 @@ def get_imgs_all(url, session, title, cw=None):
     pages = page_selector.filter(pages, cw)
     imgs = []
     for p, page in enumerate(pages):
+        check_alive(cw)
         imgs_already = get_imgs_already('webtoon', title, page, cw)
         if imgs_already:
             imgs += imgs_already
             continue
         imgs += get_imgs(page, session)
-        msg = tr_(u'\uc77d\ub294 \uc911... {} / {}  ({}/{})').format(title, page.title, p + 1, len(pages))
+        msg = tr_('읽는 중... {} / {}  ({}/{})').format(title, page.title, p + 1, len(pages))
         if cw is not None:
             cw.setTitle(msg)
-            if not cw.alive:
-                break
         else:
             print(msg)
 

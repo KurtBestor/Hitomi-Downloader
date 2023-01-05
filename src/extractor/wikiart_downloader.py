@@ -1,7 +1,7 @@
 #coding:utf8
 import downloader
 import json
-from utils import LazyUrl, Downloader, Soup, get_print, clean_title
+from utils import LazyUrl, Downloader, Soup, get_print, clean_title, check_alive
 import os
 from timee import sleep
 from translator import tr_
@@ -14,7 +14,7 @@ class Image:
         ext = os.path.splitext(url.split('?')[0])[1]
         n = len(id) + len(ext) + 3
         title = clean_title(title, n=-n)
-        self.filename = u'{} - {}{}'.format(id, title, ext)
+        self.filename = '{} - {}{}'.format(id, title, ext)
 
 
 
@@ -24,7 +24,7 @@ class Downloader_wikiart(Downloader):
     display_name = 'WikiArt'
 
     def init(self):
-        self.url = u'https://www.wikiart.org/en/{}'.format(self.id_)
+        self.url = 'https://www.wikiart.org/en/{}'.format(self.id_)
         html = downloader.read_html(self.url)
         self.soup = Soup(html)
 
@@ -56,6 +56,7 @@ def get_imgs(url, artist, cw=None):
     imgs = []
     ids = set()
     for p in range(1, 100):
+        check_alive(cw)
         url_api = 'https://www.wikiart.org/en/{}/mode/all-paintings?json=2&layout=new&page={}&resultType=masonry'.format(userid, p)
         print(url_api)
         data_raw = downloader.read_html(url_api, referer=url)
@@ -74,16 +75,14 @@ def get_imgs(url, artist, cw=None):
             referer = p['paintingUrl']
             title = p['title']
             if id in ids:
-                print(u'duplicate: {}'.format(id))
+                print('duplicate: {}'.format(id))
                 continue
             ids.add(id)
             img = Image(img, referer, title, id)
             imgs.append(img)
 
-        s = u'{}  {} - {} / {}'.format(tr_(u'읽는 중...'), artist, len(imgs), n)
+        s = '{}  {} - {} / {}'.format(tr_('읽는 중...'), artist, len(imgs), n)
         if cw:
-            if not cw.valid or not cw.alive:
-                return []
             cw.setTitle(s)
         else:
             print(s)
@@ -97,7 +96,7 @@ def get_imgs(url, artist, cw=None):
 
 def get_artist(userid, soup=None):
     if soup is None:
-        url = u'https://www.wikiart.org/en/{}'.format(userid)
+        url = 'https://www.wikiart.org/en/{}'.format(userid)
         html = downloader.read_html(url)
         soup = Soup(html)
 

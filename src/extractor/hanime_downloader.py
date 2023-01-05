@@ -32,7 +32,7 @@ class Video:
         self.filename = format_filename('[{}] {}'.format(self.brand, self.title), self.id, ext)
 
     def __repr__(self):
-        return ('Video({})').format(self.id)
+        return f'Video({self.id})'
 
 
 
@@ -51,7 +51,7 @@ class Downloader_hanime(Downloader):
         self.filenames[video.url] = video.filename
 
         self.setIcon(video.thumb)
-        self.title = u'[{}] {}'.format(video.brand, video.title)
+        self.title = '[{}] {}'.format(video.brand, video.title)
 
 
 @try_n(8)

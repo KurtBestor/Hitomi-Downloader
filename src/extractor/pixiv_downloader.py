@@ -7,10 +7,7 @@ import ree as re
 import errors
 from translator import tr_
 from error_printer import print_error
-try:
-    from urllib import quote, unquote # python2
-except ImportError:
-    from urllib.parse import quote, unquote # python3
+from urllib.parse import quote, unquote # python3
 import constants
 from datetime import datetime
 import requests
@@ -20,6 +17,7 @@ from locker import lock
 import threading
 from ratelimit import limits, sleep_and_retry
 import clf2
+from PIL import Image as Image_
 ##import asyncio
 LIMIT = 48
 for header in ['pixiv_illust', 'pixiv_bmk', 'pixiv_search', 'pixiv_following', 'pixiv_following_r18']:
@@ -510,9 +508,20 @@ def process_ids(ids, info, imgs, session, cw, depth=0, tags_add=None):
     names = cw.names_old
     table = {}
     for name in names:
-        id = re.find(r'([0-9]+)_p[0-9]+.*\.(jpg|png|bmp)$', os.path.basename(name))
+        id = re.find(r'([0-9]+)_p[0-9]+.*\.(jpg|png|bmp|webp|gif)$', os.path.basename(name)) #5541
         if id is None:
             continue
+        ext = os.path.splitext(name)[1]
+        if ext.lower() in ['.gif', '.webp']: #5541
+            try:
+                img = Image_.open(name)
+                n_frames = getattr(img, 'n_frames', 1)
+            except Exception as e:
+                print_(print_error(e))
+                n_frames = 1
+            if n_frames > 1:
+                print_(f'ugoira: {name}')
+                continue
         id = id[0]
         if id in table:
             table[id].append(name)

@@ -1,6 +1,6 @@
 import downloader
 import ree as re
-from utils import Soup, LazyUrl, Downloader, try_n, compatstr, get_print, Session, get_max_range, format_filename, json
+from utils import Soup, LazyUrl, Downloader, try_n, compatstr, get_print, Session, get_max_range, format_filename, json, check_alive
 from io import BytesIO
 import clf2
 from translator import tr_
@@ -189,8 +189,6 @@ def read_channel(url, session, cw=None, title=None):
             foo = title
         msg = '{}  {} - {}'.format(tr_('읽는 중...'), foo, len(info['items']))
         if cw:
-            if not cw.alive:
-                raise Exception('cw dead')
             cw.setTitle(msg)
         else:
             print(msg)

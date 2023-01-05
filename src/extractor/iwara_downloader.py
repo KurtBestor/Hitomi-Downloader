@@ -178,7 +178,7 @@ def get_files(url, session, multi_post=False, cw=None):
         type = 'video'
     else:
         type = 'image'
-    print_(('type: {}').format(type))
+    print_('type: {}'.format(type))
     files = []
     if type == 'image':
         urls = set()

@@ -12,9 +12,9 @@ from translator import tr_
 class Page:
     def __init__(self, url, title, date, p):
         self.url = url
-        self.title = clean_title(u'[{:04}] {}'.format(p, title), n=-4)
+        self.title = clean_title('[{:04}] {}'.format(p, title), n=-4)
         self.date = date
-        self.filename = u'{}.txt'.format(self.title)
+        self.filename = '{}.txt'.format(self.title)
         self.file = LazyUrl(self.url, self.get_file, self)
 
     def get_file(self, url):
@@ -41,7 +41,7 @@ class Downloader_kakuyomu(Downloader):
         outdir = get_outdir('kakuyomu')
 
         self.artist = self.info['artist']
-        title_dir = clean_title(u'[{}] {}'.format(self.artist, self.info['title']))
+        title_dir = clean_title('[{}] {}'.format(self.artist, self.info['title']))
 
         for page in self.info['pages']:
             file = os.path.join(outdir, title_dir, page.filename)
@@ -54,14 +54,14 @@ class Downloader_kakuyomu(Downloader):
 
     def post_processing(self):
         names = self.cw.names
-        filename = clean_title(u'[merged] [{}] {}'.format(self.artist, self.info['title']), n=-4) + '.txt'
+        filename = clean_title('[merged] [{}] {}'.format(self.artist, self.info['title']), n=-4) + '.txt'
         filename = os.path.join(self.dir, filename)
         try:
             with utils.open(filename, 'wb') as f:
-                f.write(u'    {}\n\n    \u4f5c\u8005\uff1a{}\n\n\n'.format(self.info['title'], self.artist).encode('utf8'))
+                f.write('    {}\n\n    作者：{}\n\n\n'.format(self.info['title'], self.artist).encode('utf8'))
                 f.write(self.info['description'].encode('utf8'))
                 for i, file in enumerate(names):
-                    self.cw.pbar.setFormat('[%v/%m]  {} [{}/{}]'.format(tr_(u'\ubcd1\ud569...'), i, len(names)))
+                    self.cw.pbar.setFormat('[%v/%m]  {} [{}/{}]'.format(tr_('병합...'), i, len(names)))
                     with open(file, 'rb') as f_:
                         text = f_.read()
                     f.write(b'\n\n\n\n')
@@ -76,7 +76,7 @@ def get_text(page):
     soup = Soup(html)
     view = soup.find('div', class_='widget-episodeBody')
     story = view.text.strip()
-    text =u'''────────────────────────────────
+    text = '''────────────────────────────────
 
   ◆  {}        {}
 
@@ -115,7 +115,7 @@ def get_info(url, soup=None, cw=None):
         intro = ''
     else:
         intro = intro.text.strip()
-    desc = u'  {}{}'.format(catch, ('\n\n\n'+intro) if intro else '')
+    desc = '  {}{}'.format(catch, ('\n\n\n'+intro) if intro else '')
     info['description'] = desc
 
     pages = []

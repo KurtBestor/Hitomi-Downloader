@@ -87,7 +87,6 @@
 | **Twitch** | <https://twitch.tv> |
 | **Twitter** | <https://twitter.com> |
 | **Vimeo** | <https://vimeo.com> |
-| **V LIVE** | <https://vlive.tv> |
 | **Wayback Machine** | <https://archive.org> |
 | **Weibo** | <https://weibo.com> |
 | **WikiArt** | <https://www.wikiart.org> |

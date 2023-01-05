@@ -1,5 +1,5 @@
 import downloader
-from utils import Soup, urljoin, Downloader, LazyUrl, get_imgs_already, clean_title, get_ext, get_print, errors
+from utils import Soup, urljoin, Downloader, LazyUrl, get_imgs_already, clean_title, get_ext, get_print, errors, check_alive
 from constants import try_n
 import ree as re, os
 from timee import sleep
@@ -20,7 +20,7 @@ class Image:
 
     def __init__(self, url, page, p):
         ext = get_ext(url)
-        self.filename = (u'{}/{:04}{}').format(clean_title(page.title), p, ext)
+        self.filename = '{}/{:04}{}'.format(clean_title(page.title), p, ext)
 
         self.url = LazyUrl(page.url, lambda _: url, self)
 
@@ -59,7 +59,7 @@ class Downloader_navertoon(Downloader):
         return clean_title(title)
 
     def read(self):
-        self.title = tr_(u'\uc77d\ub294 \uc911... {}').format(self.name)
+        self.title = tr_('읽는 중... {}').format(self.name)
         imgs = get_imgs_all(self.url, self.name, cw=self.cw)
         for img in imgs:
             if isinstance(img, Image):
@@ -72,9 +72,9 @@ class Downloader_navertoon(Downloader):
 
 def set_no(url, p):
     if '&no=' not in url:
-        url = url + ('&no={}').format(p)
+        url = url + f'&no={p}'
         return url
-    url = re.sub('&no=[0-9]+', ('&no={}').format(p), url)
+    url = re.sub('&no=[0-9]+', f'&no={p}', url)
     return url
 
 
@@ -84,9 +84,9 @@ def get_id(url):
 
 def set_page(url, p):
     if '&page=' in url:
-        url = re.sub('&page=[0-9]+', ('&page={}').format(p), url)
+        url = re.sub('&page=[0-9]+', f'&page={p}', url)
     else:
-        url += ('&page={}').format(p)
+        url += f'&page={p}'
     return url
 
 
@@ -222,6 +222,7 @@ def get_imgs_all(url, title, cw=None):
     pages = page_selector.filter(pages, cw)
     imgs = []
     for p, page in enumerate(pages):
+        check_alive(cw)
         imgs_already = get_imgs_already('navertoon', title, page, cw)
         if imgs_already:
             imgs += imgs_already
@@ -230,8 +231,6 @@ def get_imgs_all(url, title, cw=None):
         print_('{}: {}'.format(page.title, len(imgs_new)))
         imgs += imgs_new
         if cw is not None:
-            cw.setTitle(tr_(u'\uc77d\ub294 \uc911... {} / {}  ({}/{})').format(title, page.title, p + 1, len(pages)))
-            if not cw.alive:
-                break
+            cw.setTitle(tr_('읽는 중... {} / {}  ({}/{})').format(title, page.title, p + 1, len(pages)))
 
     return imgs

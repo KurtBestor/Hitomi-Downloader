@@ -177,7 +177,7 @@ def get_imgs(uid, oid, title, session, cw=None, d=None, parent=None):
         for p in range(1, 101):
             imgs_new = get_album_imgs(album, p)
             imgs_album += imgs_new
-            s = u'{} {}  -  {}'.format(tr_(u'읽는 중...'), title, len(imgs))
+            s = '{} {}  -  {}'.format(tr_('읽는 중...'), title, len(imgs))
             if cw:
                 cw.setTitle(s)
             else:
