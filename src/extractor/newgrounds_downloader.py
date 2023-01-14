@@ -18,9 +18,11 @@ class Downloader_newgrounds(Downloader):
     def init(self):
         self.session = Session()
 
-    @staticmethod
+    @classmethod
     def fix_url(cls, url):
-        user = re.find('(?:http(?:s)?://)?([^\.]+).newgrounds.com', url.lower())
+        user = re.find(r'(?:http(?:s)?://)?([^\.]+).newgrounds.com', url.lower())
+        if not user or user == 'www':
+            user = re.find(r'newgrounds.com/art/view/([^/?#]+)', url, err='no user id')
         return 'https://{}.newgrounds.com/art'.format(user)
 
     def read(self):
