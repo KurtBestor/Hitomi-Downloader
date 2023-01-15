@@ -1,0 +1,303 @@
+<html>
+
+<head>
+{head}
+</head>
+
+<body>
+<p align="right"><br></p>
+<h1 align="center">使い方</h1>
+<p align="right">{date}</p>
+<br>
+
+<h3>対応サイト</h3>
+<ul>
+<li><a href="https://github.com/KurtBestor/Hitomi-Downloader#supported-sites">https://github.com/KurtBestor/Hitomi-Downloader#supported-sites</a></li>
+</ul>
+
+<h3>アドレスバー</h3>
+<ul>
+<li>なんらかのURLをアドレスバーに入力し、ダウンロードボタンをクリック</li>
+<li>URLの例:<br>
+https://hitomi.la/galleries/123.html<br>
+https://hitomi.la/reader/123.html<br>
+https://e-hentai.org/g/123/356dfa74ce/<br>
+https://e-hentai.org/s/600e752112/123-4<br>
+https://hiyobi.me/reader/123<br>
+123<br>
+<br>
+https://www.pixiv.net/users/11<br>
+https://www.pixiv.net/member_illust.php?id=11<br>
+https://pixiv.me/pixiv<br>
+pixiv_11<br>
+<br>
+https://twitter.com/TensorFlow<br>
+@TensorFlow<br>
+<br>
+https://www.instagram.com/user_name<br>
+insta_user_name<br>
+<br>
+https://username.deviantart.com<br>
+deviant_username
+</li>
+<li>複数のURLの例:<br>
+123, 125, 126<br>
+123 125 126
+</li>
+<li>Hitomi.la 内にない数字は、自動で E(x)Hentai のURLに変換されます。</li>
+</ul>
+
+<h3>保存</h3>
+<ul>
+<li>設定と現在追加されているタスクを保存する。</li>
+<li>タスク - 保存</li>
+<li>[Ctrl + S] キー</li>
+</ul>
+
+<h3>検索ツール (Searcher)</h3>
+<ul>
+<li>ギャラリーを検索</li>
+<li>メニュー - 検索ツール...</li>
+<li>[Ctrl + F] キー</li>
+</ul>
+
+<h3>ダウンロードのタスク</h3>
+<ul>
+<li>最初のファイルを開く:<br>
+マウス右クリック→ [最初のファイルを開く]<br>
+サムネイルをクリック<br>
+ダブルクリック<br>
+[Enter] キー
+</li>
+<li>複数のタスクを削除:<br>
+複数のタスクを選択 → [Del] キー
+</li>
+<li>複数のファイルを削除:<br>
+複数のタスクを選択 → マウス右クリック → [ファイルの削除]<br>
+複数のタスクを選択 → [Shift] + [Del] キー
+</li>
+<li>すべての完了タスクを削除:<br>
+マウス右クリック → [完了したタスクをすべて削除]<br>
+ロックされていない完了済みのタスクがすべて削除されます。
+</li>
+</ul>
+
+<h3>タスクの色</h3>
+<ul>
+<li>濃い灰色: 待機中または読み込み中</li>
+<li>薄い灰色: ダウンロード中</li>
+<li>青: 完全にダウンロード済み</li>
+<li>オレンジ: ダウンロード未完了</li>
+<li> &nbsp; &nbsp;赤: 失敗または無効</li>
+</ul>
+
+<h3>タスクの順序を変更</h3>
+<ul>
+<li>順番変更には、マウスのスクロールボタンでドラッグアンドドロップします。</li>
+<li>以下のコマンドも動作: [Ctrl + ↑], [Ctrl + ↓], [Ctrl + Home], [Ctrl + End].</li>
+</ul>
+
+<h3>タスクの一覧の絞り込み</h3>
+<ul>
+<li>ダウンロード一覧の左下のフィルターアイコンをクリックし入力します。</li>
+<li>タイトルにその文字列を含むタスクのみを表示します。</li>
+<li>type:youtube など種類で絞り込み。</li>
+<li>dup: で重複タスクのみが表示。</li>
+<li>rem: は物理的な保存領域から削除されているタスクのみを表示。</li>
+<li>tag:glasses などタグで絞り込み。</li>
+<li>comment:xxxx でコメントで絞り込み。</li>
+<li>bad: で未完了タスクのみを表示。</li>
+</ul>
+
+<h3>検索ツールの検索一覧の絞り込み</h3>
+<ul>
+<li>検索ツール一覧の左下のフィルターアイコンをクリックし入力します。</li>
+<li>タイトル、作者、グループ、タグ、言語にその文字列を含むギャラリーのみが表示されます</li>
+<li>&quot;title:A&quot; タイトルに A という文字列を含むギャラリーのみを表示。</li>
+<li>&quot;artist:A&quot;, &quot;group:A&quot;, &quot;tag:A&quot;, &quot;lang:A&quot; という絞り込みも可能。</li>
+<li>&quot;p&lt;100&quot; 100ページ未満のギャラリーのみを表示。</li>
+<li>&quot;p&gt;100&quot; 100ページ以上のギャラリーのみを表示。</li>
+<li>&quot;done:o&quot; ダウンロード済みのギャラリーのみを表示。</li>
+<li>&quot;done:x&quot; ダウンロードしていないギャラリーのみを表示。</li>
+</ul>
+
+<h3>ページを選択してダウンロード</h3>
+<ul>
+<p><img src=":/icons/down_menu" /></p>
+<li>ページを選択してダウンロード。</li>
+<li>例:<br>
+~ 100 &nbsp; &nbsp;→ &nbsp;最初の100ページ<br>
+-100 ~ &nbsp; &nbsp;→ &nbsp;最後の100ページ<br>
+1, 10 ~ 20, -1 &nbsp; &nbsp;→ &nbsp;最初のページ、10〜20ページ、最後のページ</li>
+</ul>
+
+<h3>チャプターを選択してダウンロード</h3>
+<ul>
+<p><img src=":/icons/down_menu_chapter" /></p>
+<li>チャプターを選択してダウンロード。</li>
+</ul>
+
+<h3>設定</h3>
+<ul>
+<li>オプション → 設定</li>
+</ul>
+
+<h3>スレッド</h3>
+<ul>
+<li>タスクごとの並列ダウンロード。</li>
+<li>パソコンの性能やネット接続が良好ではないなら少なくします。</li>
+<li>この設定をよく理解していないなら、初期値のままにします。</li>
+</ul>
+
+<h3>単に検索 - 検索語句</h3>
+<ul>
+<li>Google のように検索</li>
+<li>例:<br>
+maid<br>
+maid glasses japanese<br>
+maid -schoolgirl<br>
+maid n/a<br>
+maid (japanese + n/a)</li>
+</ul>
+
+<h3>詳細検索 - タイトル</h3>
+<ul>
+<li>例:<br>
+maid<br>
+maid -schoolgirl<br>
+maid glasses</li>
+</ul>
+
+<h3>詳細検索 - 作者</h3>
+<ul>
+<li>例:<br>
+sekiya asami<br>
+sekiya asami + amezawa koma</li>
+</ul>
+
+<h3>詳細検索 - キャラクター</h3>
+<ul>
+<li>例:<br>
+chino kafuu<br>
+chino kafuu + kokoa hoto<br>
+hino kafuu, kokoa hoto</li>
+</ul>
+
+<h3>詳細検索 - タグ</h3>
+<ul>
+<li>例:<br>
+female:maid<br>
+female:maid, -female:schoolgirl uniform</li>
+</ul>
+
+<h3>検索ツールのリスト</h3>
+<ul>
+<li>複数のギャラリーをダウンロード:<br>
+複数を選択 → マウス右クリック → [ダウンロード]<br>
+複数を選択 → [Enter] キー</li>
+
+<li>ギャラリーの情報を表示:<br>
+右クリック → ギャラリーの情報...<br>
+サムネイルをクリック</li>
+</ul>
+
+
+<h3>検索中の中止</h3>
+<ul>
+<li>再び検索ボタンをクリック</li>
+</ul>
+
+<h3>ファイルが適切にダウンロードされない（チェックサムオフロードの問題） </h3>
+<ul>
+<li>推奨 (速度が低下) :<br>
+スレッド数を下げて調整します。</li>
+<li>非推奨 (速度減少なし、安全性の問題が起こる可能性) :<br>
+コントロールパネル → ハードウェア → デバイス マネージャー → ネットワーク アダプタ → いずれかのコントローラ → 右クリックし「プロパティ」 → 詳細設定 → オフロード関係をすべて「無効」に設定 → OK<br>
+少し待つと、ネットに再接続されます。</li>
+</ul>
+
+<h3>検索ツール 検索データの更新</h3>
+<ul>
+<li>検索ツール - メニュー - データのダウンロード...</li>
+<li>ダウンロードするたびに最新のデータをダウンロードします。</li>
+</ul>
+
+<h3>スクリプト</h3>
+<ul>
+<li>ツール - スクリプトのインポート...</li>
+<li>Python スクリプトを実行します。</li>
+<li>ダウンロード用のスクリプトを自分で作成して利用することもできます。</li>
+<li>スクリプトファイル (*.hds) はテキストエディタ (メモ帳) ねどで編集できます。</li>
+<li>スクリプトファイルをアプリにドラッグ＆ドロップして実行できます。</li>
+<li>実行ファイルのパス内にスクリプト用のフォルダを作成し、スクリプトファイル（* .hds）を置くと、起動時に自動的に実行されます。</li>
+<li>スクリプトのダウンロード :<br>
+<a href="https://github.com/KurtBestor/Hitomi-Downloader/wiki/Scripts">https://github.com/KurtBestor/Hitomi-Downloader/wiki/Scripts</a></li>
+<li>スクリプトの書き方:<br>
+<a href="https://github.com/KurtBestor/Hitomi-Downloader/wiki/How-to-write-a-script">https://github.com/KurtBestor/Hitomi-Downloader/wiki/How-to-write-a-script</a></li>
+</ul>
+
+<h3>DPIのバイパス</h3>
+<ul>
+<li>オプション - 設定 - ネットワークの設定 - DPIをバイパスする</li>
+<li><a href="https://github.com/ValdikSS/GoodbyeDPI">GoodbyeDPI</a> でDPIをブロック/バイパスできます (ディープ・パケット・インスペクション)。</li>
+</ul>
+
+<h3>クッキー (Cookie) の読み込み</h3>
+<ul>
+<li>オプション - 設定 - ネットワークの設定 - クッキー - 読み込み...</li>
+<li>ブラウザーの拡張機能からエクスポートされた Cookie を読み込み可能です。(Netscape HTTP Cookie ファイル)</li>
+<li>これらのクッキーを使用して、Hitomi Downloader はログインが必要なページにアクセスできます。</li>
+<li>Chrome 拡張機能: <a href="https://chrome.google.com/webstore/detail/cookiestxt/njabckikapfpffapmjgojcnbfjonfjfg">cookies.txt</a>, <a href="https://chrome.google.com/webstore/detail/get-cookiestxt/bgaddhkoddajcdgocldbbfleckgcbcid">Get cookies.txt</a></li>
+<li>Firefox 拡張機能: <a href="https://addons.mozilla.org/en-US/firefox/addon/cookies-txt/">cookies.txt</a></li>
+<li>Edge 拡張機能: <a href="https://microsoftedge.microsoft.com/addons/detail/get-cookiestxt/helleheikohejgehaknifdkcfcmceeip">Get cookies.txt</a></li>
+<li>期限切れのクッキーは灰色で表示されます。</li>
+</ul>
+
+<h3>内蔵のウェブブラウザ</h3>
+<ul>
+<li>オプション - 設定 - ネットワークの設定 - 内蔵のウェブブラウザ - 表示</li>
+<li>JS による描画が必要なページの読み込みに使用。</li>
+<li>クッキーの更新に使用できます。</li>
+</ul>
+
+<h3>Chrome 拡張機能</h3>
+<ul>
+<li><a href="https://github.com/KurtBestor/Hitomi-Downloader/wiki/Chrome-Extension">Hitomi Downloader</a></li>
+<li>機能:<br>
+拡張機能が必要なダウンロードサイト<br>
+クッキーの更新
+</ul>
+
+<h3>保存</h3>
+<ul>
+<li>保存して終了:<br>
+設定と現在追加されている位置r難を保存し終了</li>
+<li>終了 :<br>
+保存せずに終了</li>
+<li>アプリを起動すると、最後に保存された状態で開始されます。</li>
+</ul>
+
+<h3>ショートカットキー</h3>
+<ul>
+<li>Alt + D : アドレスバー ↔ タスク一覧</li>
+<li>Ctrl + 1 ~ 7 : タスクにタグを設定</li>
+<li>Ctrl + Tab : ツールバー表示/非表示</li>
+<li>Ctrl + - / + : サムネイルのサイズを調整</li>
+<li>Ctrl + Scroll : サムネイルのサイズを調整</li>
+<li>Space : グループを展開/畳む</li>
+</ul>
+
+<h3>意見を寄せる</h3>
+<ul>
+<li><a href="https://github.com/KurtBestor/Hitomi-Downloader/issues">https://github.com/KurtBestor/Hitomi-Downloader/issues</a></li>
+</ul>
+
+<h3>その他</h3>
+<ul>
+<li>ダウンロードされたファイルは私的使用の範囲内でご利用ください。</li>
+<li>更新の詳細を確認するには ヘルプ - アプリの情報 - 右下のボタン</li>
+</ul>
+
+</body>
+
+</html>
