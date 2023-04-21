@@ -140,7 +140,7 @@ def read_channel(url, session, cw=None, title=None):
         else: # Douyin
             try:
                 info['uid'] = re.find(r'''uniqueId%22%3A%22(.+?)%22''', html, err='no uid')
-                info['nickname'] = json.loads(re.find(r'''"name"\s*:\s*(".+?")''', html, err='no nickname'))
+                info['nickname'] = json.loads(re.findall(r'''"name"\s*:\s*(".+?")''', html)[-1]) #5896
             except Exception as e:
                 print_(print_error(e))
         c = 0
@@ -184,7 +184,7 @@ def read_channel(url, session, cw=None, title=None):
             print_('empty')
             sd['count_empty'] += 1
         if title is None:
-            foo = '{} (tiktok_{})'.format(info.get('nickname'), info.get('uid'))
+            foo = '{} (tiktok_{})'.format(info.get('nickname', '?'), info.get('uid', '?'))
         else:
             foo = title
         msg = '{}  {} - {}'.format(tr_('읽는 중...'), foo, len(info['items']))
