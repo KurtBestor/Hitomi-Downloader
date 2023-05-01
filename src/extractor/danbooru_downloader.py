@@ -3,8 +3,7 @@ import downloader
 import ree as re
 from utils import Downloader, get_max_range, clean_title, get_print, try_n, urljoin, check_alive, LazyUrl, get_ext
 from translator import tr_
-from urllib.parse import quote
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs, quote
 from ratelimit import limits, sleep_and_retry
 import clf2
 
@@ -28,7 +27,7 @@ class Downloader_danbooru(Downloader):
             url = url.replace(' ', '+')
             while '++' in url:
                 url = url.replace('++', '+')
-            url = 'https://danbooru.donmai.us/?tags={}'.format(quote(url))
+            url = 'https://danbooru.donmai.us/posts?tags={}'.format(quote(url))
         if 'donmai.us/posts/' in url:
             url = url.split('?')[0]
         return url.strip('+')
@@ -121,10 +120,12 @@ def setPage(url, page):
     return url
 
 
-@try_n(4) #4103
-def read_soup(url, session, cw):
+@try_n(12) #4103
+def read_soup(url, session, cw, try_=1):
     check_alive(cw)
     wait(cw)
+    if try_ > 1:
+        session.headers['User-Agent'] = downloader.ua.random #5730
     return downloader.read_soup(url, session=session)
 
 

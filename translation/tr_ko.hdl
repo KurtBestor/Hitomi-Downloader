@@ -49,6 +49,7 @@
     "#filter_cookie#": "Netscape HTTP Cookie Files (*.txt)",
     "#invalid_browserRequired#": "Browser required; Use --safemode",
     "#invalid_loginRequired#": "Login required; Update your cookies",
+    "#invalid_loginRequired2#": "Login required; Please login",
     "#invalid_outdatedExtension#": "Extension is outdated; Update the extension",
     "#invalid_unknownSite#": "Unknown site",
     "#loading_lib#": "Loading: {}",

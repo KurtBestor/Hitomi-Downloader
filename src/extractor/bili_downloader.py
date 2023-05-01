@@ -112,7 +112,10 @@ class Downloader_bili(Downloader):
         return video_id
 
     def read(self):
-        self.print_('CURRENT_QUALITY: {}'.format(self.session.cookies.get('CURRENT_QUALITY', domain='.bilibili.com')))
+        sd = self.session.cookies.get('SESSDATA', domain='.bilibili.com')
+        self.print_('sd: {}'.format(sd))
+        if not sd: #5647
+            self.cw.showCookie()
         video, info = get_video(self.url, self.session, self.cw)
         self.urls.append(video.url)
 

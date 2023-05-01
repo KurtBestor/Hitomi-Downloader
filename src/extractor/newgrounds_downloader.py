@@ -7,7 +7,7 @@ import os
 import ree as re
 from timee import sleep
 from translator import tr_
-from utils import Downloader, clean_title, Session, get_print, Soup, try_n
+from utils import Downloader, clean_title, Session, get_print, Soup, try_n, check_alive
 
 
 class Downloader_newgrounds(Downloader):
@@ -96,7 +96,7 @@ def get_imgs(user, title, session, cw=None):
     imgs = []
     url = 'https://{}.newgrounds.com/art'.format(user)
     params = {'page': 1, 'isAjaxRequest': 1}
-    while True:
+    while check_alive(cw):
         posts = get_posts(url, params, session, print_)
 
         if not posts:
@@ -106,6 +106,8 @@ def get_imgs(user, title, session, cw=None):
             sleep(0.75)
             imgs.append(get_img(post, session, print_))
         s = '{} {}  -  {}'.format(tr_('읽는 중...'), title, len(imgs))
+        if cw:
+            cw.setTitle(s)
         print_('processed: {}'.format(len(imgs)))
         print_('page: {}'.format(params['page']))
         params['page'] += 1

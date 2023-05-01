@@ -81,7 +81,7 @@ def get_artist(soup):
     if artist:
         artist = json.loads(artist).replace(utils.esc('"'), '"')
     if not artist: #5278
-        artist = soup.find(class_=lambda c: c=='mt-4 typography-14 text-text2')
+        artist = soup.find(class_=lambda c: c and set(c.split(' ')) == set(['mt-4', 'typography-14', 'text-text2'])) #5662
         if artist:
             artist = artist.text.strip()
     return artist or None

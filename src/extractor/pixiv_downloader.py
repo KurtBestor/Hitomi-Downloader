@@ -33,7 +33,8 @@ class Downloader_pixiv(Downloader):
     MAX_PARALLEL = 2
     keep_date = True
     STEP = 4, 16
-    ACCEPT_COOKIES = [r'(.*\.)?pixiv\.(com|co|net)']
+    URLS = ['pixiv.me', 'pixiv.net']
+    ACCEPT_COOKIES = [r'(.*\.)?pixiv\.(com|co|net|me)']
 
     def init(self):
         setattr(self.cw, 'sid?', None)

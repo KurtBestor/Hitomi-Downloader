@@ -11,8 +11,8 @@ from io import BytesIO
 
 class Downloader_xhamster(Downloader):
     type = 'xhamster'
-    __name = r'([^/]*\.)?(xhamster|xhwebsite|xhofficial|xhlocal|xhopen|xhtotal|megaxh|xhwide)[0-9]*' #3881, #4332, #4826, #5029
-    URLS = [r'regex:{}\.[a-z0-9]+/(videos|users|photos/gallery)/'.format(__name)]
+    __name = r'([^/]*\.)?(xhamster|xhwebsite|xhofficial|xhlocal|xhopen|xhtotal|megaxh|xhwide|xhtab|xhtime)([0-9]*)' #3881, #4332, #4826, #5029, #5696, #5893
+    URLS = [rf'regex:{__name}\.[a-z0-9]+/(videos|users|photos/gallery)/']
     single = True
     display_name = 'xHamster'
 
@@ -24,7 +24,6 @@ class Downloader_xhamster(Downloader):
 
     @classmethod
     def fix_url(cls, url):
-        url = re.sub(cls.__name, r'\2', url, 1)
         url = re.sub(r'(/users/[^/]+/videos)/[0-9]+', r'\1', url, 1) #5029
         return url
 

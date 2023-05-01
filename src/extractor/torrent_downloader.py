@@ -48,6 +48,7 @@ class Downloader_torrent(Downloader):
     _seeding = False
     _virgin = True
     STOP_READING = False
+    PRIORITY = -1
 
     @classmethod
     def fix_url(cls, url):

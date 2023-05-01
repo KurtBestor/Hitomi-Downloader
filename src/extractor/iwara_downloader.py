@@ -1,52 +1,14 @@
 import downloader
-from utils import Soup, urljoin, Downloader, LazyUrl, get_print, clean_url, clean_title, check_alive, Session, try_n, format_filename, tr_, get_ext
+from utils import Soup, urljoin, Downloader, LazyUrl, get_print, clean_url, clean_title, check_alive, Session, try_n, format_filename, tr_, get_ext, print_error, get_max_range
 import ree as re
-import json
-from io import BytesIO
 import errors
+import clf2
+import hashlib
+import urllib
+from io import BytesIO
+from timee import time
 TIMEOUT = 300
-PATTERN_ID = r'videos/([0-9a-zA-Z_-]+)'
-
-
-
-class File:
-    thumb = None
-
-    def __init__(self, type, url, title, referer, p=0, multi_post=False):
-        self.type = type
-        self.url = LazyUrl(referer, lambda _: url, self)
-        ext = get_ext(url)
-        if ext.lower() == '.php':
-            ext = '.mp4'
-        if type == 'video':
-            id_ = re.find('videos/([0-9a-zA-Z_-]+)', referer, err='no video id')
-            self.filename = format_filename(title, id_, ext) #4287
-        elif type == 'image':
-            name = '{}_p{}'.format(clean_title(title), p) if multi_post else p
-            self.filename = '{}{}'.format(name, ext)
-        else:
-            raise NotImplementedError(type)
-        self.title = title
-
-
-class LazyFile:
-    _url = None
-    thumb = None
-
-    def __init__(self, url, type_, session):
-        self.url = LazyUrl(url, self.get, self)
-        self.type = {'videos': 'video', 'images': 'image'}.get(type_) or type_
-        self.session = session
-
-    def get(self, url):
-        if self._url:
-            return self._url
-        file = get_files(url, self.session, multi_post=True)[0]
-        self.title = file.title
-        self.thumb = file.thumb
-        self.filename = file.filename
-        self._url = file.url()
-        return self._url
+PATTERN_ID = r'(image|video)/([0-9a-zA-Z_-]+)'
 
 
 
@@ -64,162 +26,244 @@ class Downloader_iwara(Downloader):
 
     def init(self):
         self.session = Session()
-        self.session.cookies.update({'show_adult': '1', 'has_js': '1'})
         self.setTimeout(TIMEOUT)
 
     def read(self):
-        file = None
-        files = None
-        title = None
-        if '/users/' in self.url or '/user/' in self.url:
-            type_ = 'videos'
+        info = get_info(self.url, self.session, self.cw)
+        if info is None:
+            return # embeded
+        self.title = clean_title(info['title'])
+
+        videos = info['files']
+        self.single = len(videos) < 2
+
+        # first video must be valid
+        while videos:
+            video = videos[0]
             try:
-                if self.url.split('/users/')[1].split('/')[1] == 'images':
-                    type_ = 'images'
-            except:
-                pass
-            info = read_channel(self.url, type_, self.session, self.cw)
-            title = info['title']
-            urls = info['urls']
-            if type_ == 'videos':
-                files = [LazyFile(url, type_, self.session) for url in urls]
-                file = self.process_playlist('[Channel] [{}] {}'.format(type_.capitalize(), title), files)
-            elif type_ == 'images': #4499
-                files = []
-                for i, url in enumerate(urls):
-                    check_alive(self.cw)
-                    files += get_files(url, self.session, multi_post=True, cw=self.cw) #4728
-                    self.title = '{} {} - {} / {}'.format(tr_('읽는 중...'), title, i, len(urls))
-                title = '[Channel] [{}] {}'.format(type_.capitalize(), title)
-            else:
-                raise NotImplementedError(type_)
+                video.url()
+                break
+            except Exception as e:
+                e_ = e
+                self.print_(print_error(e))
+                videos.remove(video)
+        else:
+            raise e_
 
-        if file is None:
-            if files is None:
-                files = get_files(self.url, self.session, cw=self.cw)
-            for file in files:
-                self.urls.append(file.url)
-            file = files[0]
-
-            if file.type == 'youtube':
-                raise errors.Invalid('[iwara] Youtube: {}'.format(self.url))
-
-            if file.type == 'image':
-                self.single = False
-            title = title or file.title
-            if not self.single:
-                title = clean_title(title)
-            self.title = title
-
-        if file.thumb is not None:
-            self.setIcon(file.thumb())
-
-
-@try_n(4)
-def read_html(*args, **kwargs):
-    kwargs['timeout'] = TIMEOUT
-    return downloader.read_html(*args, **kwargs)
-
-
-def read_channel(url, type_, session, cw=None):
-    print_ = get_print(cw)
-    html = read_html(url, session=session)
-    soup = Soup(html)
-    if soup.find('div', id='block-mainblocks-user-connect'):
-        username = re.find(r'''/messages/new\?user=(.+)['"]''', html, err='no username')
-    else:
-        username = re.find(r'/users/([^/]+)', url, err='no username')
-    print_('username: {}'.format(username))
-    info = {}
-    urls = []
-    urls_set = set()
-    for p in range(50):
-        check_alive(cw)
-        url = urljoin(url, '/users/{}/{}?page={}'.format(username, type_, p))
-        print_(url)
-        html = read_html(url, session=session)
-        soup = Soup(html)
-        if p == 0:
-            title = soup.find('h1', class_='page-title').text
-            info['title'] = title.replace("'s videos", '').replace("'s images", '').strip()
-
-        view = soup.find('div', class_='view-content')
-        if view is None:
-            break
-
-        urls_new = []
-        for div in view.findAll('div', class_='views-column'):
-            href = div.find('a')['href']
-            url_video = urljoin(url, href)
-            if url_video in urls_set:
-                continue
-            urls_set.add(url_video)
-            urls_new.append(url_video)
-        if not urls_new:
-            break
-        urls += urls_new
-    info['urls'] = urls
-    return info
-
-
-@try_n(4)
-def get_files(url, session, multi_post=False, cw=None):
-    print_ = get_print(cw)
-    html = read_html(url, session=session)
-    soup = Soup(html)
-    h = soup.find('h1', class_='title')
-    content = h.parent.parent.parent
-    title = h.text.strip()
-    youtube = content.find('div', class_='embedded-video')
-    video = content.find('video')
-    if youtube:
-        type = 'youtube'
-    elif video and video.attrs.get('poster'): #4901
-        type = 'video'
-    else:
-        type = 'image'
-    print_('type: {}'.format(type))
-    files = []
-    if type == 'image':
-        urls = set()
-        for img in content.findAll(['img', 'video']):
-            if img.source: #4901
-                img = img.source['src']
-            else:
-                img = img.parent.attrs['href']
-            img = urljoin(url, img)
-            if '/files/' not in img:
-                continue
-            if img in urls:
-                print('duplicate')
-                continue
-            urls.add(img)
-            file = File(type, img, title, url, len(files), multi_post=multi_post)
-            files.append(file)
-
-    elif type == 'youtube':
-        src = urljoin(url, youtube.find('iframe').attrs['src'])
-        file = File(type, src, title, url)
-        files.append(file)
-    elif type == 'video':
-        url_thumb = urljoin(url, video.attrs['poster'])
-        print('url_thumb:', url_thumb)
-        id = re.find(PATTERN_ID, url, err='no video id')
-        url_data = urljoin(url, '/api/video/{}'.format(id))
-        s_json = read_html(url_data, url, session=session)
-        data = json.loads(s_json)
-        video = data[0]
-        url_video = urljoin(url, video['uri'])
-        if not downloader.ok_url(url_video, url): #4287
-            print_('invalid video')
-            raise Exception('Invalid video')
-        file = File(type, url_video, title, url)
-        def thumb():
+        self.urls += [file.url for file in videos]
+        if info.get('playlist', False):
+            video = self.process_playlist(info['title'], videos)
+        url_thumb = video.url_thumb
+        self.print_(f'url_thumb: {url_thumb}')
+        if url_thumb:
             f = BytesIO()
-            downloader.download(url_thumb, buffer=f, referer=url)
-            return f
-        file.thumb = thumb
-        files.append(file)
-    else:
-        raise NotImplementedError(type)
-    return files
+            downloader.download(url_thumb, buffer=f, session=self.session, customWidget=self.cw)
+            f.seek(0)
+            self.setIcon(f)
+
+        username = info.get('username')
+        if username:
+            self.artist = username
+
+
+
+class File:
+    def __init__(self, type, url, referer, info, session, multi_post=False):
+        title = info['title']
+        p = len(info['files'])
+        self.url = LazyUrl(referer, lambda _: url, self)
+        ext = get_ext(url) or downloader.get_ext(url, session=session)
+        if type == 'video':
+            id_ = re.find(PATTERN_ID, referer, err='no video id')[1]
+            self.filename = format_filename(title, id_, ext) #4287
+        else:
+            name = '{}_p{}'.format(clean_title(title), p) if multi_post else p
+            self.filename = '{}{}'.format(name, ext)
+        self.url_thumb = info.get('url_thumb')
+
+
+class LazyFile:
+    def __init__(self, url, session, cw):
+        self.session = session
+        self.cw = cw
+        self.url = LazyUrl(url, self.get, self)
+
+    def get(self, url):
+        info = get_info(url, self.session, self.cw)
+        file = info['files'][0]
+        self.filename = file.filename
+        self.url_thumb = file.url_thumb
+        return file.url()
+
+
+def get_token(session, cw=None):
+    print_ = get_print(cw)
+    token = None
+    def f(html, browser=None):
+        def callback(r):
+            nonlocal token
+            token = r
+        browser.runJavaScript('window.localStorage.getItem("token")', callback=callback)
+        return bool(token)
+    res = clf2.solve('https://iwara.tv', session=session, cw=cw, f=f, timeout=15)
+    #print_(f'token: {token}')
+    r = session.post('https://api.iwara.tv/user/token', headers={'Authorization': f'Bearer {token}'})
+    d = r.json()
+    token = d['accessToken']
+    #print_(f'token2: {token}')
+    return token
+
+
+@try_n(2)
+def get_info(url, session, cw, multi_post=False):
+    print_ = get_print(cw)
+    t0 = None
+    def f(html, browser=None):
+        nonlocal t0
+        soup = Soup(html)
+        if t0 is None:
+            t0 = time()
+        if time() - t0 > 10 or '/profile/' in url.lower():
+            for a in soup.findAll('a'):
+                if urljoin(url, a.get('href', '')) == urljoin(url, '/login'):
+                    raise errors.LoginRequired(method='browser', url='https://www.iwara.tv/login') #5794
+        buttons = soup.findAll(class_='button--primary')
+        if buttons:
+            for i, button in enumerate(buttons):
+                button_text = button.text
+                if not button_text:
+                    continue
+                print_(f'button: {button_text}')
+                if button_text.lower() in ['i am over 18', 'continue']:
+                    browser.runJavaScript(f'btns=document.getElementsByClassName("button--primary");btns[{i}].click();') #5794#issuecomment-1517879513
+        if '/profile/' in url.lower():
+            return soup.find('div', class_='page-profile__header') is not None
+        else:
+            details = soup.find('div', class_='page-video__details') or soup.find('div', class_='page-image__details')
+            return details is not None and details.find('div', class_='text--h1') is not None
+
+    html = clf2.solve(url, session=session, f=f, cw=cw, timeout=30)['html'] #5794
+    soup = Soup(html)
+
+    info = {}
+    info['files'] = []
+
+    type = url.split('/')[3]
+    if type == 'profile':
+        max_pid = get_max_range(cw)
+        ids = set()
+        sub = (url+'/').split('/')[5]
+        if not sub:
+            sub = 'videos'
+        uid = url.split('/')[4]
+        url_api = f'https://api.iwara.tv/profile/{uid}'
+        j = downloader.read_json(url_api, session=session)
+        info['username'] = username = j['user']['name']
+        info['id'] = id = j['user']['username']
+        info['title'] = f'[Channel] [{sub.capitalize()}] {username} ({id})'
+        id = j['user']['id']
+        if sub == 'videos':
+            info['playlist'] = True
+            for p in range(100):
+                url_api = f'https://api.iwara.tv/videos?page={p}&sort=date&user={id}'
+                j = downloader.read_json(url_api, session=session)
+                for post in j['results']:
+                    id_ = post['id']
+                    if id_ in ids:
+                        continue
+                    ids.add(id_)
+                    slug = post['slug']
+                    url_post = f'https://www.iwara.tv/video/{id_}/{slug}'
+                    file = LazyFile(url_post, session, cw)
+                    info['files'].append(file)
+                if cw: cw.setTitle(tr_('읽는 중... {} ({} / {})').format(info['title'], len(ids), j['count']))
+                if len(info['files']) >= max_pid:
+                    break
+                if j['limit']*(p+1) >= j['count']: break
+        elif sub == 'images':
+            for p in range(100):
+                url_api = f'https://api.iwara.tv/images?page={p}&sort=date&user={id}'
+                j = downloader.read_json(url_api, session=session)
+                for post in j['results']:
+                    check_alive(cw)
+                    id_ = post['id']
+                    if id_ in ids:
+                        continue
+                    ids.add(id_)
+                    slug = post['slug']
+                    url_post = f'https://www.iwara.tv/image/{id_}/{slug}'
+                    info_post = get_info(url_post, session, cw, True)
+                    info['files'] += info_post['files']
+                    print_(f'imgs: {len(info["files"])}')
+                    if cw: cw.setTitle(tr_('읽는 중... {} ({} / {})').format(info['title'], len(ids), j['count']))
+                    if len(info['files']) >= max_pid:
+                        break
+                if len(info['files']) >= max_pid:
+                        break
+                if j['limit']*(p+1) >= j['count']: break
+        else:
+            raise NotImplementedError(f'profile: {sub}')
+        return info
+
+    details = soup.find('div', class_='page-video__details') or soup.find('div', class_='page-image__details')
+    info['title'] = details.find('div', class_='text--h1').text.strip()
+    info['username'] = soup.find('a', class_='username')['title']
+
+    content = soup.find('div', class_='videoPlayer') or soup.find('div', class_='page-image__slideshow')
+
+    id = re.find(PATTERN_ID, url, err='no id')[1]
+
+    try:
+        token = get_token(session, cw=cw)
+    except Exception as e:
+        print_(print_error(e))
+        token = None
+
+    url_api = f'https://api.iwara.tv/{type}/{id}'
+    hdr = {}
+    if token:
+        hdr['authorization'] = f'Bearer {token}'
+    data = downloader.read_json(url_api, url, session=session, headers=hdr)
+
+    if data.get('embedUrl'):
+        if cw and not cw.downloader.single:
+            raise errors.Invalid('[iwara] Embeded: {}'.format(data['embedUrl']))
+        #5869
+        cw.downloader.pass_()
+        cw.gal_num = cw.url = data['embedUrl']
+        d = Downloader.get('youtube')(data['embedUrl'], cw, cw.downloader.thread, 1)
+        d.start()
+        return
+
+    if not data.get('files'):
+        data['files'] = [data['file']]
+
+    for file in data['files']:
+        id_ = file['id']
+        if type == 'video':
+            fileurl = data['fileUrl']
+            up = urllib.parse.urlparse(fileurl)
+            q = urllib.parse.parse_qs(up.query)
+            paths = up.path.rstrip('/').split('/')
+            x_version = hashlib.sha1('_'.join((paths[-1], q['expires'][0], '5nFp9kmbNnHdAFhaqMvt')).encode()).hexdigest() # https://github.com/yt-dlp/yt-dlp/issues/6549#issuecomment-1473771047
+            j = downloader.read_json(fileurl, url, session=session, headers={'X-Version': x_version})
+            def key(x):
+                if x['name'].lower() == 'source':
+                    return float('inf')
+                try:
+                    return float(x['name'])
+                except:
+                    return -1
+            x = sorted(j, key=key)[-1]
+            print_(f'name: {x["name"]}')
+            url_file = urljoin(url, x['src']['view'])
+            info['url_thumb'] = urljoin(url, re.find(r'url\("(.+?)"', soup.find('div', class_='vjs-poster')['style'], err='no poster'))
+        else:
+            name = file['name']
+            url_file = f'https://i.iwara.tv/image/original/{id_}/{name}'
+        if len(data['files']) == 1:
+            multi_post = True#
+        file = File(type, url_file, url, info, session, multi_post)
+        info['files'].append(file)
+
+    return info

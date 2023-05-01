@@ -9,10 +9,10 @@ import clf2
 
 class Downloader_kissjav(Downloader):
     type = 'kissjav'
-    URLS = ['kissjav.com', 'kissjav.li'] #4835
+    URLS = ['kissjav.com', 'kissjav.li', 'mrjav.net'] #4835
     single = True
     display_name = 'KissJAV'
-    ACCEPT_COOKIES = [r'(.*\.)?kissjav\.(com|li)']
+    ACCEPT_COOKIES = [r'(.*\.)?(kissjav|mrjav)\.(com|li|net)']
 
     def read(self):
         self.session = Session()#get_session(self.url, cw=self.cw)

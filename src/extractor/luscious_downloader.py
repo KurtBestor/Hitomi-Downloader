@@ -26,6 +26,7 @@ class Image:
 
 
 class Video:
+    id = None
     def __init__(self, url, title, url_thumb):
         self.url = url
         self.title = title
@@ -130,7 +131,9 @@ def get_imgs(url, soup=None, cw=None):
 def get_imgs_p(url, p=1):
     id = re.find('/albums/[^/]+?([0-9]+)/', url+'/')
     print(url, id)
-    url_api = 'https://api.luscious.net/graphql/nobatch/?operationName=AlbumListOwnPictures&query=+query+AlbumListOwnPictures%28%24input%3A+PictureListInput%21%29+%7B+picture+%7B+list%28input%3A+%24input%29+%7B+info+%7B+...FacetCollectionInfo+%7D+items+%7B+...PictureStandardWithoutAlbum+%7D+%7D+%7D+%7D+fragment+FacetCollectionInfo+on+FacetCollectionInfo+%7B+page+has_next_page+has_previous_page+total_items+total_pages+items_per_page+url_complete+%7D+fragment+PictureStandardWithoutAlbum+on+Picture+%7B+__typename+id+title+created+like_status+number_of_comments+number_of_favorites+status+width+height+resolution+aspect_ratio+url_to_original+url_to_video+is_animated+position+tags+%7B+category+text+url+%7D+permissions+url+thumbnails+%7B+width+height+size+url+%7D+%7D+&variables=%7B%22input%22%3A%7B%22filters%22%3A%5B%7B%22name%22%3A%22album_id%22%2C%22value%22%3A%22{}%22%7D%5D%2C%22display%22%3A%22position%22%2C%22page%22%3A{}%7D%7D'.format(id, p)
+    #5699
+    #url_api = 'https://api.luscious.net/graphql/nobatch/?operationName=AlbumListOwnPictures&query=+query+AlbumListOwnPictures%28%24input%3A+PictureListInput%21%29+%7B+picture+%7B+list%28input%3A+%24input%29+%7B+info+%7B+...FacetCollectionInfo+%7D+items+%7B+...PictureStandardWithoutAlbum+%7D+%7D+%7D+%7D+fragment+FacetCollectionInfo+on+FacetCollectionInfo+%7B+page+has_next_page+has_previous_page+total_items+total_pages+items_per_page+url_complete+%7D+fragment+PictureStandardWithoutAlbum+on+Picture+%7B+__typename+id+title+created+like_status+number_of_comments+number_of_favorites+status+width+height+resolution+aspect_ratio+url_to_original+url_to_video+is_animated+position+tags+%7B+category+text+url+%7D+permissions+url+thumbnails+%7B+width+height+size+url+%7D+%7D+&variables=%7B%22input%22%3A%7B%22filters%22%3A%5B%7B%22name%22%3A%22album_id%22%2C%22value%22%3A%22{}%22%7D%5D%2C%22display%22%3A%22position%22%2C%22page%22%3A{}%7D%7D'.format(id, p)
+    url_api = f'https://apicdn.luscious.net/graphql/nobatch/?operationName=AlbumListOwnPictures&query=%2520query%2520AlbumListOwnPictures%28%2524input%253A%2520PictureListInput%21%29%2520%257B%2520picture%2520%257B%2520list%28input%253A%2520%2524input%29%2520%257B%2520info%2520%257B%2520...FacetCollectionInfo%2520%257D%2520items%2520%257B%2520__typename%2520id%2520title%2520description%2520created%2520like_status%2520number_of_comments%2520number_of_favorites%2520moderation_status%2520width%2520height%2520resolution%2520aspect_ratio%2520url_to_original%2520url_to_video%2520is_animated%2520position%2520tags%2520%257B%2520category%2520text%2520url%2520%257D%2520permissions%2520url%2520thumbnails%2520%257B%2520width%2520height%2520size%2520url%2520%257D%2520%257D%2520%257D%2520%257D%2520%257D%2520fragment%2520FacetCollectionInfo%2520on%2520FacetCollectionInfo%2520%257B%2520page%2520has_next_page%2520has_previous_page%2520total_items%2520total_pages%2520items_per_page%2520url_complete%2520%257D%2520&variables=%7B%22input%22%3A%7B%22filters%22%3A%5B%7B%22name%22%3A%22album_id%22%2C%22value%22%3A%22{id}%22%7D%5D%2C%22display%22%3A%22rating_all_time%22%2C%22items_per_page%22%3A50%2C%22page%22%3A{p}%7D%7D'
     data_raw = downloader.read_html(url_api, referer=url)
     data = json.loads(data_raw)
     has_next_page = data['data']['picture']['list']['info']['has_next_page']
@@ -143,11 +146,11 @@ def get_imgs_p(url, p=1):
 
 
 def get_video(url, soup):
-    url_thumb = soup.find('meta', {'property': 'og:image'}).attrs['content']
-
     title = re.find('videos/([^/]+)', url)
     video = soup.find('video')
-    url = video.source.attrs['src']
+    url = urljoin(url, video.source.attrs['src'])
+    url_thumb = urljoin(url, video['poster'])
+
     video = Video(url, title, url_thumb)
     return video
 

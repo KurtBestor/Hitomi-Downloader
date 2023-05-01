@@ -1,5 +1,5 @@
 import downloader
-from utils import Soup, Downloader, get_outdir, Session, LazyUrl, try_n, format_filename, get_print
+from utils import Soup, Downloader, get_outdir, Session, LazyUrl, try_n, format_filename, get_print, cut_pair
 import ree as re
 from timee import sleep, time
 import os
@@ -7,6 +7,7 @@ from io import BytesIO
 import shutil
 from m3u8_tools import playlist2stream, M3u8_stream
 import errors
+import json
 
 
 class Video:
@@ -55,9 +56,9 @@ def _get_stream(url_m3u8):
     return stream
 
 
-@try_n(8)
 def get_video(url, session, cw):
     print_ = get_print(cw)
+
     html = downloader.read_html(url, session=session)
     if "document.location.href='https://login." in html:
         raise errors.LoginRequired()
@@ -66,27 +67,32 @@ def get_video(url, session, cw):
         if alert:
             raise errors.LoginRequired(alert)
     soup = Soup(html)
+
     url_thumb = soup.find('meta', {'property': 'og:image'}).attrs['content']
     print_('url_thumb: {}'.format(url_thumb))
-    params = re.find('VodParameter *= *[\'"]([^\'"]+)[\'"]', html, err='No VodParameter')
-    params += '&adultView=ADULT_VIEW&_={}'.format(int(time()*1000))
-    for subdomain in ['afbbs', 'stbbs']: #4758
-        url_xml = 'http://{}.afreecatv.com:8080/api/video/get_video_info.php?'.format(subdomain) + params
-        print_(url_xml)
-        try:
-            html = downloader.read_html(url_xml, session=session, referer=url)
-            break
-        except Exception as e:
-            e_ = e
-    else:
-        raise e_
-    soup = Soup(html)
-    if '<flag>PARTIAL_ADULT</flag>' in html:
-        raise errors.LoginRequired()
-    title = soup.find('title').string.strip()
-    urls_m3u8 = re.findall('https?://[^>]+playlist.m3u8', html)
-    if not urls_m3u8:
-        raise Exception('no m3u8')
+
+    url_api = 'https://api.m.afreecatv.com/station/video/a/view'
+    vid = re.find(f'/player/([0-9]+)', url, err='no vid')
+    r = session.post(url_api, data={'nTitleNo': vid, 'nApiLevel': '10'}, headers={'Referer': url})
+    try:
+        s = cut_pair(r.text)
+        d = json.loads(s)
+    except Exception as e:
+        print_(r.text)
+        raise e
+    data = d['data']
+
+    title = data['full_title']
+
+    if data.get('adult_status') == 'notLogin':
+        raise errors.LoginRequired(title)
+
+    urls_m3u8 = []
+    for file in data['files']:
+        file = file['quality_info'][0]['file']
+        urls_m3u8.append(file)
+    print_(f'urls_m3u8: {len(urls_m3u8)}')
+
     streams = []
     for url_m3u8 in urls_m3u8:
         try:
@@ -98,6 +104,5 @@ def get_video(url, session, cw):
     for stream in streams[1:]:
         streams[0] += stream
     stream = streams[0]
-    id = url.split('/')[(-1)].split('?')[0].split('#')[0]
-    video = Video(stream, url, id, title, url_thumb)
+    video = Video(stream, url, vid, title, url_thumb)
     return video

@@ -20,13 +20,14 @@ from datetime import datetime
 import threading
 from putils import DIR
 import errors
+MODE = 'query'
 
 
 def print_streams(streams, cw):
     print_ = get_print(cw)
 
     for stream in streams:
-        print_('{}[{}][{}fps][{}{}][{}] {} [{} / {}] ─ {}'.format('LIVE ' if stream.live else '', stream.resolution, stream.fps, stream.abr_str, '(fixed)' if stream.abr_fixed else '', stream.tbr, stream.subtype, stream.video_codec, stream.audio_codec, stream.format))
+        print_(f'{"LIVE " if stream.live else ""}[{stream.resolution}][{stream.fps}fps][{stream.abr_str}{"(fixed)" if stream.abr_fixed else ""}][{stream.tbr}] {stream.subtype} [{stream.video_codec} / {stream.audio_codec}] ─ {stream.format}')
     print_('')
 
 
@@ -252,7 +253,7 @@ class Video:
                 if cw is not None:
                     cw.trash_can.append(path)
                 if constants.FAST:
-                    downloader_v3.download(audio, session=self.session, chunk=1024*1024, n_threads=2, outdir=os.path.dirname(path), fileName=os.path.basename(path), customWidget=cw, overwrite=True)
+                    downloader_v3.download(audio, session=self.session, chunk=1024*1024, n_threads=2, outdir=os.path.dirname(path), fileName=os.path.basename(path), customWidget=cw, overwrite=True, mode=MODE)
                 else:
                     downloader.download(audio, session=self.session, outdir=os.path.dirname(path), fileName=os.path.basename(path), customWidget=cw, overwrite=True)
                 self.audio_path = path
@@ -301,6 +302,8 @@ class Video:
             filename_new = os.path.join(os.path.dirname(filename_old), os.path.splitext(filename0)[0]+ext)
             print_(f'rename: {filename_old} -> {filename_new}')
             if filename_old != filename_new:
+                if not os.path.exists(os.path.dirname(filename_new)):
+                    os.makedirs(os.path.dirname(filename_new))
                 if os.path.isfile(filename_new):
                     os.remove(filename_new)
                 os.rename(filename_old, filename_new)
@@ -318,7 +321,7 @@ class Video:
 
 
 def get_id(url):
-    id_ = re.find(r'youtu.be/([0-9A-Za-z-_]{10,})', url) or re.find(r'[?&]v=([0-9A-Za-z-_]{10,})', url) or re.find(r'/(v|embed|shorts)/([0-9A-Za-z-_]{10,})', url) or re.find(r'%3Fv%3D([0-9A-Za-z-_]{10,})', url)
+    id_ = re.find(r'youtu.be/([0-9A-Za-z-_]{10,})', url) or re.find(r'[?&]v=([0-9A-Za-z-_]{10,})', url) or re.find(r'/(v|embed|shorts|live)/([0-9A-Za-z-_]{10,})', url) or re.find(r'%3Fv%3D([0-9A-Za-z-_]{10,})', url) #5679
     if isinstance(id_, tuple):
         id_ = id_[-1]
     return id_
@@ -394,6 +397,7 @@ class Downloader_youtube(Downloader):
             raise Exception('No videos')
 
         self.enableSegment(overwrite=True)
+        self.cw.v3['mode'] = MODE
 
         # first video must be valid
         while videos:
@@ -434,7 +438,11 @@ def get_videos(url, session, type='video', only_mp4=False, audio_included=False,
     n = get_max_range(cw)
 
     if '/channel/' in url or '/user/' in url or '/c/' in url or ''.join(url.split('/')[3:4]).startswith('@'): #5445
-        info = read_channel(url, n=n, cw=cw)
+        reverse = utils.SD['youtube']['channel_reverse'] #5848
+        tab = ''.join(url.split('/')[4:5])
+        if tab == '': #5901
+            url = '/'.join(url.split('/')[:4]) + '/videos'
+        info = read_channel(url, n=n, cw=cw, reverse=reverse)
         info['type'] = 'channel'
         info['title'] = '[Channel] {}'.format(info['uploader'])
         if cw:
@@ -459,12 +467,12 @@ def get_videos(url, session, type='video', only_mp4=False, audio_included=False,
 
 
 
-def read_channel(url, n, cw=None):
-    return read_playlist(url, n, cw)
+def read_channel(url, n, cw=None, reverse=False):
+    return read_playlist(url, n, cw, reverse=reverse)
 
 
 @try_n(2)
-def read_playlist(url, n, cw=None):
+def read_playlist(url, n, cw=None, reverse=False):
     print_ = get_print(cw)
 
     options = {
@@ -479,6 +487,8 @@ def read_playlist(url, n, cw=None):
     for e in es:
         href = 'https://www.youtube.com/watch?v={}'.format(e['id'])
         urls.append(href)
+    if reverse:
+        urls = urls[::-1]
     info['urls'] = urls
 
     if not info.get('uploader'):

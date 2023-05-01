@@ -61,13 +61,13 @@ class Video:
         else:
             live = False
         self.url = LazyUrl(url, lambda _: m, self)
-        self.title = os.path.splitext(os.path.basename(url).split('?')[0])[0]
+        self.title = os.path.splitext(os.path.basename(url).split('?')[0])[0][:50]
         self.id_ = md5(url.encode('utf8')).hexdigest()[:8]
         tail = f' ({self.id_}).mp4'
         if live: #5110
             from datetime import datetime
             now = datetime.now()
-            tail = clean_title(now.strftime(' %Y-%m-%d %H:%M')) + tail
+            tail = ' ' + clean_title(now.strftime('%Y-%m-%d %H:%M')) + tail
         self.filename = clean_title(self.title, n=-len(tail)) + tail
 
 

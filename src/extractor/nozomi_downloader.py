@@ -27,8 +27,14 @@ def read_post(id, referer):
     imgs = []
     for p, url in enumerate(j['imageurls']):
         did = url['dataid']
-        url = 'https://i.nozomi.la/{}/{}/{}.{}'.format(did[-1], did[-3:-1], did, url['type']) #5340
-        img = Image(id, url, referer, p)
+        if j.get('is_video'): #5754
+            cdn = 'v'
+            ext = url['type']
+        else:
+            cdn = 'g' if j.get('type') == 'gif' else 'w'
+            ext = 'gif' if url.get('type') == 'gif' else 'webp'
+        url = 'https://{}.nozomi.la/{}/{}/{}.{}'.format(cdn, did[-1], did[-3:-1], did, ext) #5340
+        img = Image(id, url, f'https://nozomi.la/post/{id}.html', p)
         imgs.append(img)
     return imgs
 

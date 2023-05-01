@@ -40,9 +40,10 @@ class Downloader_sankaku(Downloader):
         self.url = clean_url(self.url)
         self.session = Session()
 
-        if self.type_sankaku == 'www':
-            html = downloader.read_html(self.url, session=self.session)
-            self.soup = Soup(html)
+    @lazy
+    def soup(self):
+        html = downloader.read_html(self.url, session=self.session)
+        return Soup(html)
 
     @classmethod
     def fix_url(cls, url):
@@ -73,7 +74,7 @@ class Downloader_sankaku(Downloader):
             id = '[www] ' + self.soup.find('h1', class_='entry-title').text.strip()
         else:
             if '/post/show/' in self.url:
-                id = get_id(self.url)
+                id = get_id(self.url, self.soup)
             else:
                 qs = query_url(self.url)
                 tags = qs.get('tags', [])
@@ -282,6 +283,9 @@ def get_imgs(url, title=None, cw=None, d=None, types=['img', 'gif', 'video'], se
         page += 1
         url_old = url
         soup = Soup(html)
+        banner = soup.find('div', class_='has-mail')
+        if banner: #5861
+            banner.decompose()
         err = soup.find('div', class_='post-premium-browsing_error')
         if err and not imgs:
             raise errors.LoginRequired(err.text.strip())
@@ -305,10 +309,10 @@ def get_imgs(url, title=None, cw=None, d=None, types=['img', 'gif', 'video'], se
             url_img = article.a.attrs['href']
             if not url_img.startswith('http'):
                 url_img = urljoin('https://{}.sankakucomplex.com'.format(type), url_img)
-            id = get_id(url_img)
-            #print_(article)
-            if id is None: # sankaku plus
+            if '/post/show/' not in url_img: # sankaku plus
                 continue
+            id = re.find(r'p([0-9]+)', article['id'], err='no id') #5892
+            #print_(article)
             if id in local_ids:
                 #print('skip', id)
                 local = True
@@ -350,5 +354,8 @@ def get_imgs(url, title=None, cw=None, d=None, types=['img', 'gif', 'video'], se
     return info
 
 
-def get_id(url_img):
-    return re.find('show/([0-9]+)', url_img)
+def get_id(url, soup=None):
+    if soup is None:
+        html = downloader.read_html(url)
+        soup = Soup(html)
+    return soup.find('input', id='post_id')['value']

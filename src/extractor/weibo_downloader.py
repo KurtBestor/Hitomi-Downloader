@@ -58,6 +58,7 @@ class Downloader_weibo(Downloader):
             self.filenames[img.url] = img.filename
 
         self.title = title
+        self.referer = self.url
 
 
 def checkLogin(session):
