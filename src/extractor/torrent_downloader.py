@@ -110,6 +110,8 @@ class Downloader_torrent(Downloader):
 
     @classmethod
     def get_dn(cls, url):
+        if not url:
+            return
         if url.startswith('magnet:'):
             qs = utils.query_url(url)
             if 'dn' in qs:
@@ -122,7 +124,7 @@ class Downloader_torrent(Downloader):
         if cw:
             cw._torrent_s = None
         title = self.url
-        self._dn = self.get_dn(self.url)
+        self._dn = self.get_dn(cw.gal_num)
         info = getattr(cw, 'info?', None)
         if info is not None:
             self.print_('cached info')
@@ -400,7 +402,10 @@ class Downloader_torrent(Downloader):
                     if what == 'file_completed':
                         index = alert['index']
                         index = self._torrent_index[index]
-                        file = os.path.realpath(names[index])
+                        try:
+                            file = os.path.realpath(names[index])
+                        except IndexError:
+                            continue #???
                         cw.dones.add(file)
                         file = constants.compact(file).replace('\\', '/')
                         files = file.split('/')
