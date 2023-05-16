@@ -27,8 +27,10 @@ class Downloader_pinter(Downloader):
             username, board = get_username_board(self.url)
             if '/' in board:
                 self.type_pinter = 'section'
+            if board == '_created':
+                self.type_pinter = 'created'
         self.print_('type: {}'.format(self.type_pinter))
-        if self.type_pinter in ['board', 'section']:
+        if self.type_pinter in ['board', 'section', 'created']:
             self.info = get_info(username, board, self.api)
         elif self.type_pinter == 'pin':
             pass #5132
@@ -45,8 +47,14 @@ class Downloader_pinter(Downloader):
     def name(self):
         if self.type_pinter == 'pin':
             return self._pin_id
-        username = self.info['owner']['username']
-        name = self.info['name']
+        username = ''
+        name = ''
+        if self.type_pinter == 'created':
+            username = self.info['native_creator']['username']
+            name = '_created'
+        else:
+            username = self.info['owner']['username']
+            name = self.info['name']
         return clean_title('{}/{}'.format(username, name))
 
     def read(self):
@@ -78,6 +86,8 @@ def get_info(username, board, api):
         info.update(s)
         info['name'] = '{}/{}'.format(info['name'], title)
         print('section_id:', info['id'])
+    elif board == '_created':
+        info = api.board_created(username)[0]
     else:
         info = api.board(username, board)
     return info
@@ -125,6 +135,14 @@ class PinterestAPI:
     def board_section_pins(self, section_id):
         options = {'section_id': section_id}
         return self._pagination('BoardSectionPins', options)
+    
+    def board_created(self, user):
+        options = {'data': {}, 'username': user, 'field_set_key': 'grid_item'}
+        return self._call('UserActivityPins', options)['resource_response']['data']
+
+    def board_created_pins(self, user):
+        options = {'data': {}, 'username': user, 'field_set_key': 'grid_item'}
+        return self._pagination('UserActivityPins', options)
 
     @try_n(4)
     @sleep_and_retry
@@ -151,6 +169,8 @@ class PinterestAPI:
     def _pagination(self, resource, options):
         while True:
             data = self._call(resource, options)
+            if resource == 'UserActivityPins' and len(data['resource_response']['data']) == 0:
+                return
             for x in data['resource_response']['data']:
                 yield x
 
@@ -199,6 +219,8 @@ def get_imgs(id, api, cw=None, title=None, type='board'):
         gen = api.board_section_pins(id)
     elif type == 'pin':
         gen = [api.pin(id)]
+    elif type == 'created':
+        gen = api.board_created_pins(title.split('／')[0])
     else:
         raise Exception('Type "{}" is not supported'.format(type))
     for img in gen:
