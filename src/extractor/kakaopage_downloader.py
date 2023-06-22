@@ -1,6 +1,6 @@
 import downloader
 import ree as re
-from utils import Session, LazyUrl, Soup, Downloader, try_n, get_print, clean_title, print_error, urljoin, get_imgs_already
+from utils import Session, LazyUrl, Soup, Downloader, try_n, get_print, clean_title, print_error, urljoin, get_imgs_already, fix_dup
 from timee import sleep
 from translator import tr_
 import page_selector
@@ -82,6 +82,7 @@ def get_pages(url, session, cw=None):
     read_html(url, session=session)
     id_ = get_id(url)
 
+    titles = {}
     pages = []
     ids = set()
     for p in range(500): #2966
@@ -234,6 +235,7 @@ fragment EventLogFragment on EventLog {
         for edge in edges:
             single = edge['node']['single']
             title_page = single['title']
+            title_page = fix_dup(title_page, titles) #4483
             id_page = single['productId']
             if id_page in ids:
                 print('dup id')

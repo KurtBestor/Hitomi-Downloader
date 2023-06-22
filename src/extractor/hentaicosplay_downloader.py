@@ -49,7 +49,7 @@ class Video:
 
 class Downloader_hentaicosplay(Downloader):
     type = 'hentaicosplay'
-    URLS = ['hentai-cosplays.com', 'porn-images-xxx.com']
+    URLS = ['hentai-cosplays.com', 'porn-images-xxx.com', 'hentai-img.com']
     icon = None
     display_name = 'Hentai Cosplay'
     MAX_PARALLEL = 1 # must be 1

@@ -15,6 +15,7 @@ class Downloader_etc(Downloader):
     single = True
     MAX_PARALLEL = 8
     display_name = 'Etc'
+    PRIORITY = 10
 
     def init(self):
         self.session = Session()
@@ -83,6 +84,8 @@ def _get_video(url, session, cw, ie_key=None, allow_m3u8=True):
         #'extract_flat': True,
         'playlistend': 1,
         }
+    if ytdl.get_extractor_name(url) == 'spankbang':
+        options['legacyserverconnect'] = True #6545
     ydl = ytdl.YoutubeDL(options, cw=cw)
     try:
         info = ydl.extract_info(url)
@@ -117,7 +120,7 @@ def _get_video(url, session, cw, ie_key=None, allow_m3u8=True):
     fs = []
     for i, f in enumerate(formats):
         f['_index'] = i
-        f['_resolution'] = int_or_none(re.find('([0-9]+)p', f['format'], re.IGNORECASE)) or f.get('height') or f.get('width') or int(f.get('vcodec', 'none') != 'none')
+        f['_resolution'] = int_or_none(re.find('([0-9]+)p', f['format'], re.IGNORECASE)) or f.get('height') or f.get('width') or int_or_none(f.get('quality')) or int(f.get('vcodec', 'none') != 'none') #5995
         f['_vbr'] = f.get('vbr') or 0
         f['_audio'] = f.get('abr') or f.get('asr') or int(f.get('acodec', 'none') != 'none')
         print_(format_(f))

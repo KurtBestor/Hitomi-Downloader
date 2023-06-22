@@ -25,21 +25,29 @@ class Downloader_m3u8(Downloader):
         return url
 
     def read(self):
-        n_thread = self.cw.format or DEFAULT_N_THREAD
+        fmt = self.cw.format
+        referer = self.url
+        if isinstance(fmt, str) and fmt.startswith('referer:'):
+            referer = fmt[len('referer:'):]
+        self.print_('referer: {}'.format(referer))
+        n_thread = DEFAULT_N_THREAD
+        if isinstance(fmt, int) and fmt > 0:
+            n_thread = fmt
         self.print_('n_thread: {}'.format(n_thread))
-        video = Video(self.url, n_thread)
+        video = Video(self.url, n_thread, referer)
         self.urls.append(video.url)
         self.title = os.path.splitext(os.path.basename(video.filename))[0].replace(b'\xef\xbc\x9a'.decode('utf8'), ':')
 
 
 class Video:
-    def __init__(self, url, n_thread):
+    def __init__(self, url, n_thread, referer):
         session = Session()
         session.purge([rf'(.*\.)?{utils.domain(url)}'])
         if get_ext(url).lower() == '.mpd':
             def m():
                 hdr = session.headers.copy()
-                hdr['Referer'] = url
+                if referer:
+                    hdr['Referer'] = referer
                 return utils.LiveStream(url, headers=hdr)
             ms = [m]
         else:
@@ -79,6 +87,12 @@ def options(urls):
         if not ok:
             return
         return n_thread
+    def f2(urls):
+        referer, ok = utils.QInputDialog.getText(Downloader.mainWindow, tr_('Set a referer'), tr_('Referer?'))
+        if not ok:
+            return
+        return 'referer:'+referer
     return [
-        {'text': 'Set number of threads...', 'format': f},
+        {'text': 'Set the number of threads...', 'format': f},
+        {'text': 'Set the referer...', 'format': f2},
         ]

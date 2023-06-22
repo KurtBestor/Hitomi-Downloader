@@ -135,7 +135,7 @@ class PinterestAPI:
     def board_section_pins(self, section_id):
         options = {'section_id': section_id}
         return self._pagination('BoardSectionPins', options)
-    
+
     def board_created(self, user):
         options = {'data': {}, 'username': user, 'field_set_key': 'grid_item'}
         return self._call('UserActivityPins', options)['resource_response']['data']

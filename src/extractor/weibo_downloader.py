@@ -187,7 +187,7 @@ def get_imgs(uid, oid, title, session, cw=None, d=None, parent=None):
                 break
             if not imgs_new:
                 break
-            sleep(1)
+            sleep(1, cw)
         imgs += imgs_album
 
     imgs = sorted(imgs, key=lambda img: img.timestamp, reverse=True)

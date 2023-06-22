@@ -10,6 +10,7 @@ import errors
 import ips
 import order
 from cacher import Cache
+import myjson as json
 torrent = None
 TIMEOUT = 600
 CACHE_INFO = True
@@ -130,6 +131,10 @@ class Downloader_torrent(Downloader):
             self.print_('cached info')
             self._info = info
         if self._info is None:
+            if not (self.url.startswith('http') or self.url.startswith('magnet:')) and not os.path.exists(self.url):
+                sr = cw.serial_retry
+                if sr is not None:
+                    self.url = json.loads(sr)['url'] or self.url
             try:
                 self._info = torrent.get_info(self.url, cw, timeout=TIMEOUT, callback=self.callback)
                 if CACHE_INFO:

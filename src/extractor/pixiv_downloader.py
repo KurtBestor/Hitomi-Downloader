@@ -7,7 +7,7 @@ import ree as re
 import errors
 from translator import tr_
 from error_printer import print_error
-from urllib.parse import quote, unquote # python3
+from urllib.parse import quote, unquote
 import constants
 from datetime import datetime
 import requests
@@ -509,7 +509,7 @@ def process_ids(ids, info, imgs, session, cw, depth=0, tags_add=None):
     names = cw.names_old
     table = {}
     for name in names:
-        id = re.find(r'([0-9]+)_p[0-9]+.*\.(jpg|png|bmp|webp|gif)$', os.path.basename(name)) #5541
+        id = re.find(r'([0-9]+)_p[0-9]+.*\.(jpg|jpeg|png|apng|bmp|webp|gif)$', os.path.basename(name)) #5541
         if id is None:
             continue
         ext = os.path.splitext(name)[1]
