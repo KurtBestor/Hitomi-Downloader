@@ -12,6 +12,7 @@
     "#OK#": "확인",
     "#PB#": "{} PB",
     "#TB#": "{} TB",
+    "#appearance#": "디스플레이",
     "#boss_invalid_pw#": "Invalid password!",
     "#boss_pw#": "Password:",
     "#byte#": "{} byte",

@@ -19,11 +19,17 @@ class Image:
 
 @sleep_and_retry
 @limits(4, 1)
-def read_post(id, referer):
+def read_post(id, referer, cw):
+    print_ = get_print(cw)
+    check_alive(cw)
     # https://j.nozomi.la/nozomi.js
     s_id = str(id)
     url_post = 'https://j.nozomi.la/post/{}/{}/{}.json'.format(s_id[-1], s_id[-3:-1], s_id)
-    j = downloader.read_json(url_post, referer)
+    try:
+        j = downloader.read_json(url_post, referer)
+    except Exception as e:
+        print_(f'{id}: {e}')
+        return [] #5989
     imgs = []
     for p, url in enumerate(j['imageurls']):
         did = url['dataid']
@@ -58,25 +64,28 @@ class Downloader_nozomi(Downloader):
         name = qs['q'][0]
         if self._popular:
             name += ' - Popular'
-        return name
+        return clean_title(name)
 
     def read(self):
         if '/post/' in self.url:
             raise errors.Invalid(tr_('개별 다운로드는 지원하지 않습니다: {}').format(self.url))
         self._popular = 'search-Popular.' in self.url
-        self.title = clean_title(self.name)
+        self.title = '{} {}'.format(tr_('읽는 중...'), self.name)
         qs = query_url(self.url)
         q = qs['q'][0]
         ids = get_ids_multi(q, self._popular, self.cw)
         self.print_(f'ids: {len(ids)}')
+        max_pid = get_max_range(self.cw)
         p = ThreadPool(6)
         step = 10
         for i in range(int(ceil(len(ids)/step))):
-            for imgs in p.map(lambda id: read_post(id, self.url), ids[i*step:(i+1)*step]):
+            for imgs in p.map(lambda id: read_post(id, self.url, self.cw), ids[i*step:(i+1)*step]):
                 self.urls += [img.url for img in imgs]
                 s = '{} {} - {} / {}'.format(tr_('읽는 중...'), self.name, i*step, len(ids))
                 self.cw.setTitle(s)
-        self.title = clean_title(self.name)
+            if len(self.urls) >= max_pid:
+                break
+        self.title = self.name
 
 
 @lock

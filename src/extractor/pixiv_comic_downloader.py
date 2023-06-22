@@ -1,5 +1,5 @@
 import downloader, requests
-from utils import Soup, urljoin, Session, LazyUrl, Downloader, try_n, get_imgs_already, clean_title, get_ext, get_print, check_alive
+from utils import Soup, urljoin, Session, LazyUrl, Downloader, try_n, get_imgs_already, clean_title, get_ext, get_print, check_alive, fix_dup
 import ree as re, json, os
 from translator import tr_
 from timee import sleep
@@ -91,7 +91,7 @@ def get_pages(soup, url, cw=None):
     print_ = get_print(cw)
     pages = []
     hrefs = set()
-    titles = set()
+    titles = {}
     for a in soup.findAll(lambda tag: tag.name == 'a' and '/viewer/stories/' in tag.get('href', ''))[::-1]:
         href = urljoin(url, a.attrs['href'])
         print_(href)
@@ -108,13 +108,9 @@ def get_pages(soup, url, cw=None):
         number = list(right.children)[0].text.strip() #5158
         title = list(right.children)[1].text.strip() #5158
         title = ' - '.join(x for x in [number, title] if x)
-        if title in titles:
-            title0 = title
-            i = 2
-            while title in titles:
-                title = title0 + f' ({i})'
-                i += 1
-        titles.add(title)
+        cid = re.find(r'/viewer/stories/([0-9]+)', href, err='no cid')
+        title = f'{cid} - {title}' #5929
+        title = fix_dup(title, titles) #5929
         page = Page(href, title)
         pages.append(page)
         hrefs.add(href)

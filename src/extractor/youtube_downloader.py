@@ -233,7 +233,7 @@ class Video:
         #title =  soup.title.text.replace('- YouTube', '').strip()
         self.title = title
         ext = '.' + self.stream.subtype
-        self.filename = format_filename(title, self.id, ext, artist=self.username) #4953
+        self.filename = format_filename(title, self.id, ext, artist=self.username, date=time.strftime('%Y-%m-%d')) #4953, #5529
         print_(f'filename: {self.filename}')
 
         if type == 'audio':

@@ -1,6 +1,6 @@
 import downloader
 import ree as re
-from utils import Session, LazyUrl, Soup, Downloader, try_n, get_print, clean_title, print_error, urljoin, get_imgs_already
+from utils import Session, LazyUrl, Soup, Downloader, try_n, get_print, clean_title, print_error, urljoin, get_imgs_already, fix_dup
 from timee import sleep
 from translator import tr_
 import page_selector
@@ -82,6 +82,7 @@ def get_pages(url, session, cw=None):
     read_html(url, session=session)
     id_ = get_id(url)
 
+    titles = {}
     pages = []
     ids = set()
     for p in range(500): #2966
@@ -234,6 +235,7 @@ fragment EventLogFragment on EventLog {
         for edge in edges:
             single = edge['node']['single']
             title_page = single['title']
+            title_page = fix_dup(title_page, titles) #4483
             id_page = single['productId']
             if id_page in ids:
                 print('dup id')
@@ -254,280 +256,281 @@ def get_imgs_page(page, session):
     html = read_html(page.url, session=session)
     url_api = 'https://page.kakao.com/graphql'
     q = r'''query viewerInfo($seriesId: Long!, $productId: Long!) {
- viewerInfo(seriesId: $seriesId, productId: $productId) {
- item {
- ...SingleFragment
- __typename
- }
- seriesItem {
- ...SeriesFragment
- __typename
- }
- prevItem {
- ...NearItemFragment
- __typename
- }
- nextItem {
- ...NearItemFragment
- __typename
- }
- viewerData {
- ...TextViewerData
- ...TalkViewerData
- ...ImageViewerData
- ...VodViewerData
- __typename
- }
- displayAd {
- ...DisplayAd
- __typename
- }
- __typename
- }
+  viewerInfo(seriesId: $seriesId, productId: $productId) {
+    item {
+      ...SingleFragment
+      __typename
+    }
+    seriesItem {
+      ...SeriesFragment
+      __typename
+    }
+    prevItem {
+      ...NearItemFragment
+      __typename
+    }
+    nextItem {
+      ...NearItemFragment
+      __typename
+    }
+    viewerData {
+      ...TextViewerData
+      ...TalkViewerData
+      ...ImageViewerData
+      ...VodViewerData
+      __typename
+    }
+    displayAd {
+      ...DisplayAd
+      __typename
+    }
+    __typename
+  }
 }
 
 fragment SingleFragment on Single {
- id
- productId
- seriesId
- title
- thumbnail
- badge
- isFree
- ageGrade
- state
- slideType
- lastReleasedDate
- size
- pageCount
- isHidden
- freeChangeDate
- isWaitfreeBlocked
- saleState
- series {
- ...SeriesFragment
- __typename
- }
- serviceProperty {
- ...ServicePropertyFragment
- __typename
- }
- operatorProperty {
- ...OperatorPropertyFragment
- __typename
- }
- assetProperty {
- ...AssetPropertyFragment
- __typename
- }
+  id
+  productId
+  seriesId
+  title
+  thumbnail
+  badge
+  isFree
+  ageGrade
+  state
+  slideType
+  lastReleasedDate
+  size
+  pageCount
+  isHidden
+  remainText
+  isWaitfreeBlocked
+  saleState
+  series {
+    ...SeriesFragment
+    __typename
+  }
+  serviceProperty {
+    ...ServicePropertyFragment
+    __typename
+  }
+  operatorProperty {
+    ...OperatorPropertyFragment
+    __typename
+  }
+  assetProperty {
+    ...AssetPropertyFragment
+    __typename
+  }
 }
 
 fragment SeriesFragment on Series {
- id
- seriesId
- title
- thumbnail
- categoryUid
- category
- subcategoryUid
- subcategory
- badge
- isAllFree
- isWaitfree
- isWaitfreePlus
- is3HoursWaitfree
- ageGrade
- state
- onIssue
- seriesType
- businessModel
- authors
- pubPeriod
- freeSlideCount
- lastSlideAddedDate
- waitfreeBlockCount
- waitfreePeriodByMinute
- bm
- saleState
- serviceProperty {
- ...ServicePropertyFragment
- __typename
- }
- operatorProperty {
- ...OperatorPropertyFragment
- __typename
- }
- assetProperty {
- ...AssetPropertyFragment
- __typename
- }
+  id
+  seriesId
+  title
+  thumbnail
+  categoryUid
+  category
+  categoryType
+  subcategoryUid
+  subcategory
+  badge
+  isAllFree
+  isWaitfree
+  isWaitfreePlus
+  is3HoursWaitfree
+  ageGrade
+  state
+  onIssue
+  authors
+  pubPeriod
+  freeSlideCount
+  lastSlideAddedDate
+  waitfreeBlockCount
+  waitfreePeriodByMinute
+  bm
+  saleState
+  serviceProperty {
+    ...ServicePropertyFragment
+    __typename
+  }
+  operatorProperty {
+    ...OperatorPropertyFragment
+    __typename
+  }
+  assetProperty {
+    ...AssetPropertyFragment
+    __typename
+  }
 }
 
 fragment ServicePropertyFragment on ServiceProperty {
- viewCount
- readCount
- ratingCount
- ratingSum
- commentCount
- pageContinue {
- ...ContinueInfoFragment
- __typename
- }
- todayGift {
- ...TodayGift
- __typename
- }
- waitfreeTicket {
- ...WaitfreeTicketFragment
- __typename
- }
- isAlarmOn
- isLikeOn
- ticketCount
- purchasedDate
- lastViewInfo {
- ...LastViewInfoFragment
- __typename
- }
- purchaseInfo {
- ...PurchaseInfoFragment
- __typename
- }
+  viewCount
+  readCount
+  ratingCount
+  ratingSum
+  commentCount
+  pageContinue {
+    ...ContinueInfoFragment
+    __typename
+  }
+  todayGift {
+    ...TodayGift
+    __typename
+  }
+  waitfreeTicket {
+    ...WaitfreeTicketFragment
+    __typename
+  }
+  isAlarmOn
+  isLikeOn
+  ticketCount
+  purchasedDate
+  lastViewInfo {
+    ...LastViewInfoFragment
+    __typename
+  }
+  purchaseInfo {
+    ...PurchaseInfoFragment
+    __typename
+  }
 }
 
 fragment ContinueInfoFragment on ContinueInfo {
- title
- isFree
- productId
- lastReadProductId
- scheme
- continueProductType
- hasNewSingle
- hasUnreadSingle
+  title
+  isFree
+  productId
+  lastReadProductId
+  scheme
+  continueProductType
+  hasNewSingle
+  hasUnreadSingle
 }
 
 fragment TodayGift on TodayGift {
- id
- uid
- ticketType
- ticketKind
- ticketCount
- ticketExpireAt
- isReceived
+  id
+  uid
+  ticketType
+  ticketKind
+  ticketCount
+  ticketExpireAt
+  ticketExpiredText
+  isReceived
 }
 
 fragment WaitfreeTicketFragment on WaitfreeTicket {
- chargedPeriod
- chargedCount
- chargedAt
+  chargedPeriod
+  chargedCount
+  chargedAt
 }
 
 fragment LastViewInfoFragment on LastViewInfo {
- isDone
- lastViewDate
- rate
- spineIndex
+  isDone
+  lastViewDate
+  rate
+  spineIndex
 }
 
 fragment PurchaseInfoFragment on PurchaseInfo {
- purchaseType
- rentExpireDate
+  purchaseType
+  rentExpireDate
+  expired
 }
 
 fragment OperatorPropertyFragment on OperatorProperty {
- thumbnail
- copy
- torosImpId
- torosFileHashKey
- isTextViewer
+  thumbnail
+  copy
+  torosImpId
+  torosFileHashKey
+  isTextViewer
 }
 
 fragment AssetPropertyFragment on AssetProperty {
- bannerImage
- cardImage
- cardTextImage
- cleanImage
- ipxVideo
+  bannerImage
+  cardImage
+  cardTextImage
+  cleanImage
+  ipxVideo
 }
 
 fragment NearItemFragment on NearItem {
- productId
- slideType
- ageGrade
- isFree
- title
- thumbnail
+  productId
+  slideType
+  ageGrade
+  isFree
+  title
+  thumbnail
 }
 
 fragment TextViewerData on TextViewerData {
- type
- atsServerUrl
- metaSecureUrl
- contentsList {
- chapterId
- contentId
- secureUrl
- __typename
- }
+  type
+  atsServerUrl
+  metaSecureUrl
+  contentsList {
+    chapterId
+    contentId
+    secureUrl
+    __typename
+  }
 }
 
 fragment TalkViewerData on TalkViewerData {
- type
- talkDownloadData {
- dec
- host
- path
- talkViewerType
- __typename
- }
+  type
+  talkDownloadData {
+    dec
+    host
+    path
+    talkViewerType
+    __typename
+  }
 }
 
 fragment ImageViewerData on ImageViewerData {
- type
- imageDownloadData {
- ...ImageDownloadData
- __typename
- }
+  type
+  imageDownloadData {
+    ...ImageDownloadData
+    __typename
+  }
 }
 
 fragment ImageDownloadData on ImageDownloadData {
- files {
- ...ImageDownloadFile
- __typename
- }
- totalCount
- totalSize
- viewDirection
- gapBetweenImages
- readType
+  files {
+    ...ImageDownloadFile
+    __typename
+  }
+  totalCount
+  totalSize
+  viewDirection
+  gapBetweenImages
+  readType
 }
 
 fragment ImageDownloadFile on ImageDownloadFile {
- no
- size
- secureUrl
- width
- height
+  no
+  size
+  secureUrl
+  width
+  height
 }
 
 fragment VodViewerData on VodViewerData {
- type
- vodDownloadData {
- contentId
- drmType
- endpointUrl
- width
- height
- duration
- __typename
- }
+  type
+  vodDownloadData {
+    contentId
+    drmType
+    endpointUrl
+    width
+    height
+    duration
+    __typename
+  }
 }
 
 fragment DisplayAd on DisplayAd {
- sectionUid
- bannerUid
- treviUid
- momentUid
+  sectionUid
+  bannerUid
+  treviUid
+  momentUid
 }
 '''
     data = {

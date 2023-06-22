@@ -10,6 +10,7 @@ import errors
 import ips
 import order
 from cacher import Cache
+import myjson as json
 torrent = None
 TIMEOUT = 600
 CACHE_INFO = True
@@ -110,6 +111,8 @@ class Downloader_torrent(Downloader):
 
     @classmethod
     def get_dn(cls, url):
+        if not url:
+            return
         if url.startswith('magnet:'):
             qs = utils.query_url(url)
             if 'dn' in qs:
@@ -122,12 +125,16 @@ class Downloader_torrent(Downloader):
         if cw:
             cw._torrent_s = None
         title = self.url
-        self._dn = self.get_dn(self.url)
+        self._dn = self.get_dn(cw.gal_num)
         info = getattr(cw, 'info?', None)
         if info is not None:
             self.print_('cached info')
             self._info = info
         if self._info is None:
+            if not (self.url.startswith('http') or self.url.startswith('magnet:')) and not os.path.exists(self.url):
+                sr = cw.serial_retry
+                if sr is not None:
+                    self.url = json.loads(sr)['url'] or self.url
             try:
                 self._info = torrent.get_info(self.url, cw, timeout=TIMEOUT, callback=self.callback)
                 if CACHE_INFO:
@@ -400,7 +407,10 @@ class Downloader_torrent(Downloader):
                     if what == 'file_completed':
                         index = alert['index']
                         index = self._torrent_index[index]
-                        file = os.path.realpath(names[index])
+                        try:
+                            file = os.path.realpath(names[index])
+                        except IndexError:
+                            continue #???
                         cw.dones.add(file)
                         file = constants.compact(file).replace('\\', '/')
                         files = file.split('/')

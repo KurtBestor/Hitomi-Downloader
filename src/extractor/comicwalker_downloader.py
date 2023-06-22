@@ -1,6 +1,6 @@
 #coding:utf8
 import downloader
-from utils import Soup, LazyUrl, urljoin, try_n, Downloader, get_print, clean_title, get_imgs_already, check_alive
+from utils import Soup, LazyUrl, urljoin, try_n, Downloader, get_print, clean_title, get_imgs_already, check_alive, fix_dup
 import ree as re
 from itertools import cycle
 from io import BytesIO
@@ -60,7 +60,7 @@ class Downloader_comicwalker(Downloader):
 
     def read(self):
         cw = self.cw
-        title = get_title(self.soup, cw)
+        title = clean_title(get_title(self.soup, cw))
 
         self.imgs = get_imgs(self.url, self.soup, cw)
 
@@ -73,8 +73,12 @@ class Downloader_comicwalker(Downloader):
         self.title = title
 
 
+def get_cid(url):
+    return re.find('[?&]cid=([a-zA-Z0-9_]+)', url, err='no cid')
+
+
 def get_imgs_page(page):
-    cid = re.find('[?&]cid=([a-zA-Z0-9_]+)', page.url)
+    cid = get_cid(page.url)
     url_api = 'https://ssl.seiga.nicovideo.jp/api/v1/comicwalker/episodes/{}/frames'.format(cid)
 
     html = downloader.read_html(url_api, referer=page.url)
@@ -85,6 +89,8 @@ def get_imgs_page(page):
     for item in data['result']:
         src = item['meta']['source_url']
         hash = item['meta']['drm_hash']
+        if hash is None:
+            continue
         img = Image(src, hash, len(imgs), page)
         imgs.append(img)
 
@@ -96,12 +102,21 @@ def get_pages(url, soup=None):
         html = downloader.read_html(url)
         soup = Soup(html)
 
+    title0 = get_title(soup)
+
+    titles = {}
     pages = []
     for item in soup.findAll('div', class_='acBacknumber-item-leftbox'):
         item = item.parent
         a = item.find('a')
-        title = a.attrs['title']
         href = a.attrs['href']
+        cid = get_cid(href)
+        p = int(cid.split('_')[-2][-4:])
+        title = a.attrs['title']
+        if title.startswith(title0): #5928
+            title = title[len(title0):].strip()
+        title = f'{p:04} - {title}' #5929
+        title = fix_dup(title, titles) #5929
         href = urljoin(url, href)
         page = Page(href, title)
         pages.append(page)
@@ -117,9 +132,7 @@ def get_title(soup, cw=None):
             break
     else:
         raise Exception('no title')
-    title_clean = clean_title(title)
-    print_('get_title: "{}"({}) "{}"({})'.format(title, title.encode('utf8'), title_clean, title_clean.encode('utf8')))
-    return title_clean
+    return title
 
 
 @page_selector.register('comicwalker')
@@ -136,7 +149,7 @@ def get_imgs(url, soup=None, cw=None):
         html = downloader.read_html(url)
         soup = Soup(html)
 
-    title = get_title(soup, cw)
+    title = clean_title(get_title(soup, cw))
 
     pages = get_pages(url, soup)
     pages = page_selector.filter(pages, cw)
