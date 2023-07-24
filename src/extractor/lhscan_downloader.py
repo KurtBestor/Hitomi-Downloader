@@ -36,10 +36,10 @@ class Page:
         self.url = url
 
 
-def get_soup_session(url, cw=None):
+def get_soup_session(url, cw=None, win=None):
     print_ = get_print(cw)
     session = Session()
-    res = clf2.solve(url, session=session, cw=cw)
+    res = clf2.solve(url, session=session, cw=cw, win=win)
     print_('{} -> {}'.format(url, res['url']))
     if res['url'].rstrip('/') == 'https://welovemanga.one':
         raise errors.LoginRequired()
@@ -55,10 +55,9 @@ class Downloader_lhscan(Downloader):
         ]
     MAX_CORE = 16
     display_name = 'LHScan'
-    _soup = None
 
     def init(self):
-        self._soup, self.session = get_soup_session(self.url, self.cw)
+        self.soup, self.session = get_soup_session(self.url, self.cw)
         if not self.soup.find('ul', class_='manga-info'):
             raise errors.Invalid('{}: {}'.format(tr_('목록 주소를 입력해주세요'), self.url))
 
@@ -67,21 +66,6 @@ class Downloader_lhscan(Downloader):
         url = url.replace('lovehug.net', 'welovemanga.one')
         url = url.replace('welovemanga.net', 'welovemanga.one') #4298
         return url
-
-    @property
-    def soup(self):
-        if self._soup is None:
-            for try_ in range(8):
-                try:
-                    html = downloader.read_html(self.url, session=self.session)
-                    break
-                except Exception as e:
-                    e_ = e
-                    print(e)
-            else:
-                raise e_
-            self._soup = Soup(html)
-        return self._soup
 
     @property
     def name(self):
@@ -115,10 +99,10 @@ def get_imgs_page(page, referer, session, cw=None):
         pass
     soup = Soup(html)
 
-    view = soup.find('div', class_='chapter-content')
-
-    if not view:
-        raise Exception('no chapter-content')
+    cid = re.find(r'''load_image\(([0-9]+)''', html)
+    if cid: #6186
+        url_api = urljoin(page.url, f'/app/manga/controllers/cont.listImg.php?cid={cid}')
+        soup = downloader.read_soup(url_api, page.url, session=session)
 
     imgs = []
     for img in soup.findAll('img', class_='chapter-img'):
@@ -140,9 +124,12 @@ def get_imgs_page(page, referer, session, cw=None):
             continue
         if '/uploads/lazy_loading.gif' in src:
             continue
+        if '/xstaff.jpg.pagespeed.ic.gPQ2SGcYaN.webp' in src:
+            continue
         src = src.replace('\n', '').replace('\r', '') #5238
-        if 'proxy.php?link=' not in src: #5351
-            src = 'https://welovekai.com/proxy.php?link=' + src #5238
+        #6105
+##        if 'proxy.php?link=' not in src: #5351
+##            src = 'https://welovekai.com/proxy.php?link=' + src #5238
         if not imgs:
             print_(src0)
             print_(src)
@@ -174,9 +161,8 @@ def get_pages(url, session, soup=None, cw=None):
 
 
 @page_selector.register('lhscan')
-@try_n(4)
-def f(url):
-    soup, session = get_soup_session(url)
+def f(url, win):
+    soup, session = get_soup_session(url, win=win)
     pages = get_pages(url, session, soup=soup)
     return pages
 

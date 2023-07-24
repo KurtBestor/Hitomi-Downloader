@@ -122,10 +122,10 @@ def get_pages(soup, url, cw=None):
 
 @page_selector.register('pixiv_comic')
 @try_n(4)
-def f(url):
+def f(url, win):
     if '/viewer/' in url:
         raise Exception(tr_('목록 주소를 입력해주세요'))
-    html = clf2.solve(url, show='fake')['html']
+    html = clf2.solve(url, show='fake', win=win)['html']
     soup = Soup(html)
     pages = get_pages(soup, url)
     return pages
@@ -172,6 +172,7 @@ def get_imgs_page(page, session):
     for p in pages:
         img = p['url']
         img = img.replace('webp%3Ajpeg', 'jpeg')
+        img = img.replace('q=50', 'q=100')
         img = Image(img, page, len(imgs))
         imgs.append(img)
 

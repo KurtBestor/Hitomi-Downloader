@@ -286,6 +286,9 @@ def get_imgs(url, title=None, cw=None, d=None, types=['img', 'gif', 'video'], se
         banner = soup.find('div', class_='has-mail')
         if banner: #5861
             banner.decompose()
+        banner = soup.find('div', class_='popular-previews')
+        if banner: #6171
+            banner.decompose()
         err = soup.find('div', class_='post-premium-browsing_error')
         if err and not imgs:
             raise errors.LoginRequired(err.text.strip())

@@ -21,6 +21,11 @@ def suitable(url):
     return True
 
 
+class LoginRequired(errors.LoginRequired):
+    def __init__(self, *args):
+        super().__init__(*args, method='browser', url='https://weibo.com/login.php')
+
+
 
 class Downloader_weibo(Downloader):
     type = 'weibo'
@@ -64,7 +69,7 @@ class Downloader_weibo(Downloader):
 def checkLogin(session):
     c = session.cookies._cookies.get('.weibo.com', {}).get('/',{}).get('SUBP')
     if not c or c.is_expired():
-        raise errors.LoginRequired()
+        raise LoginRequired()
 
 
 class Album:
@@ -95,7 +100,7 @@ def get_id(url, cw=None):
             html = res['html']
             soup = Soup(html)
             if soup.find('div', class_='gn_login') or soup.find('a', class_=lambda c: c and c.startswith('LoginBtn')):
-                raise errors.LoginRequired()
+                raise LoginRequired()
             oid = _get_page_id(html)
             if not oid:
                 raise Exception('no page_id')
@@ -106,7 +111,7 @@ def get_id(url, cw=None):
                 raise Exception('no name')
             break
         except errors.LoginRequired as e:
-            raise
+            raise e
         except Exception as e:
             e_ = e
             print(e)
@@ -151,7 +156,7 @@ def get_imgs(uid, oid, title, session, cw=None, d=None, parent=None):
         referer = 'https://photo.weibo.com/{}/albums?rd=1'.format(uid)
         html = downloader.read_html(url, referer, session=session)
         if '<title>新浪通行证</title>' in html:
-            raise errors.LoginRequired()
+            raise LoginRequired()
         j = json.loads(html)
         data = j['data']
         albums = []

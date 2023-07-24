@@ -28,7 +28,6 @@ class Downloader_baraag(Downloader):
         id_ = get_id(self.url)
         info = get_info('baraag.net', id_, f'baraag_{id_}', self.session, self.cw)
 
-        for img in info['imgs']:
-            self.urls.append(img.url)
+        self.urls += info['files']
 
         self.title = clean_title('{} (baraag_{})'.format(info['title'], id_))

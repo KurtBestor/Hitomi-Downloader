@@ -6,7 +6,6 @@ from utils import Downloader, get_print, compatstr, format_filename, try_n, Lazy
 import utils
 import ffmpeg
 import os
-import errors
 import ytdl
 import threading
 import errors
@@ -15,6 +14,11 @@ import errors
 def get_id(url):
     if '/watch/' in url:
         return re.find('/watch/([a-zA-Z0-9]+)', url)
+
+
+class LoginRequired(errors.LoginRequired):
+    def __init__(self, *args):
+        super().__init__(*args, method='browser', url='https://account.nicovideo.jp/login')
 
 
 class Video:
@@ -156,7 +160,7 @@ def get_video(session, url, format, cw=None, d=None):
                 msg = box.find('p', class_='channel-invitation-box-body-channel-desc-msg1')
                 if msg:
                     msg = msg.text.strip()
-                raise errors.LoginRequired(msg or None)
+                raise LoginRequired(msg or None)
             else:
                 raise e_
         fs = info['formats']

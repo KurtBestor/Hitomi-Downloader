@@ -78,8 +78,8 @@ class Video:
         if self._url:
             return self._url
 
-        id_ = re.find(r'viewkey=(\w+)', url, re.IGNORECASE) or \
-              re.find(r'/embed/(\w+)', url, re.IGNORECASE)
+        id_ = re.find(r'viewkey=(\w+)', url, re.I) or \
+              re.find(r'/embed/(\w+)', url, re.I)
         print_('id: {}'.format(id_))
         if 'viewkey=' not in url.lower() and '/gif/' not in url.lower():
             if id_ is None:
@@ -203,7 +203,7 @@ class Downloader_pornhub(Downloader):
     single = True
     strip_header = False
     URLS = ['pornhub.com', 'pornhubpremium.com', 'pornhubthbh7ap3u.onion']
-    ACCEPT_COOKIES = [r'.*(pornhub|phncdn).*']
+    ACCEPT_COOKIES = [r'.*(pornhub|phncdn|pornhubpremium).*'] #6181
 
     @classmethod
     def fix_url(cls, url):
@@ -238,9 +238,14 @@ class Downloader_pornhub(Downloader):
 
         session = self.session = Session() # 1791
         self.purge_cookies()
+        session.cookies.update({
+            'age_verified': '1',
+            'accessAgeDisclaimerPH': '1',
+            'accessPH': '1',
+            }) #6124
         if 'pornhubpremium.com' in self.url.lower() and\
            not is_login(session, cw):
-            raise errors.LoginRequired()
+            raise errors.LoginRequired(method='browser', url='https://www.pornhubpremium.com/premium/login')
 
         videos = []
         tab = ''.join(self.url.replace('pornhubpremium.com', 'pornhub.com', 1).split('?')[0].split('#')[0].split('pornhub.com/')[-1].split('/')[2:3])
@@ -256,8 +261,7 @@ class Downloader_pornhub(Downloader):
         elif '/photo/' in self.url:
             self.print_('Photo')
             info = read_photo(self.url, session=session)
-            for photo in info['photos']:
-                self.urls.append(photo.url)
+            self.urls.append(info['photo'].url)
 
             self.title = info['title']
         elif tab not in ['', 'videos']:
@@ -303,16 +307,34 @@ def fix_soup(soup, url, session=None, cw=None):
 
 
 
+class Photo_lazy:
+    '''
+    Photo_lazy
+    '''
+
+    def __init__(self, url, session):
+        self._session = session
+        self.url = LazyUrl(url, self.get, self)
+
+    def get(self, url):
+        info = read_photo(url, self._session)
+        photo = info['photo']
+        url = photo.url()
+        self.filename = photo.filename
+        return url
+
+
+
 class Photo:
     '''
     Photo
     '''
 
-    def __init__(self, id_, url, referer):
-        self.id_ = id_
-        self.url = LazyUrl(referer, lambda x: url, self)
+    def __init__(self, url, referer, id_, session):
+        self._session = session
         ext = get_ext(url)
         self.filename = f'{id_}{ext}'
+        self.url = LazyUrl(referer, lambda _: url, self)
 
 
 @try_n(8)
@@ -320,32 +342,18 @@ def read_album(url, session=None):
     '''
     read_album
     '''
+    photos = []
     soup = downloader.read_soup(url, session=session)
     id_album = re.find('/album/([0-9]+)', url, err='no album id')
-    url_json = 'https://www.pornhub.com/album/show_album_json?album={}'.format(id_album)
-    data = downloader.read_json(url_json, url, session=session)
-    block = soup.find('div', class_='photoAlbumListBlock')
-    href = block.a.attrs['href']
-    id_ = re.find('/photo/([0-9]+)', href, err='no photo id')
-    ids = [id_]
-    while True:
-        item = data[id_]
-        id_ = item['next']
-        if id_ in ids:
-            break
-        ids.append(id_)
-
-    photos = []
-    for id_ in ids:
-        item = data[id_]
-        img = item['img_large']
-        referer = 'https://www.pornhub.com/photo/{}'.format(id_)
-        photo = Photo(id_, img, referer)
+    for block in soup.findAll('div', class_='photoAlbumListBlock'):
+        href = block.a.attrs['href']
+        href = urljoin(url, href)
+        photo = Photo_lazy(href, session)
         photos.append(photo)
 
     info = {}
-    title = clean_title(soup.find('h1', class_='photoAlbumTitleV2').text)
-    info['title'] = format_filename(title, 'album_{}'.format(id_album))
+    title = soup.find('h1', class_='photoAlbumTitleV2').text
+    info['title'] = format_filename(title, f'album_{id_album}')
     info['photos'] = photos
     return info
 
@@ -357,16 +365,13 @@ def read_photo(url, session=None):
     '''
     id_ = re.find('/photo/([0-9]+)', url, err='no photo id')
     soup = downloader.read_soup(url, session=session)
-    div = soup.find('div', id='thumbSlider')
-    href = urljoin(url, div.find('a').attrs['href'])
-    info = read_album(href)
-    photos = []
-    for photo in info['photos']:
-        if str(photo.id_) == id_:
-            photos.append(photo)
+    section = soup.find('div', id='photoImageSection')
+    photo = section.find('img')['src']
 
-    info['photos'] = photos
-    info['title'] = '{} - {}'.format(info['title'], photos[0].filename)
+    info = {}
+    info['photo'] = Photo(photo, url, id_, session)
+    title = soup.find('h1').text
+    info['title'] = format_filename(title, f'photo_{id_}')
     return info
 
 

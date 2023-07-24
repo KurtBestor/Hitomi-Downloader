@@ -10,7 +10,7 @@
 ## Links
 - [Download](https://github.com/KurtBestor/Hitomi-Downloader/releases/latest)
 - [Issues](https://github.com/KurtBestor/Hitomi-Downloader/issues)
-- [Scripts](https://github.com/KurtBestor/Hitomi-Downloader/wiki/Scripts)
+- [Scripts & Plugins](https://github.com/KurtBestor/Hitomi-Downloader/wiki/Scripts-&-Plugins)
 - [Chrome Extension](https://github.com/KurtBestor/Hitomi-Downloader/wiki/Chrome-Extension)
 
 ## Demo
@@ -60,8 +60,9 @@
 | **Iwara** | <https://iwara.tv><br><https://ecchi.iwara.tv> |
 | **Jmana** | <https://jmana.net> |
 | **カクヨム** | <https://kakuyomu.jp> |
-| **Likee** | <https://likee.video> |
 | **Luscious** | <https://luscious.net> |
+| **Mastodon** | <https://mastodon.social> |
+| **Misskey** | <https://misskey.io> |
 | **MyReadingManga** | <https://myreadingmanga.info> |
 | **Naver Blog** | <https://blog.naver.com> |
 | **Naver Cafe** | <https://cafe.naver.com> |
@@ -82,6 +83,7 @@
 | **Sankaku Complex** | <https://www.sankakucomplex.com><br><https://chan.sankakucomplex.com><br><https://idol.sankakucomplex.com> |
 | **Soundcloud** | <https://soundcloud.com> |
 | **小説家になろう** | <https://syosetu.com> |
+| **TikTok** | <https://tiktok.com><br><https://douyin.com>|
 | **TOKYO Motion** | <https://tokyomotion.net> |
 | **Tumblr** | <https://tumblr.com> |
 | **Twitch** | <https://twitch.tv> |

@@ -1,6 +1,6 @@
 #coding:utf8
 import downloader
-from utils import get_ext, LazyUrl, Downloader, try_n, clean_title, get_print
+from utils import get_ext, LazyUrl, Downloader, try_n, clean_title, get_print, print_error
 import ree as re
 from translator import tr_
 from timee import sleep
@@ -82,7 +82,14 @@ def get_imgs(url, session, title, cw=None):
     for p in range(1, 1001):
         url = setPage(url, p)
         print_(url)
-        soup = read_soup(url, session)
+        try:
+            soup = read_soup(url, session)
+        except Exception as e:
+            if p > 1:
+                print_(print_error(e))
+                break
+            else:
+                raise e
 
         view = soup.find('div', class_='photos-list')
         if view is None:

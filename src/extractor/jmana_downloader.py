@@ -9,7 +9,7 @@ import urllib, page_selector
 import bs4
 import clf2
 PATTERN = r'jmana[0-9]*.*/(comic_list_title|book)\?book'
-PATTERN_ALL = r'jmana[0-9]*.*/(comic_list_title|book|bookdetail)\?book'
+PATTERN_ALL = r'jmana[0-9]*.*/((comic_list_title|book|bookdetail)\?book|book_by_title\?title)' #6157
 PATTERN_ID = '[?&]bookdetailid=([0-9]+)'
 
 
@@ -56,7 +56,7 @@ class Downloader_jmana(Downloader):
             self.url = self.fix_url(url)
             self._soup = None
 
-            for i, page in enumerate(get_pages(self.url, self.session, self.soup)):
+            for i, page in enumerate(get_pages(self.url, self.soup, self.session)):
                 if page.id == int(op['value']):
                     break
             else:
@@ -147,10 +147,7 @@ def get_imgs_page(page, referer, session, cw=None):
     return imgs
 
 
-def get_pages(url, session=None, soup=None):
-    if soup is None:
-        res = clf2.solve(url, session=session) #4070
-        soup = Soup(res['html'])
+def get_pages(url, soup, session):
     pages = []
     for inner in soup.findAll('div', class_='inner'):
         a = inner.find('a')
@@ -172,12 +169,13 @@ def get_pages(url, session=None, soup=None):
 
 
 @page_selector.register('jmana')
-@try_n(4)
-def f(url):
+def f(url, win):
     if re.search(PATTERN_ID, url):
         raise Exception(tr_('목록 주소를 입력해주세요'))
     session = Session()
-    pages = get_pages(url, session=session)
+    res = clf2.solve(url, session=session, win=win) #4070
+    soup = Soup(res['html'])
+    pages = get_pages(url, soup, session)
     return pages
 
 
@@ -186,7 +184,7 @@ def get_imgs(url, title, session, soup=None, cw=None):
     if soup is None:
         html = downloader.read_html(url, session=session)
         soup = Soup(html)
-    pages = get_pages(url, soup=soup)
+    pages = get_pages(url, soup, session)
     print_('pages: {}'.format(len(pages)))
     pages = page_selector.filter(pages, cw)
     imgs = []

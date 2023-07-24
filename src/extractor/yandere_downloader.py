@@ -3,6 +3,7 @@ from translator import tr_
 import ree as re
 import downloader
 from ratelimit import limits, sleep_and_retry
+from urllib.parse import unquote
 
 
 @try_n(4)
@@ -67,7 +68,7 @@ class Downloader_yandere(Downloader):
 
         url_tags = url.split("tags=")[-1].split('+')
 
-        return clean_title(" ".join(url_tags))
+        return clean_title(unquote(" ".join(url_tags)))
 
 
 class Image:

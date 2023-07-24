@@ -74,16 +74,16 @@ class DownloaderNaverPost(Downloader):
 
 # https://github.com/KurtBestor/Hitomi-Downloader/blob/master/src/extractor/manatoki_downloader.py#L106 참고
 @page_selector.register("naverpost")
-def f(url):
-    client = Client(urlparse(url), get_soup(url))
+def f(url, win):
+    client = Client(urlparse(url), get_soup(url, win=win))
     return [
         page for page_list in client.posts for page in page_list
     ]  # 2차원 리스트 -> 1차원 리스트
 
 
 # https://github.com/KurtBestor/Hitomi-Downloader/blob/master/src/extractor/manatoki_downloader.py#L84 참고
-def get_soup(url: str) -> BeautifulSoup:
-    res = clf2.solve(url)
+def get_soup(url: str, win=None) -> BeautifulSoup:
+    res = clf2.solve(url, win=win)
     return Soup(res["html"])
 
 

@@ -14,8 +14,8 @@ class Downloader_fc2(Downloader):
 
     @classmethod
     def fix_url(cls, url):
-        if not re.match('https?://.+', url, re.IGNORECASE):
-            url = 'https://video.fc2.com/content/{}'.format(url)
+        if not re.match(r'https?://.+', url, re.I):
+            url = f'https://video.fc2.com/content/{url}'
         return url
 
     @classmethod

@@ -25,6 +25,10 @@ for header in ['pixiv_illust', 'pixiv_bmk', 'pixiv_search', 'pixiv_following', '
         constants.available_extra.append(header)
 
 
+class LoginRequired(errors.LoginRequired):
+    def __init__(self, *args):
+        super().__init__(*args, method='browser', url='https://accounts.pixiv.net/login')
+
 
 
 class Downloader_pixiv(Downloader):
@@ -53,7 +57,10 @@ class Downloader_pixiv(Downloader):
                         return False
                 browser.hide()
                 return True
-            res = clf2.solve('https://accounts.pixiv.net/login', session=self.session, cw=self.cw, f=f, delay=3)
+            try:
+                res = clf2.solve('https://accounts.pixiv.net/login', session=self.session, cw=self.cw, f=f, delay=3)
+            except clf2.Timeout:
+                raise LoginRequired()
             self.print_('yeee')
             res = clf2.solve(self.url, session=self.session, cw=self.cw)
             soup = Soup(res['html'])
@@ -64,6 +71,13 @@ class Downloader_pixiv(Downloader):
 
     @classmethod
     def fix_url(cls, url):
+        rt = utils.query_url(url).get('return_to')
+        if rt:
+            url = urljoin(url, rt[0])
+
+        if '/search_user.php?' in url:
+            url = 'https://pixiv.me/{}'.format(utils.query_url(url).get('nick')[0])
+
         if url.startswith('illust_'):
             url = 'https://www.pixiv.net/en/artworks/{}'.format(url[len('illust_'):])
         elif url.startswith('bmk_'):
@@ -81,11 +95,14 @@ class Downloader_pixiv(Downloader):
         url = re.sub(r'(users/[0-9]+)/artworks$', r'\1', url)
 
         url = re.sub(r'[?&]p=[0-9]+$', '', url)
+
+        if '://' not in url: #6082
+            url = 'https://' + url
         return url.strip('/')
 
     @classmethod
     def key_id(cls, url):
-        return url.replace('://www.', '://').replace('/en/', '/')
+        return url.replace('://www.', '://').replace('/en/', '/').replace('http://', 'https://').lower()
 
     def read(self):
 ##        loop = asyncio.new_event_loop()
@@ -104,7 +121,7 @@ class Downloader_pixiv(Downloader):
             pass
 
 
-class PixivAPIError(errors.LoginRequired): pass
+class PixivAPIError(LoginRequired): pass
 class HTTPError(Exception): pass
 
 
@@ -312,9 +329,9 @@ def get_info(url, session, cw=None, depth=0, tags_add=None):
         data = api.illust(id_)
         login = 'noLoginData' not in data
         if not login:#
-            raise errors.LoginRequired()
+            raise LoginRequired()
         if data['xRestrict'] and not login:
-            raise errors.LoginRequired('R-18')
+            raise LoginRequired('R-18')
         info['artist'] = data['userName']
         info['artist_id'] = data['userId']
         info['raw_title'] = data['illustTitle']
@@ -484,7 +501,7 @@ def my_id(session, cw):
     print_ = get_print(cw)
     sid = session.cookies.get('PHPSESSID', domain='.pixiv.net', path='/')
     if not sid:
-        raise errors.LoginRequired()
+        raise LoginRequired()
     if cw is not None:
         _ = getattr(cw, 'sid?', None)
         if _ is None:
@@ -492,7 +509,7 @@ def my_id(session, cw):
             print_(f'sid: {sid}')
     userid = re.find(r'^([0-9]+)', sid)
     if userid is None:
-        raise errors.LoginRequired()
+        raise LoginRequired()
     return userid
 
 

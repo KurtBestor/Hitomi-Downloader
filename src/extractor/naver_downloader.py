@@ -1,7 +1,7 @@
 #coding:utf-8
 import downloader
 import ree as re
-from utils import urljoin, Downloader, Soup, LazyUrl, clean_title, get_ext
+from utils import urljoin, Downloader, Soup, LazyUrl, clean_title, get_ext, get_print
 import json
 from timee import sleep
 import collections
@@ -51,7 +51,7 @@ class Downloader_naver(Downloader):
     def read(self):
         self.title = '읽는 중... {}'.format(self.name)
 
-        imgs = get_imgs(self.url)
+        imgs = get_imgs(self.url, self.cw)
 
         filenames = {}
         for img in imgs:
@@ -78,7 +78,7 @@ def read_page(url, depth=0):
     print('read_page', url, depth)
     if depth > 10:
         raise Exception('Too deep')
-    html = downloader.read_html(url, header=HDR)
+    html = downloader.read_html(url, headers=HDR)
 
     if len(html) < 5000:
         id = re.find('logNo=([0-9]+)', html, err='no id')
@@ -97,7 +97,8 @@ def read_page(url, depth=0):
 
 
 
-def get_imgs(url):
+def get_imgs(url, cw):
+    print_ = get_print(cw)
     url = url.replace('blog.naver', 'm.blog.naver')
     referer = url
     url_frame, soup = read_page(url)
@@ -145,10 +146,11 @@ def get_imgs(url):
 
     pairs = []
 
-    for video in soup.findAll('span', class_='_naverVideo'):
+    for video in soup.findAll(class_='_naverVideo'):
         vid = video.attrs['vid']
         key = video.attrs['key']
         pairs.append((vid, key))
+    print_(f'pairs: {pairs}')
 
     for script in soup.findAll('script', class_='__se_module_data'):
         data_raw = script['data-module']

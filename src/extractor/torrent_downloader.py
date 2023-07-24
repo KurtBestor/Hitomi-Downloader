@@ -12,7 +12,7 @@ import order
 from cacher import Cache
 import myjson as json
 torrent = None
-TIMEOUT = 600
+TIMEOUT = 1800
 CACHE_INFO = True
 
 
