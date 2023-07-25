@@ -119,9 +119,10 @@ class Video:
                 if max_res is None or res <= max_res:
                     streams.append(stream)
             def key(stream):
+                fps = stream.fps
                 vc = stream.video_codec
                 if not vc:
-                    return 1000
+                    return 1000, -fps
                 vc = vc.lower().split('.')[0].lower()
                 if vc == 'av01':
                     vc = 'av1'
@@ -130,8 +131,8 @@ class Video:
                 try:
                     i = constants.CODECS_PRI.index(vc)
                 except ValueError:
-                    return 999
-                return i
+                    return 999, -fps
+                return i, -fps
             streams = sorted(streams, key=key) #6079
             print_('')
         elif type == 'audio':
@@ -169,7 +170,7 @@ class Video:
                         foo = (stream_final is not None) and (stream_final.audio_codec is None) and bool(stream.audio_codec)
                     elif type == 'audio':
                         foo = False
-                    if stream_final is None or (stream_final.fps <= stream.fps and (foo or (stream_final.subtype.lower()!=prefer_format and stream.subtype.lower()==prefer_format) or stream_final.fps < stream.fps)):
+                    if stream_final is None or (foo or (stream_final.subtype.lower()!=prefer_format and stream.subtype.lower()==prefer_format)):
                         #print(foo)
                         print_('# stream_final')
                         print_streams([stream], cw)

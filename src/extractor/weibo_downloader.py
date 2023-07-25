@@ -23,7 +23,7 @@ def suitable(url):
 
 class LoginRequired(errors.LoginRequired):
     def __init__(self, *args):
-        super().__init__(*args, method='browser', url='https://weibo.com/login.php')
+        super().__init__(*args, method='browser', url='https://weibo.com/login.php', w=1180)
 
 
 

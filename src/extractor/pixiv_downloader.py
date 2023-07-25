@@ -27,7 +27,7 @@ for header in ['pixiv_illust', 'pixiv_bmk', 'pixiv_search', 'pixiv_following', '
 
 class LoginRequired(errors.LoginRequired):
     def __init__(self, *args):
-        super().__init__(*args, method='browser', url='https://accounts.pixiv.net/login')
+        super().__init__(*args, method='browser', url='https://accounts.pixiv.net/login', w=560, h=920)
 
 
 
@@ -58,7 +58,7 @@ class Downloader_pixiv(Downloader):
                 browser.hide()
                 return True
             try:
-                res = clf2.solve('https://accounts.pixiv.net/login', session=self.session, cw=self.cw, f=f, delay=3)
+                res = clf2.solve('https://accounts.pixiv.net/login', session=self.session, cw=self.cw, f=f, delay=3, w=560, h=920, timeout=120)
             except clf2.Timeout:
                 raise LoginRequired()
             self.print_('yeee')
