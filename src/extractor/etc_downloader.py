@@ -120,7 +120,7 @@ def _get_video(url, session, cw, ie_key=None, allow_m3u8=True):
     fs = []
     for i, f in enumerate(formats):
         f['_index'] = i
-        f['_resolution'] = int_or_none(re.find('([0-9]+)p', f['format'], re.IGNORECASE)) or f.get('height') or f.get('width') or int_or_none(f.get('quality')) or int(f.get('vcodec', 'none') != 'none') #5995
+        f['_resolution'] = int_or_none(re.find(r'([0-9]+)p', f['format'], re.I)) or f.get('height') or f.get('width') or int_or_none(f.get('quality')) or int(f.get('vcodec', 'none') != 'none') #5995
         f['_vbr'] = f.get('vbr') or 0
         f['_audio'] = f.get('abr') or f.get('asr') or int(f.get('acodec', 'none') != 'none')
         print_(format_(f))
@@ -144,7 +144,7 @@ def _get_video(url, session, cw, ie_key=None, allow_m3u8=True):
             print_('invalid url: {}'.format(f['url']))
         return list(fs)[0]#
 
-    f_video = filter_f(reversed(sorted(fs, key=lambda f:(f['_resolution'], f['_vbr'], f['_index']))))
+    f_video = filter_f(sorted(fs, key=lambda f:(f['_resolution'], int(bool(f['_audio'])), f['_vbr'], f['_index']), reverse=True)) #6072, #6118
     print_('video0: {}'.format(format_(f_video)))
 
     if f_video['_audio']:

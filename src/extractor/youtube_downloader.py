@@ -35,6 +35,8 @@ class Video:
     _url = None
     vcodec = None
     filename0 = None
+    chapters = None
+    utime = None
 
     def __init__(self, url, session, type='video', only_mp4=False, audio_included=False, max_res=None, max_abr=None, cw=None):
         self.type = type
@@ -77,12 +79,16 @@ class Video:
         else:
             raise e_
 
+        if utils.ui_setting.chapterMarkerCheck.isChecked():
+            self.chapters = yt.info.get('chapters')
+
         streams = yt.streams.all()
         print_streams(streams, cw)
 
         #3528
         time = datetime.strptime(yt.info['upload_date'], '%Y%m%d')
-        self.utime = (time-datetime(1970,1,1)).total_seconds()
+        if utils.ui_setting.youtubeMtimeCheck.isChecked(): #6092
+            self.utime = (time-datetime(1970,1,1)).total_seconds()
         print_('utime: {}'.format(self.utime))
 
         if type == 'video':
@@ -112,6 +118,22 @@ class Video:
                 res = int(stream.resolution.replace('p',''))
                 if max_res is None or res <= max_res:
                     streams.append(stream)
+            def key(stream):
+                fps = stream.fps
+                vc = stream.video_codec
+                if not vc:
+                    return 1000, -fps
+                vc = vc.lower().split('.')[0].lower()
+                if vc == 'av01':
+                    vc = 'av1'
+                if vc == 'vp09':
+                    vc = 'vp9'
+                try:
+                    i = constants.CODECS_PRI.index(vc)
+                except ValueError:
+                    return 999, -fps
+                return i, -fps
+            streams = sorted(streams, key=key) #6079
             print_('')
         elif type == 'audio':
             streams[:] = [stream for stream in streams if stream.abr]
@@ -135,7 +157,7 @@ class Video:
             if type == 'video':
                 ress = [int_(stream.resolution.replace('p', '')) for stream in streams]
                 m = max(ress)
-                prefer_format = 'mp4'
+                prefer_format = None#'mp4'
             elif type == 'audio':
                 ress = [stream.abr for stream in streams]
                 m = min(ress)
@@ -148,9 +170,10 @@ class Video:
                         foo = (stream_final is not None) and (stream_final.audio_codec is None) and bool(stream.audio_codec)
                     elif type == 'audio':
                         foo = False
-                    if stream_final is None or (stream_final.fps <= stream.fps and (foo or (stream_final.subtype.lower()!=prefer_format and stream.subtype.lower()==prefer_format) or stream_final.fps < stream.fps)):
+                    if stream_final is None or (foo or (stream_final.subtype.lower()!=prefer_format and stream.subtype.lower()==prefer_format)):
                         #print(foo)
-                        print_('# stream_final {} {} {} {} {} {}fps'.format(stream, stream.format, stream.resolution, stream.subtype, stream.audio_codec, stream.fps))
+                        print_('# stream_final')
+                        print_streams([stream], cw)
                         stream_final = stream
 
             ok = downloader.ok_url(stream_final.url, referer=url, session=self.session) if isinstance(stream_final.url, str) else True
@@ -315,6 +338,17 @@ class Video:
                 s = print_error(e)
                 print_(s)
 
+        if self.chapters and self.type == 'video': #6085
+            try:
+                chapters = []
+                for chapter in self.chapters:
+                    chapter = ffmpeg.Chapter(chapter['title'], chapter['start_time'], chapter['end_time'])
+                    chapters.append(chapter)
+                ffmpeg.add_chapters(filename_new, chapters, cw=cw)
+            except Exception as e:
+                s = print_error(e)
+                print_(s)
+
         utils.pp_subtitle(self, filename_new, cw)
 
         return filename_new
@@ -361,20 +395,23 @@ class Downloader_youtube(Downloader):
 
     @classmethod
     def fix_url(cls, url): #2033
-        if not re.match('https?://.+', url, re.IGNORECASE):
+        if not re.match('https?://.+', url, re.I):
             url = 'https://www.youtube.com/watch?v={}'.format(url)
         qs = query_url(url)
         if 'v' in qs:
             url = url.split('?')[0] + '?v={}'.format(qs['v'][0])
 
         for header in ['channel', 'user', 'c']: #5365, #5374
-            tab = re.find(rf'/{header}/[^/]+/?(.+)?', url, re.IGNORECASE)
+            tab = re.find(rf'/{header}/[^/]+/?(.+)?', url, re.I)
             if tab == 'playlists':
-                url = re.sub(rf'(/{header}/[^/]+/?)(.+)?', r'\1', url, flags=re.IGNORECASE)
+                url = re.sub(rf'(/{header}/[^/]+/?)(.+)?', r'\1', url, flags=re.I)
                 tab = ''
             if tab in ['', 'featured'] and '/{}/'.format(header) in url.lower():
-                username = re.find(r'/{}/([^/\?]+)'.format(header), url, re.IGNORECASE)
+                username = re.find(r'/{}/([^/\?]+)'.format(header), url, re.I)
                 url = urljoin(url, '/{}/{}/videos'.format(header, username))
+        m = re.find(rf'youtube.com/(@[^/]+)/?(.+)?', url, re.I)
+        if m and m[1] in ['', 'featured']: #6129
+            url = urljoin(url, f'/{m[0]}/videos')
         return url.strip('/')
 
     @classmethod

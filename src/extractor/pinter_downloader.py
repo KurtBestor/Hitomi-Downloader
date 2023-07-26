@@ -16,10 +16,12 @@ class Downloader_pinter(Downloader):
     URLS = ['pinterest.']
     type_pinter = 'board'
     display_name = 'Pinterest'
+    ACCEPT_COOKIES = [r'(.*\.)?(pinterest)\.']
 
     @try_n(4)
     def init(self):
-        self.api = PinterestAPI()
+        self.session = Session('chrome')
+        self.api = PinterestAPI(self.session)
         self._pin_id = re.find(r'https?://.*pinterest\.[^/]+/pin/([0-9]+)', self.url)
         if self._pin_id is not None:
             self.type_pinter = 'pin'
@@ -104,8 +106,8 @@ class PinterestAPI:
         'Origin': BASE_URL,
         }
 
-    def __init__(self):
-        self.session = Session('chrome')
+    def __init__(self, session):
+        self.session = session
         self.session.headers.update(self.HEADERS)
 
     def pin(self, pin_id):

@@ -4,6 +4,7 @@ import os
 import page_selector
 from translator import tr_
 import ree as re
+import clf2
 
 
 
@@ -17,6 +18,7 @@ class Downloader_webtoon(Downloader):
 
     def init(self):
         self.session = Session()
+        clf2.solve(self.url, session=self.session)
         self.url = get_main(self.url, self.session)
         self.soup = downloader.read_soup(self.url, session=self.session)
 

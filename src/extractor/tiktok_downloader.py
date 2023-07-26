@@ -12,8 +12,11 @@ PATTERN_VID = '/(v|video)/(?P<id>[0-9]+)'
 SHOW = True
 
 
-def is_captcha(soup):
-    return soup.find('div', class_="verify-wrap") is not None
+def is_captcha(soup, cw=None):
+    r = soup.find('div', class_="verify-wrap") is not None
+    if r:
+        get_print(cw)('captcha')
+    return r
 
 
 
@@ -29,7 +32,7 @@ class Downloader_tiktok(Downloader):
         res = clf2.solve(self.url, self.session, cw)
         self.url = self.fix_url(res['url']) #4324
         soup = Soup(res['html'])
-        if is_captcha(soup):
+        if is_captcha(soup, cw):
             def f(html):
                 return not is_captcha(Soup(html))
             clf2.solve(self.url, self.session, cw, show=True, f=f)
@@ -118,22 +121,17 @@ def read_channel(url, session, cw=None, title=None):
 
     def f(html, browser=None):
         soup = Soup(html)
-        if is_captcha(soup):
-            print('captcha')
+        if is_captcha(soup, cw):
             browser.show()
             sd['shown'] = True
         elif sd['shown'] and not SHOW:
             browser.hide()
             sd['shown'] = False
         if 'tiktok.com' in url.lower(): # TikTok
-            try:
-                st = soup.find('h2', class_='share-title')
-                if st is None:
-                    st = soup.find('h2', class_=lambda c: c and 'ShareTitle' in c)
+            try: #6114
+                st = soup.find(['h1', 'h2'], class_='share-title') or soup.find(['h1', 'h2'], class_=lambda c: c and 'ShareTitle' in c)
                 info['uid'] = st.text.strip()
-                st = soup.find('h1', class_='share-sub-title')
-                if st is None:
-                    st = soup.find('h1', class_=lambda c: c and 'ShareSubTitle' in c)
+                st = soup.find(['h1', 'h2'], class_='share-sub-title') or soup.find(['h1', 'h2'], class_=lambda c: c and 'ShareSubTitle' in c)
                 info['nickname'] = st.text.strip()
             except Exception as e:
                 print_(print_error(e))
@@ -150,18 +148,13 @@ def read_channel(url, session, cw=None, title=None):
         else: # Douyin
             items = soup.findAll('a')
         for item in items:
-            if item.name == 'a':
-                a = item
-            else:
-                a = item.find('a')
-                if a is None:
-                    continue
-            href = a.get('href')
-            if not href:
+            def foo(a):
+                return re.search(PATTERN_VID, a.get('href') or '')
+            as_ = [item] + item.findAll('a') #6119
+            as_ = [a for a in as_ if foo(a)]
+            if not as_:
                 continue
-            m = re.search(PATTERN_VID, href)
-            if m is None:
-                continue
+            m = foo(as_[0])
             id_video = int(m.group('id'))
             ids_now.add(id_video)
             if id_video in ids:

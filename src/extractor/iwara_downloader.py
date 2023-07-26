@@ -126,7 +126,7 @@ def get_info(url, session, cw, multi_post=False):
         if time() - t0 > 10 or '/profile/' in url.lower():
             for a in soup.findAll('a'):
                 if urljoin(url, a.get('href', '')) == urljoin(url, '/login'):
-                    raise errors.LoginRequired(method='browser', url='https://www.iwara.tv/login') #5794
+                    raise errors.LoginRequired(method='browser', url='https://www.iwara.tv/login', cookie=False) #5794
         buttons = soup.findAll(class_='button--primary')
         if buttons:
             for i, button in enumerate(buttons):

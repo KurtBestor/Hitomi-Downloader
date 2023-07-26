@@ -109,44 +109,37 @@ Remove all complete tasks which are not locked.
 <li>Type "bad:" to show only incomplete tasks.</li>
 </ul>
 
-<h3>Searcher 검색 목록 필터링</h3>
+<h3>Filtering the Searcher search list</h3>
 <ul>
-<li>Searcher 좌측 하단의 필터 모양 아이콘을 클릭하고 내용 입력</li>
-<li>해당 문자가 포함된 제목, 작가, 그룹, 태그, 언어를 가진 갤러리만 보입니다.</li>
-<li>&quot;title:A&quot; 를 입력하면 A라는 문자가 포함된 제목을 가진 갤러리만 보입니다.</li>
-<li>&quot;artist:A&quot;, &quot;group:A&quot;, &quot;tag:A&quot;, &quot;lang:A&quot; 과 같이 필터링 할 수도 있습니다.</li>
-<li>&quot;p&lt;100&quot; 을 입력하면 100 페이지 미만인 갤러리만 보입니다.</li>
-<li>&quot;p&gt;100&quot; 을 입력하면 100 페이지 초과인 갤러리만 보입니다.</li>
-<li>&quot;done:o&quot; 를 입력하면 이미 다운로드한 갤러리만 보입니다.</li>
-<li>&quot;done:x&quot; 를 입력하면 아직 다운로드하지 않은 갤러리만 보입니다.</li>
+<li>Click the filter-shaped icon in the bottom left corner of Searcher and enter something</li>
+<li>You'll only see galleries with titles, authors, groups, tags, and languages that contain those characters.</li>
+<li>If you enter &quot;title:A&quot;, you will only see galleries with titles that contain the letter A.</li>
+<li>You can also filter by &quot;artist:A&quot;, &quot;group:A&quot;, &quot;tag:A&quot;, &quot;lang:A&quot;, etc.</li>
+<li>Enter &quot;p&lt;100&quot; to see only galleries with less than 100 pages.</li>
+<li>Enter &quot;p&gt;100&quot; to see only galleries with more than 100 pages.</li>
+<li>Enter &quot;done:o&quot; to see only galleries that have already been downloaded.</li>
+<li>Enter &quot;done:x&quot; to see only galleries that you have not yet downloaded.</li>
 </ul>
 
-<h3>페이지 지정 다운로드</h3>
+<h3>Select pages &amp; Download</h3>
 <ul>
-<p><img src=":/icons/down_menu" /></p>
-<li>지정한 페이지만 다운로드합니다.</li>
+<p><img src="imgs/down_menu_en.png" /></p>
+<li>Downloads only the pages you specify.</li>
 <li>Examples:<br>
-~ 100 &nbsp; &nbsp;→ &nbsp;앞 100 페이지<br>
--100 ~ &nbsp; &nbsp;→ &nbsp;뒤 100 페이지<br>
-1, 10 ~ 20, -1 &nbsp; &nbsp;→ &nbsp;첫 페이지, 10 ~ 20 페이지, 마지막 페이지</li>
+~ 100 &nbsp; &nbsp;→ &nbsp;First 100 pages<br>
+-100 ~ &nbsp; &nbsp;→ &nbsp;Last 100 pages<br>
+1, 10 ~ 20, -1 &nbsp; &nbsp;→ &nbsp;First page, 10 ~ 20 pages, Last page</li>
 </ul>
 
-<h3>선택 화 다운로드</h3>
+<h3>Select chapters &amp; Download</h3>
 <ul>
-<p><img src=":/icons/down_menu_chapter" /></p>
-<li>선택한 화만 다운로드합니다.</li>
+<p><img src="imgs/down_menu_chapter_en.png" /></p>
+<li>Download only selected episodes.</li>
 </ul>
 
-<h3>환경 설정</h3>
+<h3>Preferences</h3>
 <ul>
 <li>Options → Preferences</li>
-</ul>
-
-<h3>스레드</h3>
-<ul>
-<li>Parallel downloads per task.</li>
-<li>컴퓨터 사양이나 인터넷 상태가 좋지 않다면 갯수를 좀 더 내립니다.</li>
-<li>If you're unsure of this setting, keep the default values.</li>
 </ul>
 
 <h3>Simple search - Search keywords</h3>
@@ -190,46 +183,37 @@ female:maid<br>
 female:maid, -female:schoolgirl uniform</li>
 </ul>
 
-<h3>Searcher 목록</h3>
+<h3>Searcher List</h3>
 <ul>
-<li>여러 갤러리 다운로드 :<br>
-여러 개 선택 → 마우스 우클릭 → [다운로드]<br>
-여러 개 선택 → [Enter] key</li>
+<li>Download multiple galleries :<br>
+Select multiple → Right click → [Download]<br>
+Select multiple → [Enter] key</li>
 
-<li>갤러리 정보 보기 :<br>
-마우스 우 클릭 → 갤러리 정보...<br>
+<li>View gallery information :<br>
+Right click → Gallery Info...<br>
 Click thumbnail</li>
 </ul>
 
 
-<h3>검색 중 중단</h3>
+<h3>To stop searching</h3>
 <ul>
-<li>검색 버튼 한번 더 클릭</li>
+<li>Click the search button one more time</li>
 </ul>
 
-<h3>파일이 제대로 다운로드 되지 않는 경우 (체크섬 오프로드 문제)</h3>
+<h3>Update Searcher search data</h3>
 <ul>
-<li>권장 (속도 떨어짐) :<br>
-스레드 갯수를 낮게 조절합니다.</li>
-<li>비권장 (속도 떨어지지 않음, 보안 문제 발생 가능) :<br>
-제어판 → 시스템 → 하드웨어 → 장치관리자 → 네트워크 어댑터 → 무슨무슨 컨트롤러 → 우클릭 후 속성 → 고급 탭 → 무슨무슨 오프로드를 모두 '사용 안 함'으로 설정 → 확인<br>
-조금 기다리면 인터넷이 다시 연결됩니다.</li>
-</ul>
-
-<h3>Searcher 검색 데이터 업데이트</h3>
-<ul>
-<li>Searcher - 메뉴 - 데이터 다운로드...</li>
-<li>데이터를 다시 다운로드할 때마다 서버에서 최신 데이터를 가져옵니다.</li>
+<li>Searcher - Menu - Download data...</li>
+<li>Each time you re-download the data, it will fetch the latest data from the server.</li>
 </ul>
 
 <h3>Scripts</h3>
 <ul>
 <li>Tools - Import script...</li>
 <li>Execute python script.</li>
-<li>다운로드 스크립트를 직접 만들어 추가하는 등 다양한 작업을 할 수 있습니다.</li>
-<li>스크립트 파일 (*.hds) 은 텍스트에디터(메모장 등)로 수정할 수 있습니다.</li>
-<li>스크립트 파일들을 프로그램에 드래그 &amp; 드랍해서 실행시킬 수도 있습니다.</li>
-<li>실행파일 경로에 scripts 폴더 만들고 스크립트 파일 (*.hds) 넣으면 시작할 때 자동으로 실행합니다.</li>
+<li>You can create your own download scripts, add them, and more.</li>
+<li>Script files (*.hds) can be modified with a text editor (such as Notepad).</li>
+<li>You can also drag &amp; drop script files into the program to run them.</li>
+<li>Create a scripts folder in your executable path and put your script files (*.hds) in it to run them automatically at startup.</li>
 <li>Download scripts :<br>
 <a href="https://github.com/KurtBestor/Hitomi-Downloader/wiki/Scripts">https://github.com/KurtBestor/Hitomi-Downloader/wiki/Scripts</a></li>
 <li>How to write a script :<br>
@@ -239,7 +223,7 @@ Click thumbnail</li>
 <h3>Bypass DPI</h3>
 <ul>
 <li>Options - Preferences - Network Settings - Bypass DPI</li>
-<li><a href="https://github.com/ValdikSS/GoodbyeDPI">GoodbyeDPI</a>To block/ bypass DPI (Deep Packet Inspection).</li>
+<li>Use <a href="https://github.com/ValdikSS/GoodbyeDPI">GoodbyeDPI</a> to block / bypass DPI (Deep Packet Inspection).</li>
 </ul>
 
 <h3>Load cookies</h3>
@@ -270,7 +254,7 @@ Update cookies
 
 <h3>Save</h3>
 <ul>
-<li>Save & Quit :<br>
+<li>Save &amp; Quit :<br>
 Quit with saving settings and currently added lists</li>
 <li>Quit :<br>
 Quit without saving</li>

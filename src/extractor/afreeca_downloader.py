@@ -22,6 +22,11 @@ class Video:
         downloader.download(url_thumb, buffer=self.thumb)
 
 
+class LoginRequired(errors.LoginRequired):
+    def __init__(self, *args):
+        super().__init__(*args, method='browser', url='https://login.afreecatv.com/afreeca/login.php')
+
+
 
 class Downloader_afreeca(Downloader):
     type = 'afreeca'
@@ -61,11 +66,11 @@ def get_video(url, session, cw):
 
     html = downloader.read_html(url, session=session)
     if "document.location.href='https://login." in html:
-        raise errors.LoginRequired()
+        raise LoginRequired()
     if len(html) < 2000:
         alert = re.find(r'''alert\(['"](.+?)['"]\)''', html)
         if alert:
-            raise errors.LoginRequired(alert)
+            raise LoginRequired(alert)
     soup = Soup(html)
 
     url_thumb = soup.find('meta', {'property': 'og:image'}).attrs['content']
@@ -85,7 +90,7 @@ def get_video(url, session, cw):
     title = data['full_title']
 
     if data.get('adult_status') == 'notLogin':
-        raise errors.LoginRequired(title)
+        raise LoginRequired(title)
 
     urls_m3u8 = []
     for file in data['files']:

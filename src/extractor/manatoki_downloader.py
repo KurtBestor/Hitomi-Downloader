@@ -123,7 +123,7 @@ def get_artist(soup):
 
 @sleep_and_retry
 @limits(1, 10)
-def get_soup(url, session=None, cw=None):
+def get_soup(url, session=None, cw=None, win=None):
     if session is None:
         session = Session()
     virgin = True
@@ -138,7 +138,7 @@ def get_soup(url, session=None, cw=None):
             return False
         browser.hide()
         return True
-    res = clf2.solve(url, session=session, f=f, cw=cw)
+    res = clf2.solve(url, session=session, f=f, cw=cw, win=win)
     soup = Soup(res['html'], apply_css=True)
 
     return session, soup, res['url']
@@ -190,8 +190,8 @@ def get_pages(url, soup, sub=False):
 
 
 @page_selector.register('manatoki')
-def f(url):
-    session, soup, url = get_soup(url)
+def f(url, win):
+    session, soup, url = get_soup(url, win=win)
     list = soup.find('ul', class_='list-body')
     if list is None:
         raise Exception(tr_('목록 주소를 입력해주세요'))
@@ -281,7 +281,7 @@ def get_imgs_page(page, title, referer, session, cw):
 
 def isVisible(tag):
     while tag:
-        if re.search(r'display:\s*none', tag.get('style', ''), re.IGNORECASE):
+        if re.search(r'display:\s*none', tag.get('style', ''), re.I):
             return False
         tag = tag.parent
     return True

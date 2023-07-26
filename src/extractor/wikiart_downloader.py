@@ -1,7 +1,7 @@
 #coding:utf8
 import downloader
 import json
-from utils import LazyUrl, Downloader, Soup, get_print, clean_title, check_alive
+from utils import LazyUrl, Downloader, get_print, clean_title, check_alive
 import os
 from timee import sleep
 from translator import tr_
@@ -22,18 +22,15 @@ class Downloader_wikiart(Downloader):
     type = 'wikiart'
     URLS = ['wikiart.org']
     display_name = 'WikiArt'
+    ACCEPT_COOKIES = [r'(.*\.)?wikiart\.org']
 
-    def init(self):
-        self.url = 'https://www.wikiart.org/en/{}'.format(self.id_)
-        html = downloader.read_html(self.url)
-        self.soup = Soup(html)
-
-    @property
-    def id_(self):
-        return get_id(self.url)
+    @classmethod
+    def fix_url(cls, url):
+        url = 'https://www.wikiart.org/en/{}'.format(get_id(url))
+        return url
 
     def read(self):
-        artist = get_artist(self.id_, self.soup)
+        artist = get_artist(get_id(self.url))
         self.artist = artist
 
         for img in get_imgs(self.url, artist, cw=self.cw):
@@ -97,7 +94,6 @@ def get_imgs(url, artist, cw=None):
 def get_artist(userid, soup=None):
     if soup is None:
         url = 'https://www.wikiart.org/en/{}'.format(userid)
-        html = downloader.read_html(url)
-        soup = Soup(html)
+        soup = downloader.read_soup(url)
 
     return soup.find('h3').text.strip()

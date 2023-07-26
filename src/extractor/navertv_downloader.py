@@ -15,9 +15,11 @@ class Downloader_navertv(Downloader):
     URLS = ['tv.naver.com']
     display_name = 'Naver TV'
 
-    def init(self):
-        if not re.match('https?://.+', self.url, re.IGNORECASE):
-            self.url = 'https://tv.naver.com/v/{}'.format(self.url)
+    @classmethod
+    def fix_url(cls, url):
+        if not re.match(r'https?://.+', url, re.I):
+            url = f'https://tv.naver.com/v/{url}'
+        return url
 
     def read(self):
         video = Video(self.url, cw=self.cw)

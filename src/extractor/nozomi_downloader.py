@@ -1,20 +1,25 @@
 import downloader
 from urllib.parse import quote
 from io import BytesIO
-from utils import Downloader, query_url, LazyUrl, get_ext, urljoin, clean_title, check_alive, lock, get_print, get_max_range
+from utils import Downloader, query_url, get_ext, urljoin, clean_title, check_alive, lock, get_print, get_max_range, File
 import errors
 from translator import tr_
-from multiprocessing.pool import ThreadPool
-from math import ceil
 from ratelimit import limits, sleep_and_retry
 
 
-class Image:
 
-    def __init__(self, id, url, referer, p):
-        self.url = LazyUrl(referer, lambda _: url, self)
-        ext = get_ext(url)
-        self.filename = '{}{}{}'.format(id, f'_p{p}' if p else '', ext)
+class File_nozomi(File):
+    type = 'nozomi'
+
+    def get(self):
+        infos = []
+        for p, img in enumerate(read_post(self['id'], self['referer'], self.cw)):
+            url = img['url']
+            ext = get_ext(url)
+            filename = '{}{}{}'.format(img['id'], f'_p{p}' if p else '', ext)
+            info = {'url': url, 'name': filename, 'referer': img['referer']}
+            infos.append(info)
+        return infos
 
 
 @sleep_and_retry
@@ -31,7 +36,7 @@ def read_post(id, referer, cw):
         print_(f'{id}: {e}')
         return [] #5989
     imgs = []
-    for p, url in enumerate(j['imageurls']):
+    for url in j['imageurls']:
         did = url['dataid']
         if j.get('is_video'): #5754
             cdn = 'v'
@@ -40,10 +45,9 @@ def read_post(id, referer, cw):
             cdn = 'g' if j.get('type') == 'gif' else 'w'
             ext = 'gif' if url.get('type') == 'gif' else 'webp'
         url = 'https://{}.nozomi.la/{}/{}/{}.{}'.format(cdn, did[-1], did[-3:-1], did, ext) #5340
-        img = Image(id, url, f'https://nozomi.la/post/{id}.html', p)
+        img = {'id': id, 'url': url, 'referer': f'https://nozomi.la/post/{id}.html'}
         imgs.append(img)
     return imgs
-
 
 
 class Downloader_nozomi(Downloader):
@@ -76,13 +80,9 @@ class Downloader_nozomi(Downloader):
         ids = get_ids_multi(q, self._popular, self.cw)
         self.print_(f'ids: {len(ids)}')
         max_pid = get_max_range(self.cw)
-        p = ThreadPool(6)
-        step = 10
-        for i in range(int(ceil(len(ids)/step))):
-            for imgs in p.map(lambda id: read_post(id, self.url, self.cw), ids[i*step:(i+1)*step]):
-                self.urls += [img.url for img in imgs]
-                s = '{} {} - {} / {}'.format(tr_('읽는 중...'), self.name, i*step, len(ids))
-                self.cw.setTitle(s)
+        for id in ids:
+            file = File_nozomi({'id': id, 'url': f'https://nozomi.la/post/{id}.html', 'referer': self.url})
+            self.urls.append(file)
             if len(self.urls) >= max_pid:
                 break
         self.title = self.name

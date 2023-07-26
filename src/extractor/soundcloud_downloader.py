@@ -42,7 +42,12 @@ class Audio:
 
         formats = info['formats']
         print(formats)
-        formats = sorted(formats, key=lambda x: int(x.get('abr', 0)), reverse=True)
+        def key(f):
+            abr = f.get('abr')
+            if abr is None:
+                abr = 320
+            return int(abr)
+        formats = sorted(formats, key=key, reverse=True)
         url_audio = None
 
         for format in formats:
