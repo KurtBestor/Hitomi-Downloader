@@ -58,7 +58,7 @@
     "#p#": "{}p",
     "#recomm_all_langs#": "All languages",
     "#recomm_artist#": "Artist",
-    "#recomm_main#": "저장 폴더에 있는 작품들을 분석해서 작가를 추천합니다.\n\n결과에 나오는 정확도는 주어진 작품 내에서의 정확도입니다.\n작품은 많으면 많을수록 좋습니다. (100 개 이상 권장)\n\n{item} 개의 작품이 있습니다:",
+    "#recomm_main#": "It analyzes the galleries in the download folder and recommends artists.\n\nThe accuracy shown in the results is within the given galleries.\nThe more galleries you have, the better (100+ is recommended).\n\nYou currently have {item} galleries:",
     "#recomm_score#": "Score",
     "#setting_MB/s#": "MB/s",
     "#setting_autosaveL#": "Every",
