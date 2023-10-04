@@ -6,6 +6,7 @@ import ree as re
 from m3u8_tools import playlist2stream, M3u8_stream
 import utils
 import ffmpeg
+import clf2
 
 
 
@@ -21,6 +22,8 @@ class Downloader_etc(Downloader):
         self.session = Session()
         name = ytdl.get_extractor_name(self.url)
         self.print_('extractor: {}'.format(name))
+        if name == 'ixigua': #6290
+            clf2.solve(self.url, session=self.session)
         #if name == 'generic':
         #    raise NotImplementedError()
 
@@ -204,6 +207,12 @@ class Video:
 
         ext = get_ext_(self.url, session, referer)
 
+        def foo():
+            hdr = session.headers.copy()
+            if referer:
+                hdr['Referer'] = referer
+            return utils.LiveStream(self.url, headers=hdr, fragments=f.get('fragments') if ytdl.LIVE_FROM_START.get('etc') else None)
+
         if not ext:
             print('empty ext')
             if f['_resolution']:
@@ -213,18 +222,18 @@ class Video:
 
         if ext.lower() == '.m3u8':
             res = get_resolution() #4773
-            try:
-                url = playlist2stream(self.url, referer, session=session, n_thread=4, res=res)
-            except:
-                url = M3u8_stream(self.url, referer=referer, session=session, n_thread=4)
-            if url.live is not None: #5110
-                url = url.live
+            if info.get('live_status') == 'is_live':
+                url = foo()
+            else:
+                try:
+                    url = playlist2stream(self.url, referer, session=session, n_thread=4, res=res)
+                except:
+                    url = M3u8_stream(self.url, referer=referer, session=session, n_thread=4)
+                if url.live is not None: #5110
+                    url = url.live
             ext = '.mp4'
-        elif ext.lower() == '.mpd': # Tver
-            hdr = session.headers.copy()
-            if referer:
-                hdr['Referer'] = referer
-            url = utils.LiveStream(self.url, headers=hdr)
+        elif ext.lower() == '.mpd': # TVer
+            url = foo()
             ext = '.mp4'
         else:
             url = self.url

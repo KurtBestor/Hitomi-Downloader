@@ -1,18 +1,15 @@
 import downloader, ree as re
-from utils import Downloader, get_outdir, Soup, LazyUrl, get_print, cut_pair, get_ext, try_n, format_filename, clean_title, get_resolution
-from timee import sleep
-from error_printer import print_error
-import os
+from utils import Downloader, Soup, Session, LazyUrl, get_print, get_ext, try_n, format_filename, clean_title, get_resolution
 from translator import tr_
-import shutil, ffmpeg, json
 from io import BytesIO
+import ytdl
 
 
 
 class Downloader_xhamster(Downloader):
     type = 'xhamster'
     __name = r'([^/]*\.)?(xhamster|xhwebsite|xhofficial|xhlocal|xhopen|xhtotal|megaxh|xhwide|xhtab|xhtime)([0-9]*)' #3881, #4332, #4826, #5029, #5696, #5893
-    URLS = [rf'regex:{__name}\.[a-z0-9]+/(videos|users|photos/gallery)/']
+    URLS = [rf'regex:{__name}\.[a-z0-9]+/(videos|users|creators|photos/gallery)/']
     single = True
     display_name = 'xHamster'
 
@@ -21,6 +18,7 @@ class Downloader_xhamster(Downloader):
             raise Exception('xHamsterLive')
         if not re.search(r'{}\.'.format(self.__name), self.url):
             self.url = 'https://xhamster.com/videos/{}'.format(self.url)
+        self.session = Session('chrome')
 
     @classmethod
     def fix_url(cls, url):
@@ -36,13 +34,13 @@ class Downloader_xhamster(Downloader):
         self.enableSegment(1024*1024//2)
         thumb = BytesIO()
 
-        if '/users/' in self.url:
-            info = read_channel(self.url, cw)
+        if '/users/' in self.url or '/creators/' in self.url: #6257
+            info = read_channel(self.url, self.session, cw)
             urls = info['urls']
             videos = [Video(url) for url in urls]
             video = self.process_playlist(info['title'], videos)
         elif '/photos/gallery/' in self.url:
-            info = read_gallery(self.url, cw)
+            info = read_gallery(self.url, self.session, cw)
             for img in info['imgs']:
                 self.urls.append(img.url)
             self.single = False
@@ -92,45 +90,37 @@ class Video:
         return self._url, self._referer
 
 
-def get_data(html):
-    data_raw = cut_pair(re.find('window.initials *= *(.+)', html))
-    return json.loads(data_raw)
-
-
-def get_info(url):
+def get_info(url): #6318
     info = {}
-    html = downloader.read_html(url)
-    soup = Soup(html)
-
-    err = soup.find('div', class_="error404-title")
-    if err:
-        raise Exception(err.text.strip())
-
-    data = get_data(html)
-
-    info['title'] = data['videoModel']['title']
-    info['id'] = data['videoModel']['id']
-    info['thumbnail'] = data['videoModel']['thumbURL']
-
+    ydl = ytdl.YoutubeDL()
+    d = ydl.extract_info(url)
+    info['title'] = d['title']
+    info['id'] = d['id']
+    info['thumbnail'] = d['thumbnail']
     fs = []
-    for res, url_video in data['videoModel']['sources']['mp4'].items():
-        height = int(re.find('(\d+)p', res))
-        f = {'url': url_video, 'height': height}
+    for f in d['formats']:
+        if f['protocol'] != 'https':
+            continue
+        f = {'url': f['url'], 'height': f['height']}
         fs.append(f)
     fs = sorted(fs, key=lambda f: f['height'])
-
     info['formats'] = fs
     return info
 
 
-def read_page(username, p, cw):
+def read_page(type_, username, p, session, cw):
     print_ = get_print(cw)
-    url = 'https://xhamster.com/users/{}/videos/{}'.format(username, p)
+    if type_ == 'users':
+        url = f'https://xhamster.com/users/{username}/videos/{p}'
+    elif type_ == 'creators':
+        url = f'https://xhamster.com/creators/{username}/exclusive/{p}'
+    else:
+        raise NotImplementedError(type_)
     print_(url)
     n = 4
     for try_ in range(n):
         try:
-            soup = downloader.read_soup(url)
+            soup = downloader.read_soup(url, session=session)
             items = soup.findAll('div', class_='thumb-list__item')
             if not items and try_ < n-1:
                 continue
@@ -139,23 +129,26 @@ def read_page(username, p, cw):
             e_ = e
             print(e)
     else:
-        raise e_
+        if p == 1:
+            raise e_
+        else:
+            return []
     return items
 
 
-def read_channel(url, cw=None):
+def read_channel(url, session, cw=None):
     print_ =  get_print(cw)
-    username = url.split('/users/')[1].split('/')[0]
+    type_, username = re.find(r'/(users|creators)/([^/]+)', url, err='no username')
 
     info = {}
-    soup = downloader.read_soup(url)
-    title = soup.find('div', class_='user-name').text.strip()
+    soup = downloader.read_soup(url, session=session)
+    title = (soup.find('div', class_='user-name') or soup.find('h1')).text.strip()
     info['title'] = '[Channel] {}'.format(title)
 
     urls = []
     urls_set = set()
     for p in range(1, 101):
-        items = read_page(username, p, cw)
+        items = read_page(type_, username, p, session, cw)
         if not items:
             print('no items')
             break
@@ -202,17 +195,17 @@ def setPage(url, p):
     return url
 
 
-def read_gallery(url, cw=None):
+def read_gallery(url, session, cw=None):
     print_ = get_print(cw)
 
     info = {}
 
-    soup = downloader.read_soup(url)
+    soup = downloader.read_soup(url, session=session)
 
     h1 = soup.find('h1')
     if h1.find('a'):
         url = h1.find('a')['href']
-        return read_gallery(url, cw)
+        return read_gallery(url, sesseion, cw)
     info['title'] = h1.text.strip()
     info['url'] = setPage(url, 1)
 
@@ -221,19 +214,19 @@ def read_gallery(url, cw=None):
     for p in range(1, 101):
         print_('p: {}'.format(p))
         url = setPage(url, p)
-        html = downloader.read_html(url)
+        soup = downloader.read_soup(url, session=session)
 
-        data = get_data(html)
+        view = soup.find('div', id='photo-slider')
+        photos = view.findAll('a', id=lambda id: id and id.startswith('photo-'))
 
-        photos = data['photosGalleryModel']['photos']
         if not photos:
-            print('no photos')
+            print_('no photos')
             break
 
         for photo in photos:
-            img = photo['imageURL']
-            id = photo['id']
-            referer = photo['pageURL']
+            img = photo['href']
+            id = photo['id'].split('photo-')[1]
+            referer = url
             if id in ids:
                 print('duplicate:', id)
                 continue

@@ -101,11 +101,11 @@ def get_title(soup):
     a = soup.find('a', class_='tit')
     if a:
         return a.text.strip()
-    return re.find(r'제목 *: *(.+)', soup.find('a', class_='tit').text, err='no title')
+    return re.find(r'제목\s*:\s*(.+)', soup.find('a', class_='tit').text, err='no title')
 
 
 def get_artist(soup):
-    return re.find(r'작가 *: *(.+)', soup.text, default='').strip() or 'N/A'
+    return re.find(r'작가\s*:\s*(.+)', soup.text, default='').strip() or 'N/A'
 
 
 @try_n(4, sleep=60)
@@ -114,7 +114,7 @@ def get_imgs_page(page, referer, session, cw=None):
     sleep(5, cw) #2017
     html = downloader.read_html(page.url, referer, session=session)
 
-    inserted = re.find(r'''var *inserted *= *['"](.*?)['"]''', html)
+    inserted = re.find(r'''var\s*inserted\s*=\s*['"](.*?)['"]''', html)
     print_('inserted: {}'.format(inserted))
 
     inserted = set(int(i) for i in inserted.split(',')) if inserted else set()

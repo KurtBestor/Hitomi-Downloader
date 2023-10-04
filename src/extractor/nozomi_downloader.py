@@ -5,18 +5,27 @@ from utils import Downloader, query_url, get_ext, urljoin, clean_title, check_al
 import errors
 from translator import tr_
 from ratelimit import limits, sleep_and_retry
+import utils
+import os
 
 
 
 class File_nozomi(File):
     type = 'nozomi'
+    format = 'idpage?'
 
     def get(self):
+        if '://' not in self['referer']:
+            return {'url': referer}
+
         infos = []
         for p, img in enumerate(read_post(self['id'], self['referer'], self.cw)):
             url = img['url']
-            ext = get_ext(url)
-            filename = '{}{}{}'.format(img['id'], f'_p{p}' if p else '', ext)
+            d = {
+                'id': img['id'],
+                'page?': f'_p{p}' if p else '',
+                }
+            filename = utils.format('nozomi', d, get_ext(url))
             info = {'url': url, 'name': filename, 'referer': img['referer']}
             infos.append(info)
         return infos
@@ -80,9 +89,28 @@ class Downloader_nozomi(Downloader):
         ids = get_ids_multi(q, self._popular, self.cw)
         self.print_(f'ids: {len(ids)}')
         max_pid = get_max_range(self.cw)
+
+        def foo(id, p):
+            d = {
+                'id': id,
+                'page?': f'_p{p}' if p else '',
+                }
+            filename_guess_base = utils.format('nozomi', d, '.webp')
+            return os.path.join(utils.get_outdir('nozomi'), self.name, filename_guess_base)
+
         for id in ids:
-            file = File_nozomi({'id': id, 'url': f'https://nozomi.la/post/{id}.html', 'referer': self.url})
-            self.urls.append(file)
+            if os.path.isfile(foo(id, 0)):
+                p = 0
+                while True:
+                    filename_guess = foo(id, p)
+                    if not os.path.isfile(filename_guess):
+                        break
+                    file = File_nozomi({'referer': filename_guess, 'name': os.path.basename(filename_guess)})
+                    self.urls.append(file)
+                    p += 1
+            else:
+                file = File_nozomi({'id': id, 'url': f'https://nozomi.la/post/{id}.html', 'referer': self.url})
+                self.urls.append(file)
             if len(self.urls) >= max_pid:
                 break
         self.title = self.name

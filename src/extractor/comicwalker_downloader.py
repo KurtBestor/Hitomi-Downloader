@@ -1,14 +1,13 @@
 #coding:utf8
 import downloader
-from utils import Soup, LazyUrl, urljoin, try_n, Downloader, get_print, clean_title, get_imgs_already, check_alive, fix_dup
+from utils import urljoin, try_n, Downloader, get_print, clean_title, get_imgs_already, check_alive, fix_dup, File
 import ree as re
 from itertools import cycle
 from io import BytesIO
-import json
 from timee import sleep
 from translator import tr_
 import page_selector
-import os
+import utils
 
 
 # https://static.comic-walker.com/viewer/cw-viewer.min.js
@@ -21,19 +20,19 @@ def decode(s, hash):
     return s2
 
 
-class Image:
-    def __init__(self, src, hash, p, page):
-        def f(_):
-            f = BytesIO()
-            downloader.download(src, referer=page.url, buffer=f)
-            s = f.read()
-            s2 = decode(s, hash)
-            f.seek(0)
-            f.write(s2)
-            f.seek(0)
-            return f
-        self.url = LazyUrl(page.url, f, self)
-        self.filename = '{}/{:04}.jpg'.format(page.title, p)
+class File_comicwalker(File):
+    type = 'comicwalker'
+    format = 'title/page:04;'
+
+    def get(self):
+        f = BytesIO()
+        downloader.download(self['src'], referer=self['referer'], buffer=f, customWidget=self.cw)
+        s = f.read()
+        s2 = decode(s, self['hash'])
+        f.seek(0)
+        f.write(s2)
+        f.seek(0)
+        return {'url': f}
 
 
 class Page:
@@ -48,27 +47,12 @@ class Downloader_comicwalker(Downloader):
     URLS = ['comic-walker.com/contents/detail/', 'comic-walker.jp/contents/detail/']
     MAX_CORE = 4
     display_name = 'ComicWalker'
-    _soup = None
-    pages = None
-
-    @property
-    def soup(self):
-        if self._soup is None:
-            html = downloader.read_html(self.url)
-            self._soup = Soup(html)
-        return self._soup
 
     def read(self):
-        cw = self.cw
-        title = clean_title(get_title(self.soup, cw))
+        soup = downloader.read_soup(self.url)
+        title = clean_title(get_title(soup, self.cw))
 
-        self.imgs = get_imgs(self.url, self.soup, cw)
-
-        for img in self.imgs:
-            if isinstance(img, Image):
-                self.urls.append(img.url)
-            else:
-                self.urls.append(img)
+        self.urls += get_imgs(self.url, soup, self.cw)
 
         self.title = title
 
@@ -77,13 +61,14 @@ def get_cid(url):
     return re.find('[?&]cid=([a-zA-Z0-9_]+)', url, err='no cid')
 
 
-def get_imgs_page(page):
+def get_imgs_page(page, cw):
+    print_ = get_print(cw)
     cid = get_cid(page.url)
-    url_api = 'https://ssl.seiga.nicovideo.jp/api/v1/comicwalker/episodes/{}/frames'.format(cid)
+    print_(f'cid: {cid}')
+    url_api = f'https://comicwalker-api.nicomanga.jp/api/v1/comicwalker/episodes/{cid}/frames' #6368
 
-    html = downloader.read_html(url_api, referer=page.url)
+    meta = downloader.read_json(url_api, referer=page.url)
 
-    meta = json.loads(html)
     data = meta['data']
     imgs = []
     for item in data['result']:
@@ -91,7 +76,11 @@ def get_imgs_page(page):
         hash = item['meta']['drm_hash']
         if hash is None:
             continue
-        img = Image(src, hash, len(imgs), page)
+        d = {
+            'title': page.title,
+            'page': len(imgs),
+            }
+        img = File_comicwalker({'src': src, 'hash': hash, 'referer': page.url, 'name': utils.format('comicwalker', d, '.jpg')})
         imgs.append(img)
 
     return imgs
@@ -99,8 +88,7 @@ def get_imgs_page(page):
 
 def get_pages(url, soup=None):
     if soup is None:
-        html = downloader.read_html(url)
-        soup = Soup(html)
+        soup = downloader.read_soup(url)
 
     title0 = get_title(soup)
 
@@ -126,13 +114,10 @@ def get_pages(url, soup=None):
 
 def get_title(soup, cw=None):
     print_ = get_print(cw)
-    for h1 in soup.findAll('h1'):
-        title = h1.text.strip()
-        if title:
-            break
-    else:
+    div = soup.find('div', class_='comicIndex-box') #6231
+    if div is None:
         raise Exception('no title')
-    return title
+    return div.find('h1').text.strip()
 
 
 @page_selector.register('comicwalker')
@@ -146,8 +131,7 @@ def f(url):
 
 def get_imgs(url, soup=None, cw=None):
     if soup is None:
-        html = downloader.read_html(url)
-        soup = Soup(html)
+        soup = downloader.read_soup(url)
 
     title = clean_title(get_title(soup, cw))
 
@@ -163,8 +147,8 @@ def get_imgs(url, soup=None, cw=None):
             continue
 
         if cw is not None:
-            cw.setTitle('{} {} / {}  ({} / {})'.format(tr_('읽는 중...'), title, page.title, i+1, len(pages)))
+            cw.setTitle(f'{tr_("읽는 중...")} {title} / {page.title}  ({i+1} / {len(pages)})')
 
-        imgs += get_imgs_page(page)
+        imgs += get_imgs_page(page, cw)
 
     return imgs

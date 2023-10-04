@@ -6,7 +6,7 @@ from constants import isdeleted
 from error_printer import print_error
 from timee import sleep
 import ree as re
-from utils import urljoin, Downloader, Soup, try_n, get_print, filter_range, LazyUrl, query_url, compatstr, uuid, get_max_range, format_filename, clean_title, get_resolution, get_abr, Session
+from utils import urljoin, Downloader, Soup, try_n, get_print, filter_range, LazyUrl, query_url, compatstr, uuid, get_max_range, format_filename, clean_title, get_resolution, get_abr, Session, fix_dup, File
 import ffmpeg
 import sys
 import constants
@@ -31,43 +31,27 @@ def print_streams(streams, cw):
     print_('')
 
 
-class Video:
-    _url = None
+class Video(File):
+    type = 'youtube'
     vcodec = None
     filename0 = None
     chapters = None
-    utime = None
 
-    def __init__(self, url, session, type='video', only_mp4=False, audio_included=False, max_res=None, max_abr=None, cw=None):
-        self.type = type
-        self.only_mp4 = only_mp4
-        self.audio_included = audio_included
-        self.max_res = max_res
-        self.max_abr = max_abr
-        self.cw = cw
-        self.url = LazyUrl(url, self.get, self, pp=self.pp)
-        self.session = session
-        self.exec_queue = cw.exec_queue if cw else None#
-
-    def get(self, url, force=False):
-        if self._url:
-            return self._url
-
-        type = self.type
-        only_mp4 = self.only_mp4
-        audio_included = self.audio_included
-        max_res = self.max_res
-        max_abr = self.max_abr
+    def get(self):
+        type = self['type']
+        only_mp4 = self['only_mp4']
+        audio_included = self['audio_included']
+        max_res = self['max_res']
+        max_abr = self['max_abr']
         cw = self.cw
+        session = self.session
+        url = self['referer']
         print_ = get_print(cw)
-
-        if force:
-            max_abr = 0
 
         print('max_res: {}'.format(max_res))
         for try_ in range(4):
             try:
-                yt = ytdl.YouTube(url, cw=cw)
+                self.yt = yt = ytdl.YouTube(url, cw=cw)
                 break
             except errors.Retry as e:
                 raise e
@@ -121,9 +105,8 @@ class Video:
             def key(stream):
                 fps = stream.fps
                 vc = stream.video_codec
-                if not vc:
-                    return 1000, -fps
-                vc = vc.lower().split('.')[0].lower()
+                if vc:
+                    vc = vc.lower().split('.')[0].lower()
                 if vc == 'av01':
                     vc = 'av1'
                 if vc == 'vp09':
@@ -131,8 +114,9 @@ class Video:
                 try:
                     i = constants.CODECS_PRI.index(vc)
                 except ValueError:
-                    return 999, -fps
-                return i, -fps
+                    i = 999
+                pr = 'premium' in stream.format.lower() #6350
+                return not pr, i, -fps, -stream.tbr
             streams = sorted(streams, key=key) #6079
             print_('')
         elif type == 'audio':
@@ -176,15 +160,16 @@ class Video:
                         print_streams([stream], cw)
                         stream_final = stream
 
-            ok = downloader.ok_url(stream_final.url, referer=url, session=self.session) if isinstance(stream_final.url, str) else True
+            ok = downloader.ok_url(stream_final.url, referer=url, session=session) if isinstance(stream_final.url, str) else True
             if ok:
                 break
             else:
                 print_('stream is not valid')
                 streams.remove(stream_final)
         else:
-            if type == 'audio' and not force:
-                return self.get(url, force=True) # 1776
+            if type == 'audio' and max_abr > 0:
+                self['max_abr'] = 0
+                return self.get(url) # 1776
             raise Exception('No videos')
 
         stream = stream_final
@@ -192,7 +177,6 @@ class Video:
 ##        if stream.video_codec and stream_final.video_codec.lower().startswith('av'):
 ##            self.vcodec = 'h264'
 
-        self.yt = yt
         self.id = yt.video_id
         self.stream = stream
         self.username = yt.info['uploader']
@@ -220,16 +204,27 @@ class Video:
             if any(stream.resolution is None for stream in streams):
                 streams = [stream for stream in streams if stream.resolution is None]
                 print_streams(streams, cw)
-            best_audio = None
-            best_abr = 0
-            for stream in streams:
+            def key(stream):
                 abr = stream.abr
-                if abr > best_abr:
-                    best_abr = abr
-                    best_audio = stream
-            if best_audio is None:
-                raise Exception('No audio')
-            print(best_audio)
+                format_note = stream.video.get('format_note')
+                if format_note and 'original' in format_note.lower():
+                    org = 0
+                else:
+                    org = 1
+                lang = stream.video.get('language')
+                if lang and constants.ALANG:
+                    match_full = lang.lower().startswith(constants.ALANG)
+                    match_part = lang.lower().startswith(constants.ALANG.split('-')[0])
+                    if match_full or match_part:
+                        lang = -1 if match_full else 0
+                    else:
+                        lang = 1
+                else:
+                    lang = 1
+                return lang, org, -abr
+            streams = sorted(streams, key=key) #6332
+            best_audio = streams[0]
+            print_streams([best_audio], cw)
             self.stream_audio = best_audio
             if 'DASH' in self.stream_audio.format:
                 self.stream_audio.setDashType('audio')
@@ -241,7 +236,7 @@ class Video:
         self._thumb = None
         def thumb():
             if self._thumb is None:
-                self.thumb_url, self._thumb = ytdl.download_thumb(yt.thumbnail_url, cw, self.session)
+                self.thumb_url, self._thumb = ytdl.download_thumb(yt.thumbnail_url, cw, session)
             self._thumb.seek(0)
             return self._thumb
         self.thumb = thumb
@@ -250,18 +245,18 @@ class Video:
         _url = self.stream.url
         if callable(_url):
             _url = _url()
-        self._url = _url
         title = yt.title
         #soup = Soup(yt.watch_html)
         #title =  soup.title.text.replace('- YouTube', '').strip()
         self.title = title
         ext = '.' + self.stream.subtype
-        self.filename = format_filename(title, self.id, ext, artist=self.username, date=time.strftime('%Y-%m-%d')) #4953, #5529
-        print_(f'filename: {self.filename}')
+        filename = format_filename(title, yt.video_id, ext, artist=yt.info['uploader'], date=time, width=None if type == 'audio' else self.stream.video['width'], height=None if type == 'audio' else self.stream.video['height']) #4953, #5529
+        filename = fix_dup(filename, CACHE_FILENAMES[self['uid_filenames']]) #6235
+        print_(f'filename: {filename}')
 
         if type == 'audio':
-            self.filename0 = self.filename
-            self.filename = f'{uuid()}_audio.tmp' #4776
+            self.filename0 = filename
+            filename = f'{uuid()}_audio.tmp' #4776
 
         print_('Resolution: {}'.format(stream.resolution))
         print_('Codec: {} / {}'.format(stream.video_codec, stream.audio_codec))
@@ -276,15 +271,15 @@ class Video:
                 if cw is not None:
                     cw.trash_can.append(path)
                 if constants.FAST:
-                    downloader_v3.download(audio, session=self.session, chunk=1024*1024, n_threads=2, outdir=os.path.dirname(path), fileName=os.path.basename(path), customWidget=cw, overwrite=True, mode=MODE)
+                    downloader_v3.download(audio, session=session, chunk=1024*1024, n_threads=2, outdir=os.path.dirname(path), fileName=os.path.basename(path), customWidget=cw, overwrite=True, mode=MODE)
                 else:
-                    downloader.download(audio, session=self.session, outdir=os.path.dirname(path), fileName=os.path.basename(path), customWidget=cw, overwrite=True)
+                    downloader.download(audio, session=session, outdir=os.path.dirname(path), fileName=os.path.basename(path), customWidget=cw, overwrite=True)
                 self.audio_path = path
                 print_('audio done')
             self.thread_audio = threading.Thread(target=f, args=(self.audio,), daemon=True)
             self.thread_audio.start()
 
-        return self._url
+        return {'url': _url, 'name': filename}
 
     def pp(self, filename, i=0):
         cw = self.cw
@@ -296,7 +291,7 @@ class Video:
             return
 
         filename_new = filename
-        if self.type == 'video' and (self.audio is not None or ext != '.mp4') and not self.stream.live: # UHD or non-mp4
+        if self['type'] == 'video' and (self.audio is not None or ext != '.mp4') and not self.stream.live: # UHD or non-mp4
             if self.audio is not None: # merge
                 self.thread_audio.join()
                 ext, out = ffmpeg.merge(filename, self.audio_path, cw=cw, vcodec=self.vcodec)
@@ -313,7 +308,7 @@ class Video:
                 filename_new = '{}.mp4'.format(name)
                 print_('Convert video: {} -> {}'.format(filename, filename_new))
                 ffmpeg.convert(filename, filename_new, cw=cw)
-        elif self.type == 'audio' and ext != '.mp3': # convert non-mp3 audio -> mp3
+        elif self['type'] == 'audio' and ext != '.mp3': # convert non-mp3 audio -> mp3
             name, ext_old = os.path.splitext(filename)
             filename_new = '{}.mp3'.format(name)
             ffmpeg.convert(filename, filename_new, '-shortest -preset ultrafast -b:a {}k'.format(get_abr()), cw=cw)
@@ -321,7 +316,7 @@ class Video:
         if self.filename0 and os.path.basename(filename_new) != self.filename0: #4776
             filename0 = utils.fix_enumerate(self.filename0, i, cw)
             filename_old = filename_new
-            ext = '.mp4' if self.type == 'video' else '.mp3'
+            ext = '.mp4' if self['type'] == 'video' else '.mp3'
             filename_new = os.path.join(os.path.dirname(filename_old), os.path.splitext(filename0)[0]+ext)
             print_(f'rename: {filename_old} -> {filename_new}')
             if filename_old != filename_new:
@@ -331,14 +326,14 @@ class Video:
                     os.remove(filename_new)
                 os.rename(filename_old, filename_new)
 
-        if self.type == 'audio' and ui_setting.albumArt.isChecked():
+        if self['type'] == 'audio' and ui_setting.albumArt.isChecked():
             try:
-                ffmpeg.add_cover(filename_new, self.thumb(), {'artist':self.username, 'title':self.title}, cw=cw)
+                ffmpeg.add_cover(filename_new, self.thumb(), {'artist':self.yt.info['uploader'], 'title':self.title}, cw=cw)
             except Exception as e:
                 s = print_error(e)
                 print_(s)
 
-        if self.chapters and self.type == 'video': #6085
+        if self.chapters and self['type'] == 'video': #6085
             try:
                 chapters = []
                 for chapter in self.chapters:
@@ -348,6 +343,19 @@ class Video:
             except Exception as e:
                 s = print_error(e)
                 print_(s)
+
+        if utils.ui_setting.thumbCheck.isChecked():
+            import filetype
+            s = self.thumb().getvalue()
+            ext = filetype.guess(s)
+            if ext is None:
+                raise Exception('unknown ext')
+            filename_thumb = os.path.splitext(filename_new)[0] + '.' + ext.extension
+            print_(f'filename_thumb: {filename_thumb}')
+            with open(filename_thumb, 'wb') as f:
+                f.write(s)
+            cw.imgs.append(filename_thumb)
+            cw.dones.add(os.path.realpath(filename_thumb))
 
         utils.pp_subtitle(self, filename_new, cw)
 
@@ -440,7 +448,7 @@ class Downloader_youtube(Downloader):
         while videos:
             video = videos[0]
             try:
-                video.url()
+                video.ready(cw)
                 break
             except Exception as e:
                 e_ = e
@@ -452,7 +460,7 @@ class Downloader_youtube(Downloader):
         if info['type'] != 'single':
             video = self.process_playlist(info['title'], videos)
         else:
-            self.urls.append(video.url)
+            self.urls.append(video)
             self.title = video.title
             if video.stream.live:
                 self.lock = False
@@ -468,6 +476,7 @@ def int_(x):
         return 0
 
 
+CACHE_FILENAMES = {}
 @try_n(2, sleep=1)
 def get_videos(url, session, type='video', only_mp4=False, audio_included=False, max_res=None, max_abr=None, cw=None):
     info = {}
@@ -498,7 +507,9 @@ def get_videos(url, session, type='video', only_mp4=False, audio_included=False,
     else:
         raise NotImplementedError(url)
 
-    info['videos'] = [Video(url, session, type, only_mp4, audio_included, max_res, max_abr, cw) for url in info['urls']]
+    uid_filenames = uuid()
+    CACHE_FILENAMES[uid_filenames] = {}
+    info['videos'] = [Video({'referer':url, 'type':type, 'only_mp4':only_mp4, 'audio_included':audio_included, 'max_res':max_res, 'max_abr':max_abr, 'uid_filenames': uid_filenames}) for url in info['urls']]
 
     return info
 
@@ -552,6 +563,7 @@ def select():
         layout.addRow('파일 형식', youtubeCombo_type)
         for i in range(utils.ui_setting.youtubeCombo_type.count()):
             youtubeCombo_type.addItem(utils.ui_setting.youtubeCombo_type.itemText(i))
+            youtubeCombo_type.setItemIcon(i, utils.ui_setting.youtubeCombo_type.itemIcon(i))
         youtubeCombo_type.setCurrentIndex(utils.ui_setting.youtubeCombo_type.currentIndex())
 
         youtubeLabel_res = QLabel('해상도')
@@ -621,8 +633,8 @@ def select():
 @selector.options('youtube')
 def options(urls):
     return [
-        {'text': 'MP4 (동영상)', 'format': 'mp4'},
-        {'text': 'MP3 (음원)', 'format': 'mp3'},
+        {'text': 'MP4 (동영상)', 'format': 'mp4', 'icon': 'movie'},
+        {'text': 'MP3 (음원)', 'format': 'mp3', 'icon': 'music'},
         ]
 
 @selector.default_option('youtube')

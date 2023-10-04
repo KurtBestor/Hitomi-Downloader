@@ -2,6 +2,10 @@
 from utils import Downloader, get_print, urljoin, Soup, get_ext, LazyUrl, clean_title, downloader, re, try_n, errors, json
 
 
+class LoginRequired(errors.LoginRequired):
+    def __init__(self, *args):
+        super().__init__(*args, method='browser', url='https://nid.naver.com/nidlogin.login')
+
 
 class Downloader_navercafe(Downloader):
     type = 'navercafe'
@@ -18,7 +22,7 @@ class Downloader_navercafe(Downloader):
         info = get_info(self.url, self.cw)
         for img in info['imgs']:
             self.urls.append(img.url)
-        tail = ' ({}_{})'.format(info['cafename'], info['id'])
+        tail = f' ({info["cafename"]}_{info["id"]})'
         self.title = clean_title(info['title'], n=-len(tail)) + tail
 
 
@@ -29,7 +33,9 @@ def get_info(url, cw=None):
 
     html = downloader.read_html(url)
     if '"cafe_cautionpage"' in html:
-        raise errors.LoginRequired()
+        raise LoginRequired()
+    if re.find(r'''onclick=['"]toLoginPage\(\)['"]''', html): #6358
+        raise LoginRequired()
     url_article = re.find(r'''//cafe\.naver\.com/ArticleRead\.nhn\?articleid=[0-9]+&clubid=[0-9]+''', html, err='no iframe')
     url_article = urljoin(url, url_article)
 
@@ -68,7 +74,7 @@ def get_info(url, cw=None):
         pairs.append((vid, key))
 
     for vid, key in pairs:
-        url_api = 'https://apis.naver.com/rmcnmv/rmcnmv/vod/play/v2.0/{}?key={}'.format(vid, key)
+        url_api = f'https://apis.naver.com/rmcnmv/rmcnmv/vod/play/v2.0/{vid}?key={key}'
         data_raw = downloader.read_html(url_api)
         data = json.loads(data_raw)
         fs = data['videos']['list']
@@ -89,4 +95,4 @@ class Image:
     def __init__(self, url, referer, p):
         self.url = LazyUrl(referer, lambda _: url, self)
         ext = get_ext(url)
-        self.filename = '{:04}{}'.format(p, ext)
+        self.filename = f'{p:04}{ext}'
