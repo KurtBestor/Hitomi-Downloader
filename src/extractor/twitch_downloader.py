@@ -168,7 +168,7 @@ class Video:
         id = info['display_id']
 
         if self._live:
-            video = utils.LiveStream(video, headers=video_best.get('http_headers'))
+            video = utils.LiveStream(video, headers=video_best.get('http_headers', {}))
             ext = '.mp4'
         else:
             if ext.lower() == '.m3u8':

@@ -1,6 +1,6 @@
 #coding:utf8
 import downloader
-from utils import Soup, urljoin, Downloader, cut_pair, LazyUrl, clean_title
+from utils import Soup, urljoin, Downloader, cut_pair, LazyUrl, clean_title, format_filename
 from timee import sleep
 from translator import tr_
 from io import BytesIO
@@ -71,7 +71,7 @@ def get_video(url, soup=None):
     video = soup.find('video', id='vjsplayer').find('source').attrs['src']
     url_thumb = soup.find('video', id='vjsplayer').attrs['poster']
     title = get_title(soup)
-    filename = '{}.mp4'.format(clean_title(title))
+    filename = format_filename(title, '', '.mp4')
     video = Video(video, url_thumb, url, filename)
     return video
 

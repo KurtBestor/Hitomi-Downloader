@@ -1,7 +1,7 @@
 #coding: utf8
 import downloader
 from io import BytesIO
-from utils import Downloader, LazyUrl, get_print, try_n, lock, clean_title, get_max_range
+from utils import Downloader, LazyUrl, get_print, try_n, lock, get_max_range, format_filename
 import ffmpeg
 import ytdl
 from m3u8_tools import M3u8_stream
@@ -62,7 +62,7 @@ class Audio:
 
         self.username = info['uploader']
         self.title = '{} - {}'.format(self.username, info['title'])
-        self.filename = '{}{}'.format(clean_title(self.title, allow_dot=True, n=-4), '.mp3')
+        self.filename = format_filename(self.title, '', '.mp3')
 
         self._thumb = None
         def thumb():

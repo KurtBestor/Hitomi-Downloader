@@ -1,7 +1,7 @@
 #coding:utf8
 import downloader
 import json
-from utils import LazyUrl, Downloader, get_print, clean_title, check_alive
+from utils import LazyUrl, Downloader, Session, get_print, clean_title, check_alive
 import os
 from timee import sleep
 from translator import tr_
@@ -24,16 +24,19 @@ class Downloader_wikiart(Downloader):
     display_name = 'WikiArt'
     ACCEPT_COOKIES = [r'(.*\.)?wikiart\.org']
 
+    def init(self):
+        self.session = Session()
+
     @classmethod
     def fix_url(cls, url):
         url = 'https://www.wikiart.org/en/{}'.format(get_id(url))
         return url
 
     def read(self):
-        artist = get_artist(get_id(self.url))
+        artist = get_artist(get_id(self.url), self.session)
         self.artist = artist
 
-        for img in get_imgs(self.url, artist, cw=self.cw):
+        for img in get_imgs(self.url, artist, self.session, cw=self.cw):
             self.urls.append(img.url)
 
         self.title = clean_title(artist)
@@ -45,7 +48,7 @@ def get_id(url):
     return userid
 
 
-def get_imgs(url, artist, cw=None):
+def get_imgs(url, artist, session, cw=None):
     print_ = get_print(cw)
     userid = get_id(url)
     print(userid)
@@ -56,7 +59,7 @@ def get_imgs(url, artist, cw=None):
         check_alive(cw)
         url_api = 'https://www.wikiart.org/en/{}/mode/all-paintings?json=2&layout=new&page={}&resultType=masonry'.format(userid, p)
         print(url_api)
-        data_raw = downloader.read_html(url_api, referer=url)
+        data_raw = downloader.read_html(url_api, url, session=session)
         data = json.loads(data_raw)
 
         _imgs = data['Paintings']
@@ -91,9 +94,8 @@ def get_imgs(url, artist, cw=None):
     return imgs
 
 
-def get_artist(userid, soup=None):
-    if soup is None:
-        url = 'https://www.wikiart.org/en/{}'.format(userid)
-        soup = downloader.read_soup(url)
+def get_artist(userid, session):
+    url = 'https://www.wikiart.org/en/{}'.format(userid)
+    soup = downloader.read_soup(url, session=session)
 
     return soup.find('h3').text.strip()

@@ -1,18 +1,18 @@
 import downloader
-from utils import Downloader, LazyUrl, clean_title, urljoin, get_ext
+from utils import Downloader, File, clean_title, urljoin, get_ext
 from ratelimit import limits, sleep_and_retry
+import utils
 
 
-class Image:
-    def __init__(self, url, ref, n):
-        self._url = url
-        self.url = LazyUrl(ref, self.get, self)
-        self.filename = '{:04}{}'.format(n, get_ext(url))
+
+class File_4chan(File):
+    type = '4chan'
+    format = 'page:04;'
 
     @sleep_and_retry
     @limits(2, 1)
-    def get(self, _):
-        return self._url
+    def get(self):
+        return {}
 
 
 
@@ -30,8 +30,11 @@ class Downloader_4chan(Downloader):
         soup = downloader.read_soup(self.url)
         for div in soup.findAll('div', class_='fileText'):
             href = urljoin(self.url, div.a['href'])
-            img = Image(href, self.url, len(self.urls))
-            self.urls.append(img.url)
+            d = {
+                'page': len(self.urls),
+                }
+            file = File_4chan({'url': href, 'referer': self.url, 'name': utils.format('4chan', d, get_ext(href))})
+            self.urls.append(file)
 
         board = self.url.split('/')[3]
         title = soup.find('span', class_='subject').text

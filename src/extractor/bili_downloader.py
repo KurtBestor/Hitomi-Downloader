@@ -1,16 +1,13 @@
 import downloader
 import downloader_v3
-from utils import Soup, LazyUrl, Downloader, query_url, get_outdir, get_print, cut_pair, format_filename, clean_title, get_resolution, try_n, Session, uuid
-import hashlib, json
+from utils import Downloader, get_print, format_filename, clean_title, get_resolution, try_n, Session, uuid, File, get_max_range
 import os
 from io import BytesIO
 import ffmpeg
-from translator import tr_
 import math
 import ree as re
 import utils
 import ytdl
-from io import BytesIO
 import constants
 from putils import DIR
 import threading
@@ -29,16 +26,64 @@ _VALID_URL = r'''(?x)
                     '''
 
 
-class Video:
+class File_bili(File):
+    type = 'bili'
+    thread_audio = None
 
-    def __init__(self, f_video, f_audio, referer, session, cw=None):
+    @try_n(4)
+    def get(self):
+        session = self.session
+        cw = self.cw
         print_ = get_print(cw)
-        self.f_video = f_video
-        self.f_audio = f_audio
-        self.referer = referer
-        self.session = session
-        self.cw = cw
-        self.url = LazyUrl(None, lambda _: f_video['url'], self, pp=self.pp)
+
+        options = {
+                #'noplaylist': True, #5562
+                #'extract_flat': True,
+                'playlistend': 1,
+                }
+        ydl = ytdl.YoutubeDL(options, cw=cw)
+        info = ydl.extract_info(self['referer'])
+
+        #5562
+        entries = info.get('entries')
+        if entries:
+            info.update(entries[0])
+
+        fs = info['formats']
+        res = max(get_resolution(), min(f.get('height', 0) for f in fs))
+        print_(f'res: {res}')
+        fs = [f for f in fs if f.get('height', 0) <= res]
+        for f in fs:
+            print_(f"{f['format']} - {f['url']}")
+
+        f_video = sorted(fs, key=lambda f:(f.get('height', 0), f.get('vbr', 0)))[-1]
+        print_('video: {}'.format(f_video['format']))
+
+        if f_video.get('abr'):
+            f_audio = None
+        else:
+            fs_audio = sorted([f_audio for f_audio in fs if f_audio.get('abr')], key=lambda f:f['abr'])
+            if fs_audio:
+                f_audio = fs_audio[-1]
+            else:
+                raise Exception('no audio')
+        print_('audio: {}'.format(f_audio['format']))
+
+        title = info['title']
+        url_thumb = info['thumbnail']
+        ext = info['ext']
+
+        session.headers.update(info.get('http_headers', {}))
+
+        mobj = re.match(_VALID_URL, self['referer'])
+        video_id = mobj.group('id')
+
+        info = {
+            'url': f_video['url'],
+            'url_thumb': url_thumb,
+            'name': format_filename(title, video_id, ext),
+            }
+
         if f_audio:
             def f():
                 audio = f_audio['url']
@@ -54,8 +99,10 @@ class Video:
             self.thread_audio = threading.Thread(target=f, daemon=True)
             self.thread_audio.start()
 
+        return info
+
     def pp(self, filename):
-        if self.f_audio:
+        if self.thread_audio:
             self.thread_audio.join()
             ffmpeg.merge(filename, self.audio_path, cw=self.cw)
         return filename
@@ -69,8 +116,7 @@ def fix_url(url, cw=None):
         tail = url.split('?')[1]
     else:
         tail = None
-    html = downloader.read_html(url, methods={'requests'})
-    soup = Soup(html)
+    soup = downloader.read_soup(url, methods={'requests'})
     err = soup.find('div', class_='error-text')
     if err:
         raise errors.Invalid('{}: {}'.format(err.text.strip(), url))
@@ -89,7 +135,7 @@ def fix_url(url, cw=None):
 
 class Downloader_bili(Downloader):
     type = 'bili'
-    URLS = [r'regex:'+_VALID_URL]
+    URLS = [r'regex:'+_VALID_URL, 'space.bilibili.com/']
     lock = True
     detect_removed = False
     detect_local_lazy = False
@@ -104,6 +150,12 @@ class Downloader_bili(Downloader):
         self.url = self.url.replace('m.bilibili', 'bilibili')
         self.session = Session()
 
+    @classmethod
+    def key_id(cls, url):
+        mobj = re.match(_VALID_URL, url)
+        video_id = mobj.group('id')
+        return video_id or url
+
     @property
     def id_(self):
         mobj = re.match(_VALID_URL, self.url)
@@ -116,77 +168,45 @@ class Downloader_bili(Downloader):
         self.print_('sd: {}'.format(sd))
         if not sd: #5647
             self.cw.showCookie()
-        video, info = get_video(self.url, self.session, self.cw)
-        self.urls.append(video.url)
+            self.cw.showLogin('https://passport.bilibili.com/login', 1030, None)
+
+        sid = re.find(r'/channel/collectiondetail?sid=([0-9]+)', self.url)
+        mid = re.find(r'space.bilibili.com/([0-9]+)', self.url)
+        if sid or mid:
+            if not sd:
+                raise errors.LoginRequired()
+            if sid:
+                url_api = f'https://api.bilibili.com/x/polymer/web-space/seasons_archives_list?mid={mid}&season_id={sid}'
+                j = downloader.read_json(url_api, self.url)
+                title = clean_title(j['data']['meta']['name'])
+            elif mid:
+                url_api = f'https://api.bilibili.com/x/space/wbi/acc/info?mid={mid}'
+                j = downloader.read_json(url_api, self.url)
+                title = clean_title(j['data']['name'])
+            else:
+                raise NotImplementedError()
+            self.single = False
+            options = {
+                'extract_flat': True,
+                'playlistend': get_max_range(self.cw),
+                }
+            ydl = ytdl.YoutubeDL(options, cw=self.cw)
+            info = ydl.extract_info(self.url)
+            files = []
+            for e in info['entries']:
+                files.append(File_bili({'referer': e['url']}))
+            self.print_(f'urls: {len(files)}')
+            file = self.process_playlist(title, files)
+            self.title = title
+        else:
+            file = File_bili({'referer': self.url})
+            file.ready(self.cw)
+            self.urls.append(file)
+            self.title = os.path.splitext(file['name'])[0]
 
         thumb = BytesIO()
-        downloader.download(info['url_thumb'], buffer=thumb)
+        downloader.download(file['url_thumb'], buffer=thumb)
         self.setIcon(thumb)
-        title = info['title']
-        title = format_filename(title, self.id_, '.mp4')[:-4]
-        n = int(math.ceil(8.0 / len([None])))
-        self.print_('n_threads: {}'.format(n))
+        n = int(math.ceil(8.0 / len(self.urls)))
+        self.print_(f'n_threads: {n}')
         self.enableSegment(n_threads=n, overwrite=True)
-        self.title = title
-        ext = info['ext']
-        video.filename = '{}{}'.format(title, ext)
-
-
-@try_n(4)
-def get_video(url, session, cw=None):
-    print_ = get_print(cw)
-
-    mobj = re.match(_VALID_URL, url)
-    video_id = mobj.group('id')
-    anime_id = mobj.group('anime_id')
-    print(video_id, anime_id)
-    print_ = get_print(cw)
-
-    options = {
-            #'noplaylist': True, #5562
-            #'extract_flat': True,
-            'playlistend': 1,
-            }
-    ydl = ytdl.YoutubeDL(options, cw=cw)
-    info = ydl.extract_info(url)
-
-    #5562
-    entries = info.get('entries')
-    if entries:
-        info.update(entries[0])
-
-    fs = info['formats']
-    res = max(get_resolution(), min(f.get('height', 0) for f in fs))
-    print_(f'res: {res}')
-    fs = [f for f in fs if f.get('height', 0) <= res]
-    for f in fs:
-        print_(f"{f['format']} - {f['url']}")
-
-    f_video = sorted(fs, key=lambda f:(f.get('height', 0), f.get('vbr', 0)))[-1]
-    print_('video: {}'.format(f_video['format']))
-
-    if f_video.get('abr'):
-        f_audio = None
-    else:
-        fs_audio = sorted([f_audio for f_audio in fs if f_audio.get('abr')], key=lambda f:f['abr'])
-        if fs_audio:
-            f_audio = fs_audio[-1]
-        else:
-            raise Exception('no audio')
-    print_('audio: {}'.format(f_audio['format']))
-
-    video = Video(f_video, f_audio, url, session, cw)
-    title = info['title']
-    url_thumb = info['thumbnail']
-    ext = info['ext']
-    if not ext.startswith('.'):
-        ext = '.' + ext
-
-    session.headers.update(info.get('http_headers', {}))
-
-    info = {
-        'title': clean_title(title),
-        'url_thumb': url_thumb,
-        'ext': ext,
-        }
-    return video, info

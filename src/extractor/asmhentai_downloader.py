@@ -1,9 +1,10 @@
 #coding: utf8
 import downloader
 import ree as re
-from utils import Soup, urljoin, Downloader, join, LazyUrl, Session, get_print
+from utils import Soup, urljoin, Downloader, join, Session, get_print, File
 import os
 from ratelimit import limits, sleep_and_retry
+import utils
 
 
 
@@ -12,6 +13,23 @@ def get_id(url):
         return int(url)
     except:
         return int(re.find('/(g|gallery)/([0-9]+)', url)[1])
+
+
+class File_asmhentai(File):
+    type = 'asmhentai'
+    format = 'name'
+
+    @sleep_and_retry
+    @limits(4, 1)
+    def get(self):
+        soup = downloader.read_soup(self['referer'], self['rereferer'], session=self.session)
+        img = soup.find('img', id='fimg')
+        url = img['data-src']
+        name, ext = os.path.splitext(os.path.basename(url).split('?')[0])
+        d = {
+            'name': name,
+            }
+        return {'url': url, 'name': utils.format('asmhentai', d, ext)}
 
 
 
@@ -27,7 +45,7 @@ class Downloader_asmhentai(Downloader):
     @classmethod
     def fix_url(cls, url):
         id_ = get_id(url)
-        return 'https://asmhentai.com/g/{}/'.format(id_)
+        return f'https://asmhentai.com/g/{id_}/'
 
     def read(self):
         info = get_info(self.url, self.session, self.cw)
@@ -43,25 +61,10 @@ class Downloader_asmhentai(Downloader):
 
         for i in range(info['n']):
             url = f'https://asmhentai.com/gallery/{info["id"]}/{i+1}/'
-            self.urls.append(Image(url, self.url, self.session, len(self.urls)).url)
+            file = File_asmhentai({'referer':url, 'rereferer': self.url})
+            self.urls.append(file)
 
         self.title = title
-
-
-class Image:
-    def __init__(self, url, referer, session, p):
-        self._url = url
-        self.url = LazyUrl(referer, self.get, self)
-        self.session = session
-
-    @sleep_and_retry
-    @limits(4, 1)
-    def get(self, referer):
-        soup = downloader.read_soup(self._url, referer, session=self.session)
-        img = soup.find('img', id='fimg')
-        url = img['data-src']
-        self.filename = os.path.basename(url).split('?')[0]
-        return url
 
 
 def get_info(url, session, cw):

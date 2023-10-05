@@ -13,7 +13,7 @@ SHOW = True
 
 
 def is_captcha(soup, cw=None):
-    r = soup.find('div', class_="verify-wrap") is not None
+    r = soup.find('div', class_="verify-wrap") or soup.find('div', class_='captcha_verify_container')
     if r:
         get_print(cw)('captcha')
     return r
@@ -30,12 +30,12 @@ class Downloader_tiktok(Downloader):
         cw = self.cw
         self.session = Session()
         res = clf2.solve(self.url, self.session, cw)
-        self.url = self.fix_url(res['url']) #4324
         soup = Soup(res['html'])
         if is_captcha(soup, cw):
             def f(html):
                 return not is_captcha(Soup(html))
-            clf2.solve(self.url, self.session, cw, show=True, f=f)
+            res = clf2.solve(self.url, self.session, cw, show=True, f=f)
+        self.url = self.fix_url(res['url']) #4324
 
     @classmethod
     def fix_url(cls, url):
@@ -48,6 +48,8 @@ class Downloader_tiktok(Downloader):
         format = compatstr(self.ui_setting.youtubeFormat.currentText()).lower().strip()
 
         def parse_video_url(info, item):
+            if 'url' in item:
+                return item['url']
             if 'tiktok.com' in self.url.lower(): # TikTok
                 return 'https://www.tiktok.com/@{}/video/{}'.format(info.get('uid', ''), item['id']) #5235
             else: # Douyin
@@ -108,87 +110,42 @@ def read_channel(url, session, cw=None, title=None):
     print_ = get_print(cw)
 
     info = {}
-    info['items'] = []
-
     ids = set()
     info['items'] = []
-    sd = {
-        'count_empty': 0,
-        'shown': SHOW,
-        }
 
-    max_pid = get_max_range(cw)
-
-    def f(html, browser=None):
-        soup = Soup(html)
-        if is_captcha(soup, cw):
-            browser.show()
-            sd['shown'] = True
-        elif sd['shown'] and not SHOW:
-            browser.hide()
-            sd['shown'] = False
-        if 'tiktok.com' in url.lower(): # TikTok
-            try: #6114
-                st = soup.find(['h1', 'h2'], class_='share-title') or soup.find(['h1', 'h2'], class_=lambda c: c and 'ShareTitle' in c)
-                info['uid'] = st.text.strip()
-                st = soup.find(['h1', 'h2'], class_='share-sub-title') or soup.find(['h1', 'h2'], class_=lambda c: c and 'ShareSubTitle' in c)
-                info['nickname'] = st.text.strip()
-            except Exception as e:
-                print_(print_error(e))
-        else: # Douyin
+    if 'tiktok.com' in url.lower(): # TikTok
+        soup = downloader.read_soup(url, session=session, user_agent='facebookexternalhit/1.1')
+        info['uid'] = re.find(r'/@([\w\.-]+)', soup.find('meta', {'property': 'og:url'})['content'], err='no uid')
+        nick = soup.find('meta', {'property': 'og:title'})['content']
+        if nick.endswith(' on TikTok'):
+            nick = nick[:-len(' on TikTok')]
+        info['nickname'] = nick
+    else: # Douyin
+        def f(html, browser=None):
+            soup = Soup(html)
+            if is_captcha(soup):
+                browser.show()
+                return False
             try:
                 info['uid'] = re.find(r'''uniqueId%22%3A%22(.+?)%22''', html, err='no uid')
                 info['nickname'] = json.loads(re.findall(r'''"name"\s*:\s*(".+?")''', html)[-1]) #5896
-            except Exception as e:
-                print_(print_error(e))
-        c = 0
-        ids_now = set()
-        if 'tiktok.com' in url.lower(): # TikTok
-            items = soup.findAll('div', class_='video-feed-item') + soup.findAll('div', class_=lambda c: c and 'DivItemContainer' in c)
-        else: # Douyin
-            items = soup.findAll('a')
-        for item in items:
-            def foo(a):
-                return re.search(PATTERN_VID, a.get('href') or '')
-            as_ = [item] + item.findAll('a') #6119
-            as_ = [a for a in as_ if foo(a)]
-            if not as_:
-                continue
-            m = foo(as_[0])
-            id_video = int(m.group('id'))
-            ids_now.add(id_video)
-            if id_video in ids:
-                continue
-            ids.add(id_video)
-            info['items'].append({'id': id_video})
-            c += 1
+                return True
+            except:
+                return False
+        clf2.solve(url, session, cw, f=f)
 
-        print_('items: {}'.format(len(info['items'])))
-        if len(info['items']) >= max_pid:
-            info['items'] = info['items'][:max_pid]
-            return True
+    options = {
+        'extract_flat': True,
+        'playlistend': get_max_range(cw),
+        }
+    ydl = ytdl.YoutubeDL(options, cw=cw)
+    info_ = ydl.extract_info(url)
 
-        browser.runJavaScript('window.scrollTo(0, document.body.scrollHeight);')
-        sleep(15, cw)
-
-        if c or (ids_now and min(ids_now) > min(ids)):
-            sd['count_empty'] = 0
-        else:
-            print_('empty')
-            sd['count_empty'] += 1
-        if title is None:
-            foo = '{} (tiktok_{})'.format(info.get('nickname', '?'), info.get('uid', '?'))
-        else:
-            foo = title
-        msg = '{}  {} - {}'.format(tr_('읽는 중...'), foo, len(info['items']))
-        if cw:
-            cw.setTitle(msg)
-        else:
-            print(msg)
-        return sd['count_empty'] > 4
-    res = clf2.solve(url, session, cw, f=f, timeout=1800, show=SHOW, delay=0)
+    for e in info_['entries']:
+        info['items'].append({'url': e['webpage_url']})
 
     if not info['items']:
         raise Exception('no items')
 
     return info
+

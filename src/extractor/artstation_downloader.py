@@ -1,24 +1,24 @@
 #coding:utf8
-import os
-import json
 import downloader
 from error_printer import print_error
 from translator import tr_
-from utils import Downloader, Soup, get_print, lazy, Session, try_n, LazyUrl, clean_title, check_alive
+from utils import Downloader, Soup, get_print, lazy, Session, try_n, File, clean_title, check_alive, File, get_ext, get_max_range
+import dateutil.parser
+import utils
 
 
-class Image:
+class File_artstation(File):
+    type = 'artstation'
+    format = '[date] name_ppage'
+    c_alter = 0
 
-    def __init__(self, post_url, date, url, page, name, data):
-        self.post_url = post_url
-        self.url = LazyUrl(post_url, lambda _: url.replace('/large/', '/4k/'), self, url)
-        self.page = page
-        self.data = data
-        ext = os.path.splitext(url.split('?')[0])[1]
-        self.filename = f'[{date}] {name}_p{page}{ext}'
-
-    def __repr__(self):
-        return f'Image({self.filename})'
+    def alter(self): #6401
+        self.c_alter += 1
+        if self.c_alter % 2 == 0:
+            url = self['url']
+        else:
+            url = self['url'].replace('/4k/', '/large/')
+        return url
 
 
 
@@ -29,7 +29,14 @@ class Downloader_artstation(Downloader):
     ACCEPT_COOKIES = [r'(.*\.)?artstation\.(com|co)']
     url_main = None
 
+    @try_n(8)
     def init(self):
+        # 3849
+        self.session = Session()
+
+        import clf2
+        clf2.solve(self.url, self.session, self.cw)
+
         _ = self._id.replace('artstation_', '', 1)
         self.url_main = f'https://www.artstation.com/{_}'
 
@@ -39,9 +46,6 @@ class Downloader_artstation(Downloader):
             self.url = self.url_main
         self.print_(self.url)
 
-        # 3849
-        self.session = Session('chrome')
-
     @lazy
     def _id(self):
         _id = get_id(self.url, self.cw)
@@ -50,8 +54,7 @@ class Downloader_artstation(Downloader):
     @lazy
     @try_n(2)
     def name(self):
-        html = downloader.read_html(self.url_main, session=self.session)
-        soup = Soup(html)
+        soup = downloader.read_soup(self.url_main, session=self.session)
         name = soup.find('meta', {'property': 'og:title'}).attrs['content']
         return clean_title(f'{name} ({self._id})')
 
@@ -68,7 +71,7 @@ class Downloader_artstation(Downloader):
             imgs = get_imgs(id_, self.title, self.session, cw=self.cw)
 
         for img in imgs:
-            self.urls.append(img.url)
+            self.urls.append(img)
 
         self.title = self.name
 
@@ -127,11 +130,13 @@ def get_imgs(id_, title, session, cw=None):
     while i < len(datas):
         check_alive(cw)
         data = datas[i]
-        date = data['created_at'][2:10]
+        date = data['created_at']
         post_url = data['permalink']
         #print('post_url', post_url)
         id_art = get_id_art(post_url)
         imgs += get_imgs_page(id_art, session, date=date, cw=cw, names=names)
+        if len(imgs) >= get_max_range(cw):
+            break
         if cw:
             cw.setTitle(f'{tr_("이미지 읽는 중...")}  {title} - {i+1} / {len(datas)}  ({len(imgs)})')
         else:
@@ -188,15 +193,15 @@ def get_imgs_page(id_art, session, date=None, cw=None, names=None):
         names.add(name.lower())
 
     try:
-        html = downloader.read_html(url_json, session=session, referer=post_url)
-        data = json.loads(html)
+        data = downloader.read_json(url_json, session=session, referer=post_url)
         imgs_ = data['assets']
     except Exception as e:
         print_(print_error(e))
         return []
 
     if date is None:
-        date = data['created_at'][2:10]
+        date = data['created_at']
+    date = dateutil.parser.parse(date)
 
     imgs = []
     for page, img in enumerate(imgs_):
@@ -204,15 +209,13 @@ def get_imgs_page(id_art, session, date=None, cw=None, names=None):
             print('no img')
             continue
         url = None
-        video = None
         embed = img.get('player_embedded')
         if embed:
             soup = Soup(embed)
             url_embed = soup.find('iframe').attrs['src']
             print_(f'embed: {url_embed}')
             try:
-                html = downloader.read_html(url_embed, session=session, referer=post_url)
-                soup = Soup(html)
+                soup = downloader.read_soup(url_embed, post_url, session=session)
                 v = soup.find('video')
                 if v:
                     url = v.find('source').attrs['src']
@@ -223,19 +226,20 @@ def get_imgs_page(id_art, session, date=None, cw=None, names=None):
                     url = soup.find('link', {'rel': 'canonical'}).attrs['href']
                     print_(f'YouTube: {url}')
                     raise Exception('YouTube')
-##                    from extractor import youtube_downloader
-##                    video = youtube_downloader.Video(url, cw=cw)
-##                    video.data = data
                 except Exception as e:
                     print(e)
                     url = None
         if not url:
             url = img['image_url']
 
-        if video:
-            img = video
-        else:
-            img = Image(post_url, date, url, page, name, data)
+        d = {
+            'date': date,
+            'name': name,
+            'page': page,
+            }
+        filename = utils.format('artstation', d, get_ext(url))
+        img = File_artstation({'referer':post_url, 'url':url.replace('/large/', '/4k/'), 'name': filename})
+        img.data = data
 
         imgs.append(img)
 

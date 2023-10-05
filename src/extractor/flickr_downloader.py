@@ -1,126 +1,95 @@
-#coding: utf-8
-import downloader
-import flickr_api
-from timee import sleep
-from utils import Downloader, LazyUrl, query_url, clean_title, check_alive
-import os
-from translator import tr_
+from utils import Downloader, File, Session, urljoin, get_ext, clean_title, Soup, check_alive
+import utils
 import ree as re
-from datetime import datetime
-import flickr_auth
+import downloader
+from ratelimit import limits, sleep_and_retry
+import clf2
+from timee import time
+TIMEOUT = 10
 
 
-alphabet = '123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ'
-base = len(alphabet)
-def b58encode(div, s=''):
-    if div >= base:
-        div, mod = divmod(div, base)
-        return b58encode(div, alphabet[mod] + s)
-    return alphabet[div] + s
-def b58decode(s):
-    return sum(alphabet.index(c) * pow(base, i) for i, c in enumerate(reversed(s)))
+class File_flickr(File):
+    type = 'flickr'
+    format = '[date] id'
 
-
-
-class Image:
-    def __init__(self, photo):
-        self.photo = photo
-        self.id = photo.id
-        self.filename = None
-
-        def f(_=None):
-            url = photo.getPhotoFile()
-            #url = 'https://flic.kr/p/{}'.format(b58encode(int(photo.id)))
-            ext = os.path.splitext(url)[1]
-            date = datetime.fromtimestamp(int(photo.dateuploaded))
-            date = '{:02}-{:02}-{:02}'.format(date.year%100, date.month, date.day)
-            self.filename = '[{}] {}{}'.format(date, self.id, ext)
-            return url
-        self.url = LazyUrl('flickr_{}'.format(self.id), f, self)
-
-
-def find_ps(url):
-    user = flickr_api.Person.findByUrl(url)
-    id = re.search('/albums/([0-9]+)', url).groups()[0]
-    pss = user.getPhotosets()
-    for ps in pss:
-        if ps.id == id:
-            break
-    else:
-        raise Exception('Not found photoset id')
-    return user, ps
-
+    @sleep_and_retry
+    @limits(1, 1)
+    def get(self):
+        url = self['referer']
+        soup = downloader.read_soup(url, session=self.session)
+        img = soup.find('meta', {'property': 'og:image'})['content']
+        date = re.find(r'"dateCreated":{"data":"([0-9]+)"', soup.html, err='no date')
+        ext = get_ext(img)
+        d = {
+            'date': int(date),
+            'id': re.find(r'/photos/[^/]+/([0-9]+)', url, err='no id'),
+            }
+        return {'url': img, 'name': utils.format('flickr', d, ext)}
 
 
 class Downloader_flickr(Downloader):
     type = 'flickr'
     URLS = ['flickr.com']
-    _name = None
+    MAX_CORE = 4
 
     def init(self):
-        if 'flickr.com' in self.url.lower():
-            self.url = self.url.replace('http://', 'https://')
-        else:
-            self.url = 'https://www.flickr.com/people/{}'.format(self.url)
+        self.session = Session()
 
-    @property
-    def name(self):
-        global pss
-        if self._name is None:
-            url = self.url
-            flickr_auth.get_api(url, self.cw)
-            if '/albums/' in url:
-                user, ps = find_ps(url)
-                self._name = '{} (flickr_album_{}_{})'.format(ps.title, user.id, ps.id)
-            else:
-                user = flickr_api.Person.findByUrl(url)
-                self._name = '{} (flickr_{})'.format(user.username, user.id)
-        return clean_title(self._name)
-
+    @classmethod
+    def fix_url(cls, url):
+        url = url.replace('flickr.com/people/', 'flickr.com/photos/')
+        uid = re.find(r'flickr.com/photos/([^/]+)', url)
+        if uid:
+            url = f'https://www.flickr.com/photos/{uid}'
+        return url
 
     def read(self):
-        self.title = self.name
+        tab = ''.join(self.url.split('/')[3:4])
+        if tab == 'photos':
+            uid = self.url.split('/')[4]
+            title = None
+            ids = set()
+            c = 0
+            ct = None
+            p_max = 1
+            def f(html, browser=None):
+                nonlocal title, c, ct, p_max
+                soup = Soup(html)
+                browser.runJavaScript('window.scrollTo(0,document.body.scrollHeight);')
 
-        imgs = get_imgs(self.url, self.title, cw=self.cw)
+                for a in soup.findAll('a'):
+                    href = a.get('href') or ''
+                    href = urljoin(self.url, href)
+                    p_max = max(p_max, int(re.find(rf'flickr.com/photos/{uid}/page([0-9]+)', href) or 0))
+                    id_ = re.find(rf'/photos/{uid}/([0-9]+)', href)
+                    if not id_:
+                        continue
+                    if id_ in ids:
+                        continue
+                    ids.add(id_)
+                    file = File_flickr({'referer': href})
+                    self.urls.append(file)
 
-        for img in imgs:
-            self.urls.append(img.url)
+                if ids:
+                    uname = soup.h1.text.strip()
+                    title = f'{clean_title(uname)} (flickr_{uid})'
+                    self.cw.setTitle(f'{title} - {len(ids)}')
+                    if c == len(ids):
+                        if not ct:
+                            ct = time()
+                        dt = time() - ct
+                        if dt > TIMEOUT:
+                            return True
+                    else:
+                        ct = None
+                    c = len(ids)
 
-        self.title = self.name
-
-
-def get_imgs(url, title=None, cw=None):
-    flickr_auth.get_api(title, cw)
-    if not flickr_auth.isAuth:
-        raise Exception('No Auth')
-
-
-    if '/albums/' in url:
-        user, ps = find_ps(url)
-        handle = ps
-    else:
-        user = flickr_api.Person.findByUrl(url)
-        handle = user
-
-    photos = []
-
-    per_page = 500
-    for page in range(1, 200):
-        check_alive(cw)
-        photos_new = handle.getPhotos(per_page=per_page, page=page)
-        photos += photos_new
-        if len(photos_new) < per_page:
-            break
-
-        msg = '{}  {} - {}'.format(tr_('읽는 중...'), title, len(photos))
-        if cw:
-            cw.setTitle(msg)
+            p = 1
+            while p <= p_max:
+                url = f'https://www.flickr.com/photos/{uid}/page{p}'
+                self.print_(url)
+                clf2.solve(url, session=self.session, f=f)
+                p += 1
+            self.title = title
         else:
-            print(msg)
-
-    imgs = []
-    for photo in photos:
-        img = Image(photo)
-        imgs.append(img)
-
-    return imgs
+            raise NotImplementedError(tab)

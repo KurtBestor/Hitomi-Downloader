@@ -51,14 +51,16 @@ class Downloader_lhscan(Downloader):
     type = 'lhscan'
     URLS = [
         #'lhscan.net', 'loveheaven.net',
-        'lovehug.net', 'welovemanga.',
+        'lovehug.net', 'welovemanga.', 'nicomanga.com',
         ]
     MAX_CORE = 16
     display_name = 'LHScan'
 
     def init(self):
         self.soup, self.session = get_soup_session(self.url, self.cw)
-        if not self.soup.find('ul', class_='manga-info'):
+        try:
+            self.name
+        except:
             raise errors.Invalid('{}: {}'.format(tr_('목록 주소를 입력해주세요'), self.url))
 
     @classmethod
@@ -99,9 +101,13 @@ def get_imgs_page(page, referer, session, cw=None):
         pass
     soup = Soup(html)
 
-    cid = re.find(r'''load_image\(([0-9]+)''', html)
-    if cid: #6186
-        url_api = urljoin(page.url, f'/app/manga/controllers/cont.listImg.php?cid={cid}')
+    m = re.find(r'''(load_image|imgsListchap)\(([0-9]+)''', html)
+    if m: #6186
+        cid = m[1]
+        if utils.domain(page.url, 2).lower() == 'nicomanga.com':
+            url_api = urljoin(page.url, f'/app/manga/controllers/cont.imgsList.php?cid={cid}')
+        else:
+            url_api = urljoin(page.url, f'/app/manga/controllers/cont.listImg.php?cid={cid}')
         soup = downloader.read_soup(url_api, page.url, session=session)
 
     imgs = []
@@ -125,6 +131,8 @@ def get_imgs_page(page, referer, session, cw=None):
         if '/uploads/lazy_loading.gif' in src:
             continue
         if '/xstaff.jpg.pagespeed.ic.gPQ2SGcYaN.webp' in src:
+            continue
+        if '/uploads/loading-mm.gif' in src:
             continue
         src = src.replace('\n', '').replace('\r', '') #5238
         #6105
