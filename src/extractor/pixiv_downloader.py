@@ -48,7 +48,6 @@ class Downloader_pixiv(Downloader):
         soup = Soup(res['html'])
 
         if soup.find('a', href=lambda h: h and '/login.php' in h):
-            self.print_('yee')
             def f(html, browser=None):
                 soup = Soup(html)
                 for div in soup.findAll('div'):
@@ -61,7 +60,6 @@ class Downloader_pixiv(Downloader):
                 res = clf2.solve('https://accounts.pixiv.net/login', session=self.session, cw=self.cw, f=f, delay=3, w=560, h=920, timeout=120)
             except clf2.Timeout:
                 raise LoginRequired()
-            self.print_('yeee')
             res = clf2.solve(self.url, session=self.session, cw=self.cw)
             soup = Soup(res['html'])
 
@@ -221,11 +219,10 @@ class PixivAPI:
 
 class Image():
     local = False
-    def __init__(self, url, referer, id_, p, format_, info, cw, ugoira=None):
+    def __init__(self, url, referer, id_, p, info, cw, ugoira=None):
         self._url = url
         self.id_ = id_
         self.p = p
-        self.format_ = format_
         self.artist = info['artist']
         self.artistid = info['artist_id'] #3636
         self.title = info['raw_title']
@@ -235,16 +232,15 @@ class Image():
         self.url = LazyUrl(referer, self.get, self, pp=self.pp, detect_local=not ugoira)
 
     def get(self, referer):
-        ext = get_ext(self._url)
         d ={
             'id': self.id_,
             'page': self.p,
             'artist': self.artist,
             'artistid': self.artistid,
             'title': self.title,
+            'date': self.utime,
             }
-        name = utils.format(self.format_, d)
-        self.filename = clean_title(name.strip(), allow_dot=True, n=-len(ext)) + ext
+        self.filename = utils.format('pixiv', d, get_ext(self._url))
         if self.ugoira and self.ugoira['ext']: #3355
             filename_local = os.path.join(self.cw.dir, self.filename)
             filename_local = '{}{}'.format(os.path.splitext(filename_local)[0], self.ugoira['ext'])
@@ -320,7 +316,6 @@ def get_info(url, session, cw=None, depth=0, tags_add=None):
     imgs = []
 
     ugoira_ext = [None, '.gif', '.webp', '.png'][utils.ui_setting.ugoira_convert.currentIndex()] if utils.ui_setting else None
-    format_ = compatstr(utils.ui_setting.pixivFormat.currentText()) if utils.ui_setting else 'id_ppage'
 
     max_pid = get_max_range(cw)
 
@@ -346,12 +341,12 @@ def get_info(url, session, cw=None, depth=0, tags_add=None):
                     'ext': ugoira_ext,
                     'delay': [frame['delay'] for frame in data['frames']],
                     }
-                img = Image(data['originalSrc'], url, id_, 0, format_, info, cw, ugoira=ugoira)
+                img = Image(data['originalSrc'], url, id_, 0, info, cw, ugoira=ugoira)
                 imgs.append(img)
             else:
                 data = api.pages(id_)
                 for img in data:
-                    img = Image(img['urls']['original'], url, id_, len(imgs), format_, info, cw)
+                    img = Image(img['urls']['original'], url, id_, len(imgs), info, cw)
                     imgs.append(img)
         else:
             print('tags mismatched')
@@ -578,7 +573,7 @@ def process_ids(ids, info, imgs, session, cw, depth=0, tags_add=None):
                         info_illust = get_info('https://www.pixiv.net/en/artworks/{}'.format(id_), session, cw, depth=depth+1, tags_add=tags_add)
                         res[i] = info_illust['imgs']
                 except Exception as e:
-                    if depth == 0 and (e.args and e.args[0] == '不明なエラーが発生しました' or type(e) == errors.LoginRequired): # logout during extraction
+                    if depth == 0 and (e.args and e.args[0] == '不明なエラーが発生しました' or isinstance(e, errors.LoginRequired)): # logout during extraction
                         res[i] = e
                     print_('process_ids error (id: {}, d:{}):\n{}'.format(id_, depth, print_error(e)))
                 finally:

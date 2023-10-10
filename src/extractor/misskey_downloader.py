@@ -1,23 +1,29 @@
-from utils import Downloader, Session, clean_title, get_ext, errors, check_alive, tr_, try_n, File
+from utils import Downloader, Session, clean_title, get_ext, errors, check_alive, tr_, try_n, File, get_max_range
 import downloader
 import ree as re
 from ratelimit import limits, sleep_and_retry
 from datetime import datetime
 import utils
+import errors
 DOMAIN = 'misskey.io'
 SUBFOLDER = True
-if not utils.SD.get('misskey', {}).get('format'):
-    utils.SD.setdefault('misskey', {})
-    utils.SD['misskey']['format'] = '[date] id_ppage'
+
+
+class File_misskey(File):
+    type = 'misskey'
+    format = '[date] id_ppage'
 
 
 def get_file(nid, url, referer, session, p, time):
     ext = get_ext(url) or downloader.get_ext(url, session, referer)
-    date = datetime.fromtimestamp(float(time))
-    date = date.strftime('%y-%m-%d') # local time
-    filename = utils.SD['misskey']['format'].replace('date', date).replace('id', str(nid)).replace('page', str(p)) + ext
+    d = {
+        'date': time,
+        'id': str(nid),
+        'page': str(p),
+        }
+    filename = utils.format('misskey', d, ext)
     info = {'name': filename, 'url': url, 'referer': referer}
-    return File(info)
+    return File_misskey(info)
 
 
 def get_time(note):
@@ -44,6 +50,8 @@ class Downloader_misskey(Downloader):
 
     def init(self):
         self.session = Session()
+        if f'{DOMAIN}/notes/' in self.url:
+            raise errors.Invalid(tr_('개별 다운로드는 지원하지 않습니다: {}').format(self.url))
 
     @try_n(4, sleep=5)
     @sleep_and_retry
@@ -99,6 +107,7 @@ class Downloader_misskey(Downloader):
             self.title = title = f'{clean_title(self.artist)} (misskey_@{username})'
             untilId = None
             nids = set()
+            n = get_max_range(self.cw)
             while check_alive(self.cw):
                 data = {"userId":uid,
                         "limit":30,
@@ -120,4 +129,6 @@ class Downloader_misskey(Downloader):
                         self.urls.append(file)
                     untilId = nid
                 self.cw.setTitle(f'{tr_("읽는 중...")}  {title} - {len(self.urls)}')
+                if len(self.urls) >= n:
+                    break
             self.title = title

@@ -540,6 +540,6 @@ def get_videos(url, session, cw=None):
         hrefs = filter_range(hrefs, cw.range)
         cw.fped = True
 
-    info['hrefs'] = hrefs
+    info['hrefs'] = hrefs[:max_pid]
 
     return info

@@ -1,7 +1,7 @@
 #coding:utf8
 import downloader
 import ree as re
-from utils import Soup, urljoin, LazyUrl, Downloader, try_n, join, get_ext
+from utils import Soup, urljoin, File, Downloader, try_n, join, get_ext
 import os
 import json
 import clf2
@@ -27,7 +27,7 @@ class Downloader_nhentai(Downloader):
 
     @classmethod
     def fix_url(cls, url):
-        return 'https://nhentai.net/g/{}/'.format(get_id(url))
+        return f'https://nhentai.net/g/{get_id(url)}/'
 
     def read(self):
         info, imgs = get_imgs(get_id(self.url), self.session)
@@ -40,36 +40,9 @@ class Downloader_nhentai(Downloader):
         series = info.seriess[0] if info.seriess else 'N／A'
         title = self.format_title(info.type, info.id, info.title, artist, group, series, lang)
 
-        for img in imgs:
-            self.urls.append(img.url)
+        self.urls += imgs
 
         self.title = title
-
-
-@LazyUrl.register
-class LazyUrl_nhentai(LazyUrl):
-    type = 'nhentai'
-    def dump(self):
-        referer = self._url
-        url = self.image.url_img
-        return {
-            'referer': referer,
-            'url': url,
-            'p': self.image.p,
-            }
-    @classmethod
-    def load(cls, data):
-        referer = data['referer']
-        url = data['url']
-        img = Image(referer, url, data['p'])
-        return img.url
-
-
-class Image:
-    def __init__(self, url_page, url_img, p):
-        self.p = p
-        self.url = LazyUrl_nhentai(url_page, lambda _: url_img, self)
-        self.filename = '{:04}{}'.format(p, get_ext(url_img))
 
 
 class Info:
@@ -89,9 +62,9 @@ class Info:
 
 @try_n(4)
 def get_info(id, session):
-    url = 'https://nhentai.net/g/{}/1/'.format(id)
-    referer = 'https://nhentai.net/g/{}/'.format(id)
-    html = downloader.read_html(url, referer=referer, session=session)
+    url = f'https://nhentai.net/g/{id}/1/'
+    referer = f'https://nhentai.net/g/{id}/'
+    html = downloader.read_html(url, referer, session=session)
 
     data = html.split('JSON.parse(')[1].split(');')[0]
     gal = json.loads(json.loads(data))
@@ -130,10 +103,11 @@ def get_imgs(id, session):
 
     imgs = []
     for p in range(1, info.p+1):
-        name = '/galleries/{}/{}.{}'.format(info.id_media, p, info.formats[p-1])
-        url_page = 'https://nhentai.net/g/{}/{}/'.format(id, p)
+        name = f'/galleries/{info.id_media}/{p}.{info.formats[p-1]}'
+        url_page = f'https://nhentai.net/g/{id}/{p}/'
         url_img = urljoin(info.host, name)
-        img = Image(url_page, url_img, p)
+        ext = get_ext(url_img)
+        img = File({'url': url_img, 'referer': url_page, 'name': f'{p:04}{ext}'})
         imgs.append(img)
 
     return info, imgs

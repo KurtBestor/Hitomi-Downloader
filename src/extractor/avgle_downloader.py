@@ -2,7 +2,7 @@
 import downloader
 import os
 from m3u8_tools import M3u8_stream
-from utils import Soup, Downloader, LazyUrl, get_print, try_n, clean_title, check_alive
+from utils import Soup, Downloader, LazyUrl, get_print, try_n, clean_title, check_alive, format_filename
 from io import BytesIO
 import constants
 from error_printer import print_error
@@ -74,5 +74,4 @@ class Video:
         self.thumb = BytesIO()
         downloader.download(url_thumb, referer=referer, buffer=self.thumb)
         self.title = title
-        ext = '.mp4'
-        self.filename = '{}{}'.format(clean_title(title, n=-len(ext)), ext)
+        self.filename = format_filename(title, '', '.mp4')

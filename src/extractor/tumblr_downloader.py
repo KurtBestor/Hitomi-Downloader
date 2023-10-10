@@ -200,10 +200,13 @@ def get_id(url):
     if 'tumblr.com/blog/view/' in url:
         url = url.split('tumblr.com/blog/view/')[1]
     if 'tumblr.com' in url:
-        if 'www.tumblr.com' in url:
-            qs = query_url(url)
-            url = qs.get('url', [url])[0]
-        url = url.split('.tumblr.com')[0].split('/')[(-1)]
-    if url == 'www':
-        raise Exception('no id')
+        qs = query_url(url)
+        url_ = qs.get('url')
+        if url_:
+            return get_id(url_)
+        id = url.split('tumblr.com')[0].split('/')[-1].strip('.')
+        if id == 'www':
+            url = re.find(r'tumblr\.com/([^/#?]+)', url, err='no id') #6333
+        else:
+            url = id
     return url

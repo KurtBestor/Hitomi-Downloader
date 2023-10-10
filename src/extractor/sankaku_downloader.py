@@ -7,11 +7,9 @@
 #https://www.sankakucomplex.com/
 import downloader
 import ree as re
-import os
-from utils import Downloader, LazyUrl, urljoin, query_url, get_max_range, get_print, Soup, lazy, Session, clean_title, check_alive
+from utils import Downloader, urljoin, query_url, get_max_range, get_print, Soup, lazy, Session, clean_title, check_alive, File, get_ext
 from translator import tr_
-import urllib
-import sys
+import os
 from timee import sleep
 import constants
 from error_printer import print_error
@@ -19,6 +17,50 @@ from constants import clean_url
 from ratelimit import limits, sleep_and_retry
 from urllib.parse import quote
 import errors
+import utils
+
+
+class File_sankaku(File):
+    type = 'sankaku'
+    format = 'id'
+
+    def get(self):
+        referer = self['referer']
+        if '://' not in referer:
+            return {'url': referer}
+
+        print_ = get_print(self.cw)
+
+        for try_ in range(4):
+            wait(self.cw)
+            html = ''
+            try:
+                html = downloader.read_html(referer, session=self.session)
+                soup = Soup(html)
+                highres = soup.find(id='highres')
+                url = urljoin(referer, highres['href'] if highres else soup.find(id='image')['src'])
+                break
+            except Exception as e:
+                e_msg = print_error(e)
+                if '429 Too many requests'.lower() in html.lower():
+                    t_sleep = 120 * min(try_ + 1, 2)
+                    e = '429 Too many requests... wait {} secs'.format(t_sleep)
+                elif 'post-content-notification' in html: # sankaku plus
+                    print_('Sankaku plus: {}'.format(self['id']))
+                    return ''
+                else:
+                    t_sleep = 5
+                s = '[Sankaku] failed to read image (id:{}): {}'.format(self['id'], e)
+                print_(s)
+                sleep(t_sleep, self.cw)
+        else:
+            raise Exception('can not find image (id:{})\n{}'.format(self['id'], e_msg))
+        soup = Soup('<p>{}</p>'.format(url))
+        url = soup.string
+        d = {
+            'id': self['id'],
+            }
+        return {'url': url, 'name': utils.format('sankaku', d, get_ext(url))}
 
 
 
@@ -109,11 +151,7 @@ class Downloader_sankaku(Downloader):
             self.single = info['single']
             imgs = info['imgs']
 
-        for img in imgs:
-            if isinstance(img, str):
-                self.urls.append(img)
-            else:
-                self.urls.append(img.url)
+        self.urls += imgs
 
         self.title = self.name
 
@@ -131,79 +169,6 @@ def get_imgs_www(url, soup):
             continue
         imgs.append(img)
     return imgs
-
-
-@LazyUrl.register
-class LazyUrl_sankaku(LazyUrl):
-    type = 'sankaku'
-    def dump(self):
-        return {
-            'type': self.image.type,
-            'id': self.image.id,
-            'url': self._url,
-            'referer': self.image.referer,
-            'cw': self.CW,
-            'd': self.DOWNLOADER,
-            'local': self.image.local,
-            'session': self.SESSION,
-            }
-    @classmethod
-    def load(cls, data):
-        img = Image(data['type'], data['id'], data['url'], data['referer'], data['local'], data['cw'], data['d'], data['session'])
-        return img.url
-
-
-class Image:
-    filename = None
-    def __init__(self, type, id, url, referer, local=False, cw=None, d=None, session=None):
-        self.type = type
-        self.id = id
-        self.referer = referer
-        self.cw = cw
-        self.d = d
-        self.local = local
-        self.session = session
-        if local:
-            self.url = url
-            self.filename = os.path.basename(url)
-        else:
-            self.url = LazyUrl_sankaku(url, self.get, self)
-
-    def get(self, url):
-        cw = self.cw
-        d = self.d
-        print_ = get_print(cw)
-
-        for try_ in range(4):
-            wait(cw)
-            html = ''
-            try:
-                html = downloader.read_html(url, referer=self.referer, session=self.session)
-                #url = 'https:' + re.findall('[Oo]riginal:? ?<a href="(//[0-9a-zA-Z_-]{2,2}.sankakucomplex.com/data/.{0,320}?)"', html)[0]
-                soup = Soup(html)
-                highres = soup.find(id='highres')
-                url = urljoin(url, highres['href'] if highres else soup.find(id='image')['src'])
-                break
-            except Exception as e:
-                e_msg = print_error(e)
-                if '429 Too many requests'.lower() in html.lower():
-                    t_sleep = 120 * min(try_ + 1, 2)
-                    e = '429 Too many requests... wait {} secs'.format(t_sleep)
-                elif 'post-content-notification' in html: # sankaku plus
-                    print_('Sankaku plus: {}'.format(self.id))
-                    return ''
-                else:
-                    t_sleep = 5
-                s = '[Sankaku] failed to read image (id:{}): {}'.format(self.id, e)
-                print_(s)
-                sleep(t_sleep, cw)
-        else:
-            raise Exception('can not find image (id:{})\n{}'.format(self.id, e_msg))
-        soup = Soup('<p>{}</p>'.format(url))
-        url = soup.string
-        ext = os.path.splitext(url)[1].split('?')[0]
-        self.filename = '{}{}'.format(self.id, ext)
-        return url
 
 
 def setPage(url, page):
@@ -241,7 +206,7 @@ def get_imgs(url, title=None, cw=None, d=None, types=['img', 'gif', 'video'], se
     if '/post/show/' in url:
         info['single'] = True
         id = get_id(url)
-        info['imgs'] = [Image(type, id, url, None, cw=cw, d=d)]
+        info['imgs'] = [File_sankaku({'type': type, 'id': id, 'referer': url})]
         return info
 
     # Range
@@ -261,7 +226,7 @@ def get_imgs(url, title=None, cw=None, d=None, types=['img', 'gif', 'video'], se
 
     imgs = []
     page = 1
-    url_imgs = set()
+    ids = set()
     url_old = 'https://{}.sankakucomplex.com'.format(type)
     if cw is not None:
         cw.setTitle('{}  {}'.format(tr_('읽는 중...'), title))
@@ -295,6 +260,16 @@ def get_imgs(url, title=None, cw=None, d=None, types=['img', 'gif', 'video'], se
         articles = soup.findAll('span', {'class': 'thumb'})
 
         if not articles:
+            if soup.find(class_='post-premium-browsing_error'): #6418
+                print_('premium error')
+                tags = utils.query_url(url)['tags'][0]
+                tags = re.sub(r'id_range:<[0-9]+', '', tags).strip()
+                tags += f' id_range:<{min(ids)}'
+                url = utils.update_url_query(url, {'tags': tags})
+                url = re.sub(r'&page=[0-9]+', '', url)
+                url = re.sub(r'&next=[0-9]+', '', url)
+                continue
+            print_('no articles')
             break
 
         for article in articles:
@@ -314,19 +289,19 @@ def get_imgs(url, title=None, cw=None, d=None, types=['img', 'gif', 'video'], se
                 url_img = urljoin('https://{}.sankakucomplex.com'.format(type), url_img)
             if '/post/show/' not in url_img: # sankaku plus
                 continue
-            id = re.find(r'p([0-9]+)', article['id'], err='no id') #5892
+            id = int(re.find(r'p([0-9]+)', article['id'], err='no id')) #5892
             #print_(article)
-            if id in local_ids:
+            if str(id) in local_ids:
                 #print('skip', id)
                 local = True
             else:
                 local = False
             #print(url_img)
-            if url_img not in url_imgs:
-                url_imgs.add(url_img)
+            if id not in ids:
+                ids.add(id)
                 if local:
-                    url_img = local_ids[id]
-                img = Image(type, id, url_img, url, local=local, cw=cw, d=d)
+                    url_img = local_ids[str(id)]
+                img = File_sankaku({'type':type, 'id':id, 'referer':url_img})
                 imgs.append(img)
                 if len(imgs) >= max_pid:
                     break
@@ -334,7 +309,7 @@ def get_imgs(url, title=None, cw=None, d=None, types=['img', 'gif', 'video'], se
         try:
             # For page > 50
             pagination = soup.find('div', class_='pagination')
-            url = urljoin('https://{}.sankakucomplex.com'.format(type), pagination.attrs['next-page-url'])
+            url = urljoin('https://{}.sankakucomplex.com'.format(type), utils.html.unescape(pagination.attrs['next-page-url'])) #6326
 ##            #3366
 ##            p = int(re.find(r'[?&]page=([0-9]+)', url, default=1))
 ##            if p > 100:
