@@ -97,7 +97,6 @@ class LazyFile:
 
 
 def get_token(session, cw=None):
-    print_ = get_print(cw)
     token = None
     def f(html, browser=None):
         def callback(r):
@@ -105,7 +104,7 @@ def get_token(session, cw=None):
             token = r
         browser.runJavaScript('window.localStorage.getItem("token")', callback=callback)
         return bool(token)
-    res = clf2.solve('https://iwara.tv', session=session, cw=cw, f=f, timeout=15)
+    clf2.solve('https://iwara.tv', session=session, cw=cw, f=f, timeout=15)
     #print_(f'token: {token}')
     r = session.post('https://api.iwara.tv/user/token', headers={'Authorization': f'Bearer {token}'})
     d = r.json()
@@ -209,7 +208,7 @@ def get_info(url, session, cw, multi_post=False):
     info['title'] = details.find('div', class_='text--h1').text.strip()
     info['username'] = soup.find('a', class_='username')['title']
 
-    content = soup.find('div', class_='videoPlayer') or soup.find('div', class_='page-image__slideshow')
+    soup.find('div', class_='videoPlayer') or soup.find('div', class_='page-image__slideshow')
 
     id = re.find(PATTERN_ID, url, err='no id')[1]
 

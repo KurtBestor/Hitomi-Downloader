@@ -1,6 +1,5 @@
 import downloader
-from utils import Soup, urljoin, Downloader, LazyUrl, Session, try_n, format_filename, clean_title, get_resolution, get_print
-from timee import sleep
+from utils import urljoin, Downloader, LazyUrl, Session, try_n, format_filename, get_resolution, get_print
 import ree as re
 from io import BytesIO
 import clf2

@@ -2,7 +2,7 @@
 import downloader
 from io import BytesIO
 import ree as re
-from utils import Downloader, get_print, compatstr, format_filename, try_n, LazyUrl, get_abr, Session, get_resolution, print_error
+from utils import Downloader, get_print, format_filename, try_n, LazyUrl, get_abr, Session, get_resolution, print_error
 import utils
 import ffmpeg
 import os
@@ -51,7 +51,7 @@ class Video:
             heartbeat_data = heartbeat_info_dict['data'].encode()
             heartbeat_interval = heartbeat_info_dict.get('interval', 30)
 
-            request = ytdl.youtube_dl.utils.sanitized_Request(heartbeat_url, heartbeat_data)
+            request = ytdl.get_ytdl().utils.sanitized_Request(heartbeat_url, heartbeat_data)
 
             def heartbeat():
                 if self.d.status == 'stop':
@@ -118,7 +118,6 @@ class Downloader_nico(Downloader):
         return 'https://{}/watch/{}'.format(domain, id_)
 
     def read(self):
-        ui_setting = self.ui_setting
         if self.cw.format:
             self._format = self.cw.format
 
@@ -140,7 +139,6 @@ class Downloader_nico(Downloader):
 def get_video(session, url, format, cw=None, d=None):
     print_ = get_print(cw)
 
-    id = get_id(url)
     if 'live.nico' in url: #3986
         raise NotImplementedError('nama')
     else:

@@ -3,7 +3,6 @@ import downloader
 from utils import get_ext, LazyUrl, Downloader, try_n, clean_title, get_print, print_error
 import ree as re
 from translator import tr_
-from timee import sleep
 import errors
 from ratelimit import limits, sleep_and_retry
 import clf2

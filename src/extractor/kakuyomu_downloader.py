@@ -1,9 +1,8 @@
 #coding:utf8
 import downloader
 import utils
-from utils import Soup, urljoin, Downloader, LazyUrl, get_outdir, try_n, clean_title, get_print
+from utils import Soup, urljoin, Downloader, LazyUrl, try_n, clean_title, get_print
 import os
-from timee import sleep
 from io import BytesIO
 from translator import tr_
 
@@ -38,13 +37,13 @@ class Downloader_kakuyomu(Downloader):
         self.info = get_info(self.url, cw=self.cw)
 
     def read(self):
-        outdir = get_outdir('kakuyomu')
-
         self.artist = self.info['artist']
         title_dir = clean_title('[{}] {}'.format(self.artist, self.info['title']))
 
+        outdir = utils.dir(self.type, title_dir, self.cw)
+
         for page in self.info['pages']:
-            file = os.path.join(outdir, title_dir, page.filename)
+            file = os.path.join(outdir, page.filename)
             if os.path.isfile(file):
                 self.urls.append(file)
             else:

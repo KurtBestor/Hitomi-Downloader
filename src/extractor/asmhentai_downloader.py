@@ -1,7 +1,7 @@
 #coding: utf8
 import downloader
 import ree as re
-from utils import Soup, urljoin, Downloader, join, Session, get_print, File
+from utils import Soup, urljoin, Downloader, join, Session, File, clean_title
 import os
 from ratelimit import limits, sleep_and_retry
 import utils
@@ -27,7 +27,7 @@ class File_asmhentai(File):
         url = img['data-src']
         name, ext = os.path.splitext(os.path.basename(url).split('?')[0])
         d = {
-            'name': name,
+            'name': clean_title(name),
             }
         return {'url': url, 'name': utils.format('asmhentai', d, ext)}
 
@@ -68,7 +68,6 @@ class Downloader_asmhentai(Downloader):
 
 
 def get_info(url, session, cw):
-    print_ = get_print(cw)
     html = downloader.read_html(url, session=session)
     soup = Soup(html)
 

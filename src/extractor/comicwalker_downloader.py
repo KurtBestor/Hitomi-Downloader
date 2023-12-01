@@ -4,7 +4,6 @@ from utils import urljoin, try_n, Downloader, get_print, clean_title, get_imgs_a
 import ree as re
 from itertools import cycle
 from io import BytesIO
-from timee import sleep
 from translator import tr_
 import page_selector
 import utils
@@ -77,7 +76,7 @@ def get_imgs_page(page, cw):
         if hash is None:
             continue
         d = {
-            'title': page.title,
+            'title': clean_title(page.title),
             'page': len(imgs),
             }
         img = File_comicwalker({'src': src, 'hash': hash, 'referer': page.url, 'name': utils.format('comicwalker', d, '.jpg')})
@@ -113,7 +112,6 @@ def get_pages(url, soup=None):
 
 
 def get_title(soup, cw=None):
-    print_ = get_print(cw)
     div = soup.find('div', class_='comicIndex-box') #6231
     if div is None:
         raise Exception('no title')

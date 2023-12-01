@@ -1,12 +1,11 @@
 import downloader
 import downloader_v3
-from utils import Downloader, get_print, format_filename, clean_title, get_resolution, try_n, Session, uuid, File, get_max_range
+from utils import Downloader, get_print, format_filename, clean_title, get_resolution, try_n, Session, uuid, File, get_max_range, query_url
 import os
 from io import BytesIO
 import ffmpeg
 import math
 import ree as re
-import utils
 import ytdl
 import constants
 from putils import DIR
@@ -154,13 +153,15 @@ class Downloader_bili(Downloader):
     def key_id(cls, url):
         mobj = re.match(_VALID_URL, url)
         video_id = mobj.group('id')
-        return video_id or url
+        qs = query_url(url)
+        p = qs.get('p', ['1'])[0] #6580
+        return f'{video_id or url} {p}'
 
     @property
     def id_(self):
         mobj = re.match(_VALID_URL, self.url)
         video_id = mobj.group('id')
-        anime_id = mobj.group('anime_id')
+        #anime_id = mobj.group('anime_id')
         return video_id
 
     def read(self):

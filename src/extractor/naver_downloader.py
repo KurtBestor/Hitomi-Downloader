@@ -3,8 +3,6 @@ import downloader
 import ree as re
 from utils import urljoin, Downloader, Soup, LazyUrl, clean_title, get_ext, get_print
 import json
-from timee import sleep
-import collections
 import errors
 PATTERNS = ['.*blog.naver.com/(?P<username>.+)/(?P<pid>[0-9]+)',
             '.*blog.naver.com/.+?blogId=(?P<username>[^&]+).+?logNo=(?P<pid>[0-9]+)',
@@ -35,6 +33,7 @@ class Downloader_naver(Downloader):
     type = 'naver'
     URLS = ['blog.naver.', '.blog.me']
     display_name = 'Naver Blog'
+    ACCEPT_COOKIES = [r'(.*\.)?naver\.com', r'(.*\.)?blog\.me']
 
     def init(self):
         username, pid = get_id(self.url)
@@ -53,7 +52,6 @@ class Downloader_naver(Downloader):
 
         imgs = get_imgs(self.url, self.cw)
 
-        filenames = {}
         for img in imgs:
             self.urls.append(img.url)
 

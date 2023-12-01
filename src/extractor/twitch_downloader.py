@@ -1,11 +1,10 @@
 #coding: utf8
 import downloader
 import ytdl
-from utils import Downloader, get_outdir, Soup, LazyUrl, try_n, compatstr, format_filename, get_ext, clean_title, Session, get_print, get_resolution, get_max_range
+from utils import Downloader, LazyUrl, try_n, format_filename, get_ext, Session, get_print, get_resolution, get_max_range
 from io import BytesIO
 from m3u8_tools import M3u8_stream
 import ree as re
-from translator import tr_
 import errors
 import utils
 
@@ -30,33 +29,45 @@ class Downloader_twitch(Downloader):
 
     @classmethod
     def fix_url(cls, url):
+        url = url.replace('m.twitch.tv', 'www.twitch.tv')
         if re.search(r'/(videos|clips)\?filter=', url):
             return url.strip('/')
-        return url.split('?')[0].strip('/')
+        url = url.split('?')[0].strip('/')
+        filter = cls.get_filter(url)
+        if filter == 'live':
+            url = '/'.join(url.split('/')[:4])
+        return url
+
+    @classmethod
+    def get_filter(cls, url):
+        if url.count('/') == 3:
+            if 'www.twitch.tv' in url or '//twitch.tv' in url:
+                filter = 'live'
+            else:
+                filter = None
+        elif url.count('/') == 4:
+            filter = re.find(r'filter=([0-9a-zA-Z_]+)', url) or re.find(r'[0-9a-zA-Z_]+', url.split('/')[-1])
+            if filter is not None and filter.isdigit():
+                filter = None
+        else:
+            filter = None
+        if filter in ['about', 'schedule']:
+            filter = 'live'
+        return filter
 
     def read(self):
         if '/directory/' in self.url.lower():
             raise errors.Invalid('[twitch] Directory is unsupported: {}'.format(self.url))
 
-        if self.url.count('/') == 3:
-            if 'www.twitch.tv' in self.url or '//twitch.tv' in self.url:
-                filter = 'live'
-            else:
-                filter = None
-        elif self.url.count('/') == 4:
-            filter = re.find(r'filter=([0-9a-zA-Z_]+)', self.url) or re.find(r'[0-9a-zA-Z_]+', self.url.split('/')[-1])
-            if filter is not None and filter.isdigit():
-                filter = None
-        else:
-            filter = None
+        filter = self.get_filter(self.url)
 
         if filter is None:
-            video = Video(self.url, self.cw)
+            video = Video(self.url, self.session, self.cw)
             video.url()
             self.urls.append(video.url)
             self.title = video.title
         elif filter == 'live':
-            video = Video(self.url, self.cw, live=True)
+            video = Video(self.url, self.session, self.cw, live=True)
             video.url()
             self.urls.append(video.url)
             self.title = video.title
@@ -72,6 +83,12 @@ class Downloader_twitch(Downloader):
         downloader.download(video.url_thumb, buffer=thumb) #5418
 
         self.setIcon(thumb)
+        if filter == 'live':
+            d = {}
+            d['url'] = self.url
+            d['title'] = self.artist
+            d['thumb'] = thumb.getvalue()
+            utils.update_live(d)
 
 
 @try_n(2)
@@ -87,7 +104,7 @@ def get_videos(url, cw=None):
     ydl = ytdl.YoutubeDL(options, cw=cw)
     info = ydl.extract_info(url)
     for e in info['entries']:
-        video = Video(e['url'], cw)
+        video = Video(e['url'], self.session, cw)
         video.id = int(e['id'])
         videos.append(video)
         if 'name' not in info:
@@ -98,7 +115,10 @@ def get_videos(url, cw=None):
     return info
 
 
-def alter(seg):
+def alter(seg, cw):
+    if 'amazon' in seg.raw.title.lower():
+        get_print(cw)('strip ads')
+        return []
     segs = []
     if '-muted' in seg.url:
         seg_ = seg.copy()
@@ -129,14 +149,16 @@ def extract_info(url, cw=None):
 class Video:
     _url = None
 
-    def __init__(self, url, cw, live=False):
+    def __init__(self, url, session, cw, live=False):
         self.url = LazyUrl(url, self.get, self)
+        self.session = session
         self.cw = cw
         self._live = live
 
     @try_n(4)
     def get(self, url):
         print_ = get_print(self.cw)
+        session = self.session
         if self._url:
             return self._url
         info = extract_info(url, self.cw)
@@ -168,13 +190,34 @@ class Video:
         id = info['display_id']
 
         if self._live:
-            video = utils.LiveStream(video, headers=video_best.get('http_headers', {}))
+            if utils.SD['twitch']['strip_ads']:
+                video = M3u8_stream(video, n_thread=4, alter=alter, session=session)
+            else:
+                video = utils.LiveStream(video, headers=video_best.get('http_headers', {}))
             ext = '.mp4'
         else:
             if ext.lower() == '.m3u8':
-                video = M3u8_stream(video, n_thread=4, alter=alter)
+                video = M3u8_stream(video, n_thread=4, alter=alter, session=session)
                 ext = '.mp4'
         self.filename = format_filename(self.title, id, ext, artist=self.artist)
         self.url_thumb = info['thumbnail']
         self._url = video
         return self._url
+
+
+class Live_twitch(utils.Live):
+    type = 'twitch'
+
+    @classmethod
+    def is_live(cls, url):
+        return Downloader.get('twitch').get_filter(url) == 'live'
+
+    @classmethod
+    def check_live(cls, url):
+        ydl = ytdl.YoutubeDL()
+        try:
+            ydl.extract_info(url)
+            return True
+        except Exception as e:
+            print(e)
+            return False

@@ -1,8 +1,8 @@
 #coding:utf8
 import downloader
 import ree as re
-from utils import Soup, urljoin, File, Downloader, try_n, join, get_ext
-import os
+from utils import urljoin, File, Downloader, try_n, join, get_ext
+import utils
 import json
 import clf2
 
@@ -13,6 +13,10 @@ def get_id(url):
     except:
         return int(re.find('/g/([0-9]+)', url))
 
+
+class File_nhentai(File):
+    type = 'nhentai'
+    format = 'page:04;'
 
 
 class Downloader_nhentai(Downloader):
@@ -107,7 +111,10 @@ def get_imgs(id, session):
         url_page = f'https://nhentai.net/g/{id}/{p}/'
         url_img = urljoin(info.host, name)
         ext = get_ext(url_img)
-        img = File({'url': url_img, 'referer': url_page, 'name': f'{p:04}{ext}'})
+        d = {
+            'page': p,
+            }
+        img = File_nhentai({'url': url_img, 'referer': url_page, 'name': utils.format('nhentai', d, ext)})
         imgs.append(img)
 
     return info, imgs

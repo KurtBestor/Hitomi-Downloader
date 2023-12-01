@@ -86,6 +86,7 @@ def _get_video(url, session, cw, ie_key=None, allow_m3u8=True):
         'noplaylist': True,
         #'extract_flat': True,
         'playlistend': 1,
+        'writesubtitles': True,
         }
     if ytdl.get_extractor_name(url) == 'spankbang':
         options['legacyserverconnect'] = True #6545

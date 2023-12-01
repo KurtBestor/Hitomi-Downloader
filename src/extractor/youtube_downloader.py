@@ -2,18 +2,13 @@
 import ytdl
 import downloader
 import downloader_v3
-from constants import isdeleted
 from error_printer import print_error
 from timee import sleep
 import ree as re
-from utils import urljoin, Downloader, Soup, try_n, get_print, filter_range, LazyUrl, query_url, compatstr, uuid, get_max_range, format_filename, clean_title, get_resolution, get_abr, Session, fix_dup, File
+from utils import urljoin, Downloader, try_n, get_print, filter_range, compatstr, uuid, get_max_range, format_filename, get_resolution, get_abr, Session, fix_dup, File, clean_title
 import ffmpeg
-import sys
 import constants
-import requests
-import chardet
 import os
-from random import randrange
 import utils
 from translator import tr, tr_
 from datetime import datetime
@@ -21,6 +16,7 @@ import threading
 from putils import DIR
 import errors
 MODE = 'query'
+utils.TOKENS['youtube'] = ['title', 'id', 'artist', 'date'] + utils.ADD_TOKENS
 
 
 def print_streams(streams, cw):
@@ -250,7 +246,30 @@ class Video(File):
         #title =  soup.title.text.replace('- YouTube', '').strip()
         self.title = title
         ext = '.' + self.stream.subtype
-        filename = format_filename(title, yt.video_id, ext, artist=yt.info['uploader'], date=time, width=None if type == 'audio' else self.stream.video['width'], height=None if type == 'audio' else self.stream.video['height']) #4953, #5529
+
+        #6425
+        d = {}
+        v = self.stream.video
+        if type != 'audio':
+            d['width'] = v['width']
+            d['height'] = v['height']
+        tokens = ['fps',  'vcodec', 'acodec', 'audio_channels', 'language', 'vbr', 'abr', 'tbr']
+        for token in tokens:
+            value = v.get(token)
+            if isinstance(value, str):
+                value = clean_title(value)
+            d[token] = value
+        if self.stream_audio:
+            v = self.stream_audio.video
+            for token in tokens:
+                value = v.get(token)
+                if isinstance(value, str):
+                    value = clean_title(value)
+                _ = d.get(token)
+                if not _ or _ == 'none':
+                    d[token] = value
+
+        filename = format_filename(title, yt.video_id, ext, artist=yt.info['uploader'], date=time, d=d) #4953, #5529
         filename = fix_dup(filename, CACHE_FILENAMES[self['uid_filenames']]) #6235
         print_(f'filename: {filename}')
 
@@ -405,9 +424,10 @@ class Downloader_youtube(Downloader):
     def fix_url(cls, url): #2033
         if not re.match('https?://.+', url, re.I):
             url = 'https://www.youtube.com/watch?v={}'.format(url)
-        qs = query_url(url)
-        if 'v' in qs:
-            url = url.split('?')[0] + '?v={}'.format(qs['v'][0])
+
+        id_ = get_id(url)
+        if id_: #6485
+            url = 'https://www.youtube.com/watch?v={}'.format(id_)
 
         for header in ['channel', 'user', 'c']: #5365, #5374
             tab = re.find(rf'/{header}/[^/]+/?(.+)?', url, re.I)
@@ -417,7 +437,7 @@ class Downloader_youtube(Downloader):
             if tab in ['', 'featured'] and '/{}/'.format(header) in url.lower():
                 username = re.find(r'/{}/([^/\?]+)'.format(header), url, re.I)
                 url = urljoin(url, '/{}/{}/videos'.format(header, username))
-        m = re.find(rf'youtube.com/(@[^/]+)/?(.+)?', url, re.I)
+        m = re.find(r'youtube.com/(@[^/]+)/?(.+)?', url, re.I)
         if m and m[1] in ['', 'featured']: #6129
             url = urljoin(url, f'/{m[0]}/videos')
         return url.strip('/')
@@ -426,10 +446,12 @@ class Downloader_youtube(Downloader):
     def key_id(cls, url):
         return get_id(url) or url
 
+    @classmethod
+    def is_channel_url(cls, url):
+        return '/channel/' in url or '/user/' in url or '/c/' in url or ''.join(url.split('/')[3:4]).startswith('@')
+
     def read(self):
-        ui_setting = self.ui_setting
         cw = self.cw
-        print_ = get_print(cw)
         if self.yt_type == 'video':
             res = self.__format.get('res', get_resolution())
             info = get_videos(self.url, self.session, type=self.yt_type, max_res=res, only_mp4=False, audio_included=not True, cw=cw)
@@ -483,7 +505,7 @@ def get_videos(url, session, type='video', only_mp4=False, audio_included=False,
 
     n = get_max_range(cw)
 
-    if '/channel/' in url or '/user/' in url or '/c/' in url or ''.join(url.split('/')[3:4]).startswith('@'): #5445
+    if Downloader.get('youtube').is_channel_url(url): #5445
         reverse = utils.SD['youtube']['channel_reverse'] #5848
         tab = ''.join(url.split('/')[4:5])
         if tab == '': #5901
@@ -526,6 +548,7 @@ def read_playlist(url, n, cw=None, reverse=False):
     options = {
             'extract_flat': True,
             'playlistend': n,
+            'writesubtitles': True,
             }
     ydl = ytdl.YoutubeDL(options, cw=cw)
     info = ydl.extract_info(url)
@@ -616,7 +639,7 @@ def select():
         tr(win)
         win.setWindowOpacity(constants.opacity_max)
         try:
-            res = win.exec_()
+            res = win.exec()
             utils.log(f'youtube.select.res: {res}')
             if not res:
                 return selector.Cancel

@@ -1,6 +1,7 @@
 #coding: utf8
 import downloader
-from utils import Downloader, Session, Soup, LazyUrl, urljoin, get_ext, clean_title, try_n, get_outdir
+from utils import Downloader, Session, Soup, LazyUrl, urljoin, get_ext, clean_title, try_n
+import utils
 import ree as re
 from translator import tr_
 import clf2
@@ -124,7 +125,7 @@ class Downloader_hentaicosplay(Downloader):
             self.cw.setTitle('{} {} ({} / {})'.format(tr_('읽는 중...'), title, i+1, len(pages)))
 
         names = {}
-        dirname = os.path.join(get_outdir(self.type), clean_title(title))
+        dirname = utils.dir(self.type, clean_title(title), self.cw)
         try:
             files = os.listdir(dirname)
         except:

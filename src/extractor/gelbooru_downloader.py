@@ -1,15 +1,12 @@
 #coding: utf-8
 import downloader
 import ree as re
-import os
 from utils import Downloader, urljoin, query_url, Soup, get_max_range, get_print, LazyUrl, get_ext, clean_title, Session, check_alive
 from translator import tr_
 try:
     from urllib import quote # python2
 except:
     from urllib.parse import quote # python3
-import sys
-from timee import sleep
 from constants import clean_url
 
 

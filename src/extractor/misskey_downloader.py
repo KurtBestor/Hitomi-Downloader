@@ -1,4 +1,4 @@
-from utils import Downloader, Session, clean_title, get_ext, errors, check_alive, tr_, try_n, File, get_max_range
+from utils import Downloader, Session, clean_title, get_ext, check_alive, tr_, try_n, File, get_max_range
 import downloader
 import ree as re
 from ratelimit import limits, sleep_and_retry
@@ -18,8 +18,8 @@ def get_file(nid, url, referer, session, p, time):
     ext = get_ext(url) or downloader.get_ext(url, session, referer)
     d = {
         'date': time,
-        'id': str(nid),
-        'page': str(p),
+        'id': nid,
+        'page': p,
         }
     filename = utils.format('misskey', d, ext)
     info = {'name': filename, 'url': url, 'referer': referer}

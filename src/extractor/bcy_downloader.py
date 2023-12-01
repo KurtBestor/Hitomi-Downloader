@@ -2,7 +2,6 @@
 import downloader
 from utils import Soup, cut_pair, LazyUrl, Downloader, get_print, get_max_range, try_n, clean_title, check_alive
 import json
-import ree as re
 import os
 from translator import tr_
 

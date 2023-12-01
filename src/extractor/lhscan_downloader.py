@@ -1,6 +1,6 @@
 #coding:utf8
 import downloader
-from utils import Soup, urljoin, LazyUrl, Downloader, try_n, Session, clean_title, get_print, print_error, check_alive
+from utils import Soup, urljoin, LazyUrl, Downloader, try_n, Session, clean_title, get_print, check_alive
 import os
 from translator import tr_
 import page_selector

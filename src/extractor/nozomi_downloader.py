@@ -1,7 +1,7 @@
 import downloader
 from urllib.parse import quote
 from io import BytesIO
-from utils import Downloader, query_url, get_ext, urljoin, clean_title, check_alive, lock, get_print, get_max_range, File
+from utils import Downloader, query_url, get_ext, clean_title, check_alive, lock, get_print, get_max_range, File
 import errors
 from translator import tr_
 from ratelimit import limits, sleep_and_retry
@@ -15,9 +15,6 @@ class File_nozomi(File):
     format = 'idpage?'
 
     def get(self):
-        if '://' not in self['referer']:
-            return {'url': referer}
-
         infos = []
         for p, img in enumerate(read_post(self['id'], self['referer'], self.cw)):
             url = img['url']
@@ -96,7 +93,7 @@ class Downloader_nozomi(Downloader):
                 'page?': f'_p{p}' if p else '',
                 }
             filename_guess_base = utils.format('nozomi', d, '.webp')
-            return os.path.join(utils.get_outdir('nozomi'), self.name, filename_guess_base)
+            return os.path.join(utils.dir(self.type, self.name, self.cw), filename_guess_base)
 
         for id in ids:
             if os.path.isfile(foo(id, 0)):
@@ -105,8 +102,7 @@ class Downloader_nozomi(Downloader):
                     filename_guess = foo(id, p)
                     if not os.path.isfile(filename_guess):
                         break
-                    file = File_nozomi({'referer': filename_guess, 'name': os.path.basename(filename_guess)})
-                    self.urls.append(file)
+                    self.urls.append(filename_guess)
                     p += 1
             else:
                 file = File_nozomi({'id': id, 'url': f'https://nozomi.la/post/{id}.html', 'referer': self.url})
@@ -118,7 +114,6 @@ class Downloader_nozomi(Downloader):
 
 @lock
 def get_ids(q, popular, cw):
-    print_ = get_print(cw)
     check_alive(cw)
     if q is None:
         if popular:

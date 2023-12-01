@@ -1,10 +1,9 @@
 #coding:utf8
 import downloader
-from utils import Soup, urljoin, Session, LazyUrl, Downloader, lazy, try_n, clean_title, check_alive
+from utils import Soup, urljoin, Session, LazyUrl, Downloader, try_n, clean_title, check_alive
 import ree as re
 import os
 from translator import tr_
-from timee import sleep
 URL_ENTER = 'https://www.hentai-foundry.com/site/index?enterAgree=1&size=1550'
 URL_FILTER = 'https://www.hentai-foundry.com/site/filters'
 
