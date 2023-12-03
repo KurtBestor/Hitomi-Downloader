@@ -3,12 +3,11 @@
 Pornhub Downloader
 '''
 from io import BytesIO
-import os
 import downloader
 import ree as re
 from utils import (Downloader, Soup, try_n, LazyUrl, urljoin, get_print,
                    Session, get_max_range, filter_range, get_ext,
-                   lock, format_filename, clean_title, get_resolution, check_alive)
+                   format_filename, clean_title, get_resolution, check_alive)
 import clf2
 import utils
 from m3u8_tools import playlist2stream, M3u8_stream
@@ -146,7 +145,6 @@ class Video:
             fs = []
             for f in info['formats']:
                 f['quality'] = f.get('height') or 0
-                ext = get_ext(f['url'])
                 if f['protocol'].startswith('m3u8'):
                     f['quality'] -= 1
                 if 'dash' in f['protocol'].lower(): #5554
@@ -188,7 +186,6 @@ def is_login(session, cw=None, n=2):
     url = 'https://www.pornhubpremium.com'
     soup = downloader.read_soup(url, session=session)
     soup = fix_soup(soup, url, session, cw)
-    html = str(soup)
     if soup.find('ul', id='profileMenuDropdown'):
         return True
     return is_login(session, cw, n-1)

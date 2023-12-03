@@ -1,5 +1,5 @@
 import downloader
-from utils import Downloader, Session, urljoin, clean_title, LazyUrl, get_ext, get_print, try_n, compatstr, get_max_range, check_alive, query_url, get_outdir, Soup
+from utils import Downloader, urljoin, clean_title, LazyUrl, get_ext, get_print, try_n, compatstr, get_max_range, check_alive, query_url, Soup
 import ffmpeg
 import utils
 import os
@@ -23,6 +23,7 @@ LIMIT = 48
 for header in ['pixiv_illust', 'pixiv_bmk', 'pixiv_search', 'pixiv_following', 'pixiv_following_r18']:
     if header not in constants.available_extra:
         constants.available_extra.append(header)
+utils.TOKENS['pixiv'] = ['id', 'page', 'artist', 'artistid', 'title', 'date']
 
 
 class LoginRequired(errors.LoginRequired):
@@ -129,7 +130,7 @@ class PixivAPI:
         self.session = session
         hdr = {
             'Accept': 'application/json',
-            'Accept-Encoding': 'gzip, deflate, br',
+            'Accept-Encoding': 'gzip, deflate', #6588
             'Accept-Language': 'en-US,en;q=0.9,ko-KR;q=0.8,ko;q=0.7,ja;q=0.6',
             'Cache-Control': 'no-cache',
             'Pragma': 'no-cache',
@@ -217,7 +218,7 @@ class PixivAPI:
 
 
 
-class Image():
+class Image:
     local = False
     def __init__(self, url, referer, id_, p, info, cw, ugoira=None):
         self._url = url
@@ -232,12 +233,12 @@ class Image():
         self.url = LazyUrl(referer, self.get, self, pp=self.pp, detect_local=not ugoira)
 
     def get(self, referer):
-        d ={
+        d = {
             'id': self.id_,
             'page': self.p,
-            'artist': self.artist,
+            'artist': clean_title(self.artist, allow_dot=True),
             'artistid': self.artistid,
-            'title': self.title,
+            'title': clean_title(self.title, allow_dot=True), #6433, #6592
             'date': self.utime,
             }
         self.filename = utils.format('pixiv', d, get_ext(self._url))
@@ -426,7 +427,7 @@ def get_info(url, session, cw=None, depth=0, tags_add=None):
                 break
             p += 1
         process_ids(ids, info, imgs, session, cw, depth)
-    elif 'bookmark_new_illust.php' in url or 'bookmark_new_illust_r18.php' in url: # Newest works: Following
+    elif 'bookmark_new_illust.php' in url or 'bookmark_new_illust_r18.php' in url or re.search(r'/users/[0-9]+/following', url): # Newest works: Following
         r18 = 'bookmark_new_illust_r18.php' in url
         id_ = my_id(session, cw)
         process_user(id_, info, api)
@@ -561,7 +562,7 @@ def process_ids(ids, info, imgs, session, cw, depth=0, tags_add=None):
             while self.alive:
                 try:
                     id_, res, i = self.queue.popleft()
-                except Exception as e:
+                except:
                     sleep(.1)
                     continue
                 try:

@@ -11,7 +11,6 @@ from utils import Downloader, urljoin, query_url, get_max_range, get_print, Soup
 from translator import tr_
 import os
 from timee import sleep
-import constants
 from error_printer import print_error
 from constants import clean_url
 from ratelimit import limits, sleep_and_retry
@@ -25,11 +24,8 @@ class File_sankaku(File):
     format = 'id'
 
     def get(self):
-        referer = self['referer']
-        if '://' not in referer:
-            return {'url': referer}
-
         print_ = get_print(self.cw)
+        referer = self['referer']
 
         for try_ in range(4):
             wait(self.cw)
@@ -147,7 +143,7 @@ class Downloader_sankaku(Downloader):
         if self.type_sankaku == 'www':
             imgs = get_imgs_www(self.url, self.soup)
         else:
-            info = get_imgs(self.url, self.name, cw=self.cw, d=self, types=types, session=self.session)
+            info = get_imgs(self.url, self.name, cw=self.cw, types=types, session=self.session)
             self.single = info['single']
             imgs = info['imgs']
 
@@ -190,7 +186,7 @@ def wait(cw):
     check_alive(cw)
 
 
-def get_imgs(url, title=None, cw=None, d=None, types=['img', 'gif', 'video'], session=None):
+def get_imgs(url, title=None, cw=None, types=['img', 'gif', 'video'], session=None):
     print_ = get_print(cw)
     print_('types: {}'.format(', '.join(types)))
     if 'chan.sankakucomplex' in url:
@@ -248,8 +244,7 @@ def get_imgs(url, title=None, cw=None, d=None, types=['img', 'gif', 'video'], se
         page += 1
         url_old = url
         soup = Soup(html)
-        banner = soup.find('div', class_='has-mail')
-        if banner: #5861
+        for banner in soup.findAll('div', class_='has-mail'): #5861
             banner.decompose()
         banner = soup.find('div', class_='popular-previews')
         if banner: #6171
@@ -287,7 +282,7 @@ def get_imgs(url, title=None, cw=None, d=None, types=['img', 'gif', 'video'], se
             url_img = article.a.attrs['href']
             if not url_img.startswith('http'):
                 url_img = urljoin('https://{}.sankakucomplex.com'.format(type), url_img)
-            if '/post/show/' not in url_img: # sankaku plus
+            if 'get.sankaku.plus' in url_img: # sankaku plus
                 continue
             id = int(re.find(r'p([0-9]+)', article['id'], err='no id')) #5892
             #print_(article)
@@ -300,8 +295,9 @@ def get_imgs(url, title=None, cw=None, d=None, types=['img', 'gif', 'video'], se
             if id not in ids:
                 ids.add(id)
                 if local:
-                    url_img = local_ids[str(id)]
-                img = File_sankaku({'type':type, 'id':id, 'referer':url_img})
+                    img = local_ids[str(id)]
+                else:
+                    img = File_sankaku({'type':type, 'id':id, 'referer':url_img})
                 imgs.append(img)
                 if len(imgs) >= max_pid:
                     break

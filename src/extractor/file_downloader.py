@@ -1,7 +1,5 @@
-import downloader, json, os
-from constants import try_n
-from utils import Downloader, query_url, clean_title, get_ext
-from timee import sleep
+import downloader, os
+from utils import Downloader, query_url, clean_title, get_ext, Session
 from hashlib import md5
 
 
@@ -10,6 +8,9 @@ class Downloader_file(Downloader):
     type = 'file'
     single = True
     URLS = []
+
+    def init(self):
+        self.session = Session() #6525
 
     @classmethod
     def fix_url(cls, url):

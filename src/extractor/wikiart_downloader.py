@@ -3,7 +3,6 @@ import downloader
 import json
 from utils import LazyUrl, Downloader, Session, get_print, clean_title, check_alive
 import os
-from timee import sleep
 from translator import tr_
 
 

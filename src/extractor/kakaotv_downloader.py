@@ -2,7 +2,6 @@ import downloader
 import ytdl
 from utils import Downloader, try_n, LazyUrl, get_ext, format_filename
 from io import BytesIO as IO
-from m3u8_tools import M3u8_stream
 
 
 

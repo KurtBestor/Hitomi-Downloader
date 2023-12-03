@@ -1,7 +1,7 @@
 #coding:utf8
 import downloader
 import ree as re
-from utils import Soup, urljoin, LazyUrl, Downloader, try_n, join, clean_title
+from utils import urljoin, LazyUrl, Downloader, try_n, join
 import os
 import json
 

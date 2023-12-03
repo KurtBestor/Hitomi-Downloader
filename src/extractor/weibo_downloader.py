@@ -1,16 +1,14 @@
 #coding:utf8
 import downloader
 import ree as re
-from timee import sleep, clock, time
-from constants import clean_url
-from utils import Downloader, urljoin, try_n, Session, get_print, clean_title, Soup, fix_protocol, domain, get_max_range
+from timee import sleep, time
+from utils import Downloader, try_n, Session, get_print, clean_title, Soup, fix_protocol, domain, get_max_range
 import os
 from translator import tr_
 import json
-from datetime import datetime
-import constants
 import clf2
 import errors
+import utils
 
 
 def suitable(url):
@@ -40,23 +38,23 @@ class Downloader_weibo(Downloader):
         url = url.replace('weibo.cn', 'weibo.com').split('?')[0]
         if 'weibo.com/p/' in url:
             id = re.find(r'weibo.com/p/([^/]+)', url, err='no id')
-            url = 'https://weibo.com/p/{}'.format(id)
+            url = f'https://weibo.com/p/{id}'
         elif 'weibo.com/u/' in url:
             id = re.find(r'weibo.com/u/([^/]+)', url, err='no id')
-            url = 'https://weibo.com/u/{}'.format(id)
+            url = f'https://weibo.com/u/{id}'
         elif 'weibo.com/' in url:
             id = re.find(r'weibo.com/([^/]+)', url, err='no id')
-            url = 'https://weibo.com/{}'.format(id)
+            url = f'https://weibo.com/{id}'
         else:
             id = url
-            url = 'https://weibo.com/u/{}'.format(id)
+            url = f'https://weibo.com/u/{id}'
         return fix_protocol(url)
 
     def read(self):
         checkLogin(self.session)
 
         uid, oid, name = get_id(self.url, self.cw)
-        title = clean_title('{} (weibo_{})'.format(name, uid))
+        title = clean_title(f'{name} (weibo_{uid})')
 
         for img in get_imgs(uid, oid, title, self.session, cw=self.cw, d=self, parent=self.mainWindow):
             self.urls.append(img.url)
@@ -123,14 +121,14 @@ def get_id(url, cw=None):
 
 def get_imgs(uid, oid, title, session, cw=None, d=None, parent=None):
     print_ = get_print(cw)
-    print_('uid: {}, oid:{}'.format(uid, oid))
+    print_(f'uid: {uid}, oid:{oid}')
 
     max_pid = get_max_range(cw)
 
     @try_n(4)
     def get_album_imgs(album, page):
         url = 'https://photo.weibo.com/photos/get_all?uid={}&album_id={}&count=30&page={}&type={}&__rnd={}'.format(uid, album.id, page, album.type, int(time()*1000))
-        referer = 'https://photo.weibo.com/{}/talbum/index'.format(uid)
+        referer = f'https://photo.weibo.com/{uid}/talbum/index'
         html = downloader.read_html(url, referer, session=session, timeout=30)
         j = json.loads(html)
         data = j['data']
@@ -140,11 +138,13 @@ def get_imgs(uid, oid, title, session, cw=None, d=None, parent=None):
             name = photo['pic_name']
             id = photo['photo_id']
             timestamp = photo['timestamp']
-            date = datetime.fromtimestamp(timestamp)
-            t = '{:02}-{:02}-{:02}'.format(date.year % 100, date.month, date.day)
-            url = '{}/large/{}'.format(host, name)
+            url = f'{host}/large/{name}'
             ext = os.path.splitext(name)[1]
-            filename = '[{}] {}{}'.format(t, id, ext)
+            d = {
+                'date': timestamp,
+                'id': id,
+                }
+            filename = utils.format('weibo', d, ext)
             img = Image(url, filename, timestamp)
             imgs.append(img)
 
@@ -153,7 +153,7 @@ def get_imgs(uid, oid, title, session, cw=None, d=None, parent=None):
     @try_n(2)
     def get_albums(page):
         url = 'https://photo.weibo.com/albums/get_all?uid={}&page={}&count=20&__rnd={}'.format(uid, page, int(time()*1000))
-        referer = 'https://photo.weibo.com/{}/albums?rd=1'.format(uid)
+        referer = f'https://photo.weibo.com/{uid}/albums?rd=1'
         html = downloader.read_html(url, referer, session=session)
         if '<title>新浪通行证</title>' in html:
             raise LoginRequired()
@@ -172,7 +172,7 @@ def get_imgs(uid, oid, title, session, cw=None, d=None, parent=None):
     for p in range(1, 101):
         albums_new = get_albums(p)
         albums += albums_new
-        print_('p:{}, albums:{}'.format(p, len(albums)))
+        print_(f'p:{p}, albums:{len(albums)}')
         if not albums_new:
             break
 

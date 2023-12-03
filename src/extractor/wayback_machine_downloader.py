@@ -2,7 +2,6 @@
 # title: Wayback Machine Downloader
 # author: bog_4t
 import downloader
-import json
 import concurrent.futures
 import os
 import ree as re

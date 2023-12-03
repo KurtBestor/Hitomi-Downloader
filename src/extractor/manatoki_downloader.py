@@ -1,32 +1,38 @@
-import downloader
-from utils import Soup, try_n, Downloader, urljoin, get_print, Session, clean_url, clean_title, LazyUrl, get_ext, fix_title, lazy, get_imgs_already, check_alive
+from utils import Soup, try_n, Downloader, urljoin, get_print, Session, clean_title, get_ext, fix_title, lazy, get_imgs_already, check_alive, File
 from translator import tr_
 import page_selector
 import utils
-from time import sleep
 import clf2
 import ree as re
 from ratelimit import limits, sleep_and_retry
-from PIL import Image as Image_
+from PIL import Image
 
 
-class Image:
-    def __init__(self, url, page, p):
-        ext = get_ext(url)
+class File_manatoki(File):
+    type = 'manatoki'
+    format = 'title/page:04;'
+    show_pp = False
+
+    def __init__(self, info):
+        ext = get_ext(info['url'])
         if ext.lower()[1:] not in ['jpg', 'jpeg', 'bmp', 'png', 'gif', 'webm', 'webp']:
             ext = '.jpg'
-        self.filename = '{}/{:04}{}'.format(page.title, p, ext)
-        self._url = url
-        self.url = LazyUrl(page.url, self.get, self, pp=self.pp)
-        self.url.show_pp = False
+        d = {
+            'title': info['title'],
+            'page': info['page'],
+            'chapterid': re.find(r'/comic/([0-9]+)', info['referer']), #6380
+            }
+        info['name'] = utils.format('manatoki', d, ext)
+
+        super().__init__(info)
 
     @sleep_and_retry
     @limits(2, 1)
-    def get(self, _):
-        return self._url
+    def get(self):
+        return {}
 
     def pp(self, filename): #5233
-        img = Image_.open(filename)
+        img = Image.open(filename)
         nf = getattr(img, 'n_frames', 1)
         loop = img.info.get('loop')
         if nf > 1 and loop:
@@ -105,10 +111,7 @@ class Downloader_manatoki(Downloader):
         imgs = get_imgs(self.url, self.name, self.soup, self.session, self.cw)
 
         for img in imgs:
-            if isinstance(img, Image):
-                self.urls.append(img.url)
-            else:
-                self.urls.append(img)
+            self.urls.append(img)
 
         self.title = self.name
 
@@ -232,9 +235,6 @@ def get_imgs(url, title, soup=None, session=None, cw=None):
 @try_n(4)
 def get_imgs_page(page, title, referer, session, cw):
     print_ = get_print(cw)
-    #sleep(2)
-    #html = downloader.read_html(page.url, referer, session=session)
-    #soup = Soup(html)
 
     # 2183
     session, soup, page.url = get_soup(page.url, session, cw)
@@ -270,7 +270,7 @@ def get_imgs_page(page, title, referer, session, cw):
                 continue
             if '/img/blank.gif' in img:
                 continue
-            img = Image(img, page, len(imgs))
+            img = File_manatoki({'referer': page.url, 'url': img, 'title': page.title, 'page': len(imgs)})
             imgs.append(img)
 
 ##    if not imgs:

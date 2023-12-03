@@ -1,10 +1,6 @@
 #coding:utf8
-import downloader
-from utils import Soup, urljoin, LazyUrl, Downloader, query_url, try_n, Session, get_print, clean_title, get_ext, check_alive
-import os
+from utils import Soup, urljoin, LazyUrl, Downloader, try_n, get_print, clean_title, get_ext, check_alive
 from translator import tr_
-from timee import sleep
-import requests
 import ree as re
 import clf2#
 

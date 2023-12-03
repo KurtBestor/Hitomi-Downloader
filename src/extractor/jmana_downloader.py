@@ -3,9 +3,8 @@ from utils import Soup, urljoin, Downloader, fix_title, Session, get_print, Lazy
 import ree as re
 from timee import sleep
 from translator import tr_
-import os
 from constants import try_n, clean_url
-import urllib, page_selector
+import page_selector
 import bs4
 import clf2
 PATTERN = r'jmana[0-9]*.*/(comic_list_title|book)\?book'

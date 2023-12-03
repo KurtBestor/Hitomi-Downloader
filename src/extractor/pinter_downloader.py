@@ -1,10 +1,8 @@
-import downloader
-from utils import Session, Downloader, LazyUrl, clean_url, try_n, Soup, clean_title, get_ext, get_max_range, get_print, check_alive
-import json, os, ree as re
-from timee import sleep
+from utils import Session, Downloader, LazyUrl, clean_url, try_n, clean_title, get_ext, get_max_range, check_alive
+import json
+import ree as re
 from translator import tr_
 import urllib
-import constants
 from ratelimit import limits, sleep_and_retry
 from m3u8_tools import playlist2stream, M3u8_stream
 BASE_URL = 'https://www.pinterest.com'
@@ -31,7 +29,7 @@ class Downloader_pinter(Downloader):
                 self.type_pinter = 'section'
             if board == '_created':
                 self.type_pinter = 'created'
-        self.print_('type: {}'.format(self.type_pinter))
+        self.print_(f'type: {self.type_pinter}')
         if self.type_pinter in ['board', 'section', 'created']:
             self.info = get_info(username, board, self.api)
         elif self.type_pinter == 'pin':
@@ -42,7 +40,7 @@ class Downloader_pinter(Downloader):
     @classmethod
     def fix_url(cls, url):
         if 'pinterest.' not in url:
-            url = 'https://www.pinterest.com/{}'.format(url)
+            url = f'https://www.pinterest.com/{url}'
         return url
 
     @property
@@ -57,7 +55,7 @@ class Downloader_pinter(Downloader):
         else:
             username = self.info['owner']['username']
             name = self.info['name']
-        return clean_title('{}/{}'.format(username, name))
+        return clean_title(f'{username}/{name}')
 
     def read(self):
         if self.type_pinter == 'pin':
@@ -86,7 +84,7 @@ def get_info(username, board, api):
 
         title = s['title']
         info.update(s)
-        info['name'] = '{}/{}'.format(info['name'], title)
+        info['name'] = f'{info["name"]}/{title}'
         print('section_id:', info['id'])
     elif board == '_created':
         info = api.board_created(username)[0]
@@ -150,9 +148,9 @@ class PinterestAPI:
     @sleep_and_retry
     @limits(1, 4) # 1000 calls per hour
     def _call(self, resource, options):
-        url = '{}/resource/{}Resource/get/'.format(BASE_URL, resource)
+        url = f'{BASE_URL}/resource/{resource}Resource/get/'
         params = {'data': json.dumps({'options': options}), 'source_url': ''}
-        #print('_call: {}, {}'.format(url, params))
+        #print(f'_call: {url}, {params}')
         r = self.session.get(url, params=params)
         s = r.text
         status_code = r.status_code
@@ -166,7 +164,7 @@ class PinterestAPI:
 
         if status_code == 404 or r.history:
             raise Exception('Not Found')
-        raise Exception('API request failed: {}'.format(status_code))
+        raise Exception(f'API request failed: {status_code}')
 
     def _pagination(self, resource, options):
         while True:
@@ -204,17 +202,16 @@ class Image:
                 src = M3u8_stream(src)
             ext = '.mp4'
 
-        self.url = LazyUrl('{}/pin/{}/'.format(BASE_URL, self.id), lambda _: src, self)
+        self.url = LazyUrl(f'{BASE_URL}/pin/{self.id}/', lambda _: src, self)
         self.filename = f'{self.id}{ext}'
 
 
 
 def get_imgs(id, api, cw=None, title=None, type='board'):
-    print_ = get_print(cw)
     n = get_max_range(cw)
     imgs = []
     ids = set()
-    print('get_imgs: type={}'.format(type))
+    print(f'get_imgs: type={type}')
     if type == 'board':
         gen = api.board_pins(id)
     elif type == 'section':
@@ -224,7 +221,7 @@ def get_imgs(id, api, cw=None, title=None, type='board'):
     elif type == 'created':
         gen = api.board_created_pins(title.split('／')[0])
     else:
-        raise Exception('Type "{}" is not supported'.format(type))
+        raise Exception(f'Type "{type}" is not supported')
     for img in gen:
         check_alive(cw)
         if 'images' not in img:

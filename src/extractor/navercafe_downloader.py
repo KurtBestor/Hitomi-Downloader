@@ -1,5 +1,6 @@
 #coding:utf8
-from utils import Downloader, get_print, urljoin, Soup, get_ext, LazyUrl, clean_title, downloader, re, try_n, errors, json
+from utils import Downloader, get_print, urljoin, Soup, get_ext, File, clean_title, downloader, re, try_n, errors, json, Session
+import utils
 
 
 class LoginRequired(errors.LoginRequired):
@@ -10,6 +11,11 @@ class LoginRequired(errors.LoginRequired):
 class Downloader_navercafe(Downloader):
     type = 'navercafe'
     URLS = ['cafe.naver.com']
+    display_name = 'Naver Cafes'
+    ACCEPT_COOKIES = [r'(.*\.)?naver\.com']
+
+    def init(self):
+        self.session = Session()
 
     @classmethod
     def fix_url(cls, url):
@@ -19,33 +25,39 @@ class Downloader_navercafe(Downloader):
         return url
 
     def read(self):
-        info = get_info(self.url, self.cw)
+        info = get_info(self.url, self.session, self.cw)
         for img in info['imgs']:
-            self.urls.append(img.url)
+            self.urls.append(img)
         tail = f' ({info["cafename"]}_{info["id"]})'
         self.title = clean_title(info['title'], n=-len(tail)) + tail
 
 
 @try_n(4)
-def get_info(url, cw=None):
+def get_info(url, session, cw=None):
     print_ = get_print(cw)
     info = {}
 
-    html = downloader.read_html(url)
+    html = downloader.read_html(url, 'http://search.naver.com', session=session)
+    soup = Soup(html)
     if '"cafe_cautionpage"' in html:
         raise LoginRequired()
-    if re.find(r'''onclick=['"]toLoginPage\(\)['"]''', html): #6358
-        raise LoginRequired()
-    url_article = re.find(r'''//cafe\.naver\.com/ArticleRead\.nhn\?articleid=[0-9]+&clubid=[0-9]+''', html, err='no iframe')
+    url_article = re.find(r'''//cafe\.naver\.com/ArticleRead\.nhn\?articleid=[0-9]+[^'"]*''', html, err='no articleid')
     url_article = urljoin(url, url_article)
 
     print_(url_article)
 
     articleid = re.find(r'articleid=([0-9]+)', url_article)
-    clubid = re.find(r'clubid=([0-9]+)', url_article)
-    url_api = f'https://apis.naver.com/cafe-web/cafe-articleapi/v2/cafes/{clubid}/articles/{articleid}?query=&useCafeId=true&requestFrom=A'
+    clubid = re.find(r'clubid(=|%3D)([0-9]+)', url_article)[1]
+    art = re.find(r'art=(.+?)&', url_article)
+    if art:
+        url_api = f'https://apis.naver.com/cafe-web/cafe-articleapi/v2.1/cafes/{clubid}/articles/{articleid}?art={art}&useCafeId=true&requestFrom=A'
+    else:
+        url_api = f'https://apis.naver.com/cafe-web/cafe-articleapi/v2.1/cafes/{clubid}/articles/{articleid}?query=&useCafeId=true&requestFrom=A'
 
-    j = downloader.read_json(url_api, url)
+    j = downloader.read_json(url_api, url_article, session=session)
+
+    if j['result'].get('errorCode'): #6358
+        raise LoginRequired(j['result'].get('reason'))
 
     info['title'] = j['result']['article']['subject']
     info['cafename'] = j['result']['cafe']['url']
@@ -79,11 +91,11 @@ def get_info(url, cw=None):
         data = json.loads(data_raw)
         fs = data['videos']['list']
         fs = sorted(fs, key=lambda f: f['size'], reverse=True)
-        video = Image(fs[0]['source'], url_article, len(imgs))
+        video = Image({'url': fs[0]['source'], 'referer': url_article, 'p': len(imgs)})
         imgs.append(video)
 
     for img in soup.findAll('img'):
-        img = Image(urljoin(url_article, img['src']), url, len(imgs))
+        img = Image({'url': urljoin(url_article, img['src']), 'referer': url, 'p': len(imgs)})
         imgs.append(img)
 
     info['imgs'] = imgs
@@ -91,8 +103,19 @@ def get_info(url, cw=None):
     return info
 
 
-class Image:
-    def __init__(self, url, referer, p):
-        self.url = LazyUrl(referer, lambda _: url, self)
-        ext = get_ext(url)
-        self.filename = f'{p:04}{ext}'
+class Image(File):
+    type = 'navercafe'
+    format = 'page:04;'
+
+    def __init__(self, info):
+        self._url = info['url']
+        info['url'] = re.sub(r'[?&]type=[wh0-9]+', '', self._url) #6460
+        ext = get_ext(info['url'])
+        d = {
+            'page': info['p'],
+            }
+        info['name'] = utils.format('navercafe', d, ext)
+        super().__init__(info)
+
+    def alter(self):
+        return self._url

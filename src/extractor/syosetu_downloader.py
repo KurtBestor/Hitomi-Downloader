@@ -1,10 +1,9 @@
 #coding:utf8
 import downloader
 import utils
-from utils import Soup, urljoin, LazyUrl, try_n, Downloader, get_outdir, get_print, clean_title, Session
+from utils import Soup, urljoin, LazyUrl, try_n, Downloader, clean_title, Session
 import ree as re
 from io import BytesIO
-from timee import sleep
 import os
 from translator import tr_
 
@@ -102,12 +101,11 @@ class Downloader_syosetu(Downloader):
             text = Text(title_dir, None, self.url, session, True)
             texts.append(text)
         self.print_('single: {}'.format(self.single))
-        outdir = get_outdir('syosetu')
         for text in texts:
             if self.single:
-                file = os.path.join(outdir, text.filename)
+                file = os.path.join(utils.dir(self.type, '', self.cw), text.filename)
             else:
-                file = os.path.join(outdir, title_dir, text.filename)
+                file = os.path.join(utils.dir(self.type, title_dir, self.cw), text.filename)
             if os.path.isfile(file):
                 self.urls.append(file)
             else:

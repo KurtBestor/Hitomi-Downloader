@@ -1,10 +1,7 @@
 import downloader
-from utils import Soup, cut_pair, urljoin, Downloader, LazyUrl, format_filename, clean_title
+from utils import Soup, Downloader, LazyUrl, format_filename
 import ree as re
-import m3u8
-from m3u8_tools import M3u8_stream, playlist2stream
-from timee import sleep
-import os
+from m3u8_tools import playlist2stream
 from io import BytesIO as IO
 
 
