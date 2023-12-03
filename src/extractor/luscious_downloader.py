@@ -1,9 +1,9 @@
 #coding:utf8
 import downloader
-from utils import Soup, Downloader, LazyUrl, urljoin, try_n, get_outdir, clean_title, get_max_range
+import utils
+from utils import Soup, Downloader, LazyUrl, urljoin, try_n, clean_title, get_max_range
 import ree as re
 import os
-from timee import sleep
 from translator import tr_
 from io import BytesIO
 import json
@@ -79,7 +79,7 @@ class Downloader_luscious(Downloader):
         else:
             imgs = get_imgs(self.url, soup, self.cw)
 
-        dir = os.path.join(get_outdir(self.type), title)
+        dir = utils.dir(self.type, title, self.cw)
         names = {}
         try:
             for name in os.listdir(dir):
@@ -136,7 +136,6 @@ def get_imgs_p(url, p=1):
     url_api = f'https://apicdn.luscious.net/graphql/nobatch/?operationName=AlbumListOwnPictures&query=%2520query%2520AlbumListOwnPictures%28%2524input%253A%2520PictureListInput%21%29%2520%257B%2520picture%2520%257B%2520list%28input%253A%2520%2524input%29%2520%257B%2520info%2520%257B%2520...FacetCollectionInfo%2520%257D%2520items%2520%257B%2520__typename%2520id%2520title%2520description%2520created%2520like_status%2520number_of_comments%2520number_of_favorites%2520moderation_status%2520width%2520height%2520resolution%2520aspect_ratio%2520url_to_original%2520url_to_video%2520is_animated%2520position%2520tags%2520%257B%2520category%2520text%2520url%2520%257D%2520permissions%2520url%2520thumbnails%2520%257B%2520width%2520height%2520size%2520url%2520%257D%2520%257D%2520%257D%2520%257D%2520%257D%2520fragment%2520FacetCollectionInfo%2520on%2520FacetCollectionInfo%2520%257B%2520page%2520has_next_page%2520has_previous_page%2520total_items%2520total_pages%2520items_per_page%2520url_complete%2520%257D%2520&variables=%7B%22input%22%3A%7B%22filters%22%3A%5B%7B%22name%22%3A%22album_id%22%2C%22value%22%3A%22{id}%22%7D%5D%2C%22display%22%3A%22rating_all_time%22%2C%22items_per_page%22%3A50%2C%22page%22%3A{p}%7D%7D'
     data_raw = downloader.read_html(url_api, referer=url)
     data = json.loads(data_raw)
-    has_next_page = data['data']['picture']['list']['info']['has_next_page']
     imgs = []
     for item in data['data']['picture']['list']['items']:
         img = Image(item, url)

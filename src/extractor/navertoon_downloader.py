@@ -1,11 +1,11 @@
 import downloader
-from utils import Soup, urljoin, Downloader, LazyUrl, get_imgs_already, clean_title, get_ext, get_print, errors, check_alive
+from utils import Soup, urljoin, Downloader, get_imgs_already, clean_title, get_ext, get_print, errors, check_alive, File
 from constants import try_n
-import ree as re, os
-from timee import sleep
+import ree as re
 import page_selector
 from translator import tr_
 import json
+import utils
 
 
 class Page:
@@ -16,13 +16,20 @@ class Page:
         self.p = p
 
 
-class Image:
+class File_navertoon(File):
+    type = 'navertoon'
+    format = 'title/page:04;'
 
-    def __init__(self, url, page, p):
-        ext = get_ext(url)
-        self.filename = '{}/{:04}{}'.format(clean_title(page.title), p, ext)
+    def __init__(self, info):
+        ext = get_ext(info['url'])
+        d = {
+            'title': clean_title(info['title']),
+            'page': info['page'],
+            'chapterid': re.find(r'[?&]no=([0-9]+)', info['referer']), #6380
+            }
+        info['name'] = utils.format('navertoon', d, ext)
 
-        self.url = LazyUrl(page.url, lambda _: url, self)
+        super().__init__(info)
 
 
 class Info:
@@ -40,6 +47,7 @@ class Downloader_navertoon(Downloader):
     MAX_CORE = 8
     MAX_SPEED = 4.0
     display_name = 'Naver Webtoon'
+    ACCEPT_COOKIES = [r'(.*\.)?naver\.com']
 
     def init(self):
         self.__info, _ = get_pages(self.url, self.cw)
@@ -62,10 +70,7 @@ class Downloader_navertoon(Downloader):
         self.title = tr_('읽는 중... {}').format(self.name)
         imgs = get_imgs_all(self.url, self.name, cw=self.cw)
         for img in imgs:
-            if isinstance(img, Image):
-                self.urls.append(img.url)
-            else:
-                self.urls.append(img)
+            self.urls.append(img)
 
         self.title = self.name
 
@@ -176,7 +181,7 @@ def get_imgs(page, cw=None):
             if not img:
                 continue
             img = urljoin(page.url, img)
-            img = Image(img, page, len(imgs))
+            img = File_navertoon({'referer': page.url, 'url':img, 'title': page.title, 'page': len(imgs)})
             imgs.append(img)
     elif type_ == 'CUTTOON': # https://m.comic.naver.com/webtoon/detail.nhn?titleId=752803
         view = soup.find('div', class_='swiper-wrapper')
@@ -192,7 +197,7 @@ def get_imgs(page, cw=None):
             img = div.find('img')
             img = img.attrs['data-src']
             img = urljoin(page.url, img)
-            img = Image(img, page, len(imgs))
+            img = File_navertoon({'referer': page.url, 'url':img, 'title': page.title, 'page': len(imgs)})
             imgs.append(img)
     elif type_ == 'EFFECTTOON': #2313; https://m.comic.naver.com/webtoon/detail.nhn?titleId=670144
         img_base = re.find('''imageUrl *: *['"](.+?)['"]''', html) + '/'
@@ -202,7 +207,7 @@ def get_imgs(page, cw=None):
         data = json.loads(data_raw)
         for img in data['assets']['stillcut'].values(): # ordered in python3.7+
             img = urljoin(img_base, img)
-            img = Image(img, page, len(imgs))
+            img = File_navertoon({'referer': page.url, 'url':img, 'title': page.title, 'page': len(imgs)})
             imgs.append(img)
     else:
         _imgs = re.findall('sImageUrl *: *[\'"](.+?)[\'"]', html)
@@ -210,7 +215,7 @@ def get_imgs(page, cw=None):
             raise Exception('no imgs')
         for img in _imgs:
             img = urljoin(page.url, img)
-            img = Image(img, page, len(imgs))
+            img = File_navertoon({'referer': page.url, 'url':img, 'title': page.title, 'page': len(imgs)})
             imgs.append(img)
 
     return imgs

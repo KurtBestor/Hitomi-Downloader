@@ -1,11 +1,8 @@
 #coding: utf8
 import downloader
-import os
 from m3u8_tools import M3u8_stream
-from utils import Soup, Downloader, LazyUrl, get_print, try_n, clean_title, check_alive, format_filename
+from utils import Soup, Downloader, LazyUrl, get_print, try_n, check_alive, format_filename
 from io import BytesIO
-import constants
-from error_printer import print_error
 import base64
 import json
 import webbrowser

@@ -7,7 +7,7 @@ import os
 import ree as re
 from timee import sleep
 from translator import tr_
-from utils import Downloader, clean_title, Session, get_print, Soup, try_n, check_alive
+from utils import Downloader, clean_title, Session, get_print, try_n, check_alive
 
 
 class Downloader_newgrounds(Downloader):

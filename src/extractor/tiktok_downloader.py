@@ -1,11 +1,7 @@
 import downloader
 import ree as re
-from utils import Soup, LazyUrl, Downloader, try_n, compatstr, get_print, Session, get_max_range, format_filename, json, check_alive
-from io import BytesIO
+from utils import Soup, LazyUrl, Downloader, try_n, compatstr, get_print, Session, get_max_range, format_filename, json
 import clf2
-from translator import tr_
-from timee import sleep
-from error_printer import print_error
 import ytdl
 from urllib.parse import unquote
 PATTERN_VID = '/(v|video)/(?P<id>[0-9]+)'
@@ -107,10 +103,7 @@ class Video:
 
 
 def read_channel(url, session, cw=None, title=None):
-    print_ = get_print(cw)
-
     info = {}
-    ids = set()
     info['items'] = []
 
     if 'tiktok.com' in url.lower(): # TikTok

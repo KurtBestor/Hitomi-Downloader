@@ -1,9 +1,7 @@
 import downloader
-import ree as re
 from io import BytesIO
-import os
 from constants import try_n
-from utils import Downloader, LazyUrl, get_ext, format_filename, clean_title
+from utils import Downloader, LazyUrl, get_ext, format_filename
 import ytdl
 from m3u8_tools import M3u8_stream
 

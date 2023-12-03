@@ -5,7 +5,6 @@ from datetime import datetime
 import ree as re
 import os
 from translator import tr_
-from timee import sleep
 from error_printer import print_error
 import clf2
 import errors

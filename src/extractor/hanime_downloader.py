@@ -1,5 +1,5 @@
 import downloader
-from utils import Session, Downloader, get_outdir, try_n, Soup, format_filename, clean_title, get_print, get_resolution
+from utils import Session, Downloader, try_n, Soup, format_filename, get_print, get_resolution
 import ree as re, json
 from io import BytesIO
 import os

@@ -1,6 +1,5 @@
 import downloader
 from utils import Soup, Session, LazyUrl, clean_title, get_ext, get_imgs_already, urljoin, try_n, Downloader, check_alive
-import os
 import page_selector
 from translator import tr_
 import ree as re

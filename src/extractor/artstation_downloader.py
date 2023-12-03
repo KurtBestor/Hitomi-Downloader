@@ -2,7 +2,7 @@
 import downloader
 from error_printer import print_error
 from translator import tr_
-from utils import Downloader, Soup, get_print, lazy, Session, try_n, File, clean_title, check_alive, File, get_ext, get_max_range
+from utils import Downloader, Soup, get_print, lazy, Session, try_n, File, clean_title, check_alive, get_ext, get_max_range
 import dateutil.parser
 import utils
 
@@ -46,6 +46,14 @@ class Downloader_artstation(Downloader):
             self.url = self.url_main
         self.print_(self.url)
 
+    @classmethod
+    def fix_url(cls, url): #6516
+        if '.artstation.com' in url:
+            sub = url.split('.artstation.com')[0].split('/')[-1]
+            if sub != 'www':
+                url = f'https://www.artstation.com/{sub}'
+        return url
+
     @lazy
     def _id(self):
         _id = get_id(self.url, self.cw)
@@ -86,41 +94,25 @@ def get_imgs(id_, title, session, cw=None):
     url = f'https://www.artstation.com/users/{id_}/quick.json'
     j = downloader.read_json(url, referer, session=session)
     uid = j['id']
-    aids = [a['id'] for a in j['albums_with_community_projects']]
-    print_(f'albums: {aids}')
 
     datas = []
     ids = set()
-    for aid in aids:
-        p = 1
-        while p < 1000:
-            check_alive(cw)
-            url = f'https://www.artstation.com/users/{id_}/projects.json?album_id={aid}&page={p}&user_id={uid}'
-            print(url)
-            _e = None
-            for i in range(4):
-                try:
-                    j = downloader.read_json(url, referer, session=session)
-                    break
-                except Exception as e:
-                    _e = e
-                    print(e)
-            else:
-                if _e is not None:
-                    raise _e
+    for p in range(1, 1000):
+        check_alive(cw)
+        url = f'https://www.artstation.com/users/{id_}/projects.json??user_id={uid}&page={p}' #6516
+        j = try_n(4)(downloader.read_json)(url, referer, session=session)
 
-            data = j['data']
-            if not data:
-                break
-            for d in data:
-                if d['id'] not in ids:
-                    ids.add(d['id'])
-                    datas.append(d)
-            if cw:
-                cw.setTitle(f'{tr_("페이지 읽는 중...")}  {title} - {len(datas)}')
-            else:
-                print(len(datas))
-            p += 1
+        data = j['data']
+        if not data:
+            break
+        for d in data:
+            if d['id'] not in ids:
+                ids.add(d['id'])
+                datas.append(d)
+        if cw:
+            cw.setTitle(f'{tr_("페이지 읽는 중...")}  {title} - {len(datas)}')
+        else:
+            print(len(datas))
 
     datas = sorted(datas, key=lambda data: int(data['id']), reverse=True)
 
@@ -234,7 +226,7 @@ def get_imgs_page(id_art, session, date=None, cw=None, names=None):
 
         d = {
             'date': date,
-            'name': name,
+            'name': clean_title(name),
             'page': page,
             }
         filename = utils.format('artstation', d, get_ext(url))

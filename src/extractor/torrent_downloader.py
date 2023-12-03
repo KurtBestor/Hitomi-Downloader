@@ -124,7 +124,6 @@ class Downloader_torrent(Downloader):
         self.__init()
         if cw:
             cw._torrent_s = None
-        title = self.url
         self._dn = self.get_dn(cw.gal_num)
         info = getattr(cw, 'info?', None)
         if info is not None:
@@ -139,7 +138,7 @@ class Downloader_torrent(Downloader):
                 self._info = torrent.get_info(self.url, cw, timeout=TIMEOUT, callback=self.callback)
                 if CACHE_INFO:
                     setattr(cw, 'info?', self._info)
-            except Exception as e:
+            except:
                 self.update_pause()
                 if not cw.paused:
                     raise errors.Invalid(f'Faild to read metadata: {self.url}', fail=True)
@@ -211,7 +210,7 @@ class Downloader_torrent(Downloader):
         self._seeding = False
         pr = cw.get_extra('pr')
         if cw.paused:
-            data = cw.pause_data
+            #data = cw.pause_data
             cw.paused = False
             cw.pause_lock = False
             self.update_tools_buttons()
@@ -254,7 +253,7 @@ class Downloader_torrent(Downloader):
                                 res = order.getOrder([[True, file.path] for file in files], utils.ui.listWidget, self.title, tr_('파일을 고르세요:'), True, size=(600, 600), icon=_getIcon, move=False)
                                 if res is None or any(item[0] for item in res):
                                     break
-                                messageBox('No files selected', self.title, icon=QMessageBox.Warning, parent=utils.ui.listWidget)
+                                utils.messageBox('No files selected', self.title, icon=utils.QMessageBox.Warning, parent=utils.ui.listWidget)
                         finally:
                             done = True
                     utils.exec_queue.run(f)

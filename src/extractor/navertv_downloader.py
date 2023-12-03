@@ -1,10 +1,8 @@
 import downloader
 import ree as re
 from io import BytesIO as IO
-import os
 from constants import try_n
-from error_printer import print_error
-from utils import Downloader, compatstr, LazyUrl, get_ext, format_filename, clean_title
+from utils import Downloader, LazyUrl, get_ext, format_filename
 import ytdl
 
 
@@ -14,6 +12,7 @@ class Downloader_navertv(Downloader):
     single = True
     URLS = ['tv.naver.com']
     display_name = 'Naver TV'
+    ACCEPT_COOKIES = [r'(.*\.)?naver\.com']
 
     @classmethod
     def fix_url(cls, url):

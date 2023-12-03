@@ -5,7 +5,6 @@ import utils
 from utils import Soup, urljoin, get_text, LazyUrl, try_n, Downloader, lazy, clean_title
 import ree as re
 from io import BytesIO
-from timee import sleep
 from translator import tr_
 
 

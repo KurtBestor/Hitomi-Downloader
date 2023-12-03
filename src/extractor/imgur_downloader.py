@@ -1,7 +1,6 @@
 import downloader
 from utils import Downloader, Soup, try_n, urljoin, get_max_range, clean_title, cut_pair, check_alive
 import ree as re, json, os
-from timee import sleep
 from translator import tr_
 
 
@@ -119,6 +118,9 @@ def get_imgs(url, info=None, cw=None):
 
             if c == 0:
                 print('same; break')
+                break
+
+            if len(imgs) >= max_pid:
                 break
 
     return imgs

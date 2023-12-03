@@ -3,7 +3,6 @@ import ytdl
 from io import BytesIO as IO
 import downloader
 import ree as re
-import ffmpeg
 PATTEN_IMAGIZER = r'coub-com-.+\.imagizer\.com'
 
 
@@ -67,6 +66,7 @@ class Video:
         return self._url
 
     def pp(self, filename):
+##        import ffmpeg
 ##        f = IO()
 ##        downloader.download(self.f_audio['url'], buffer=f)
 ##        ffmpeg.merge(filename, f)

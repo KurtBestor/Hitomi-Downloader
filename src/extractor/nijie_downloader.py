@@ -1,6 +1,6 @@
 #coding: utf-8
 import downloader
-from utils import Downloader, urljoin, get_max_range, query_url, Soup, Session, LazyUrl, get_print, clean_title, try_n, get_ext, check_alive
+from utils import Downloader, urljoin, get_max_range, Soup, LazyUrl, get_print, clean_title, try_n, get_ext, check_alive
 from translator import tr_
 from constants import clean_url
 import ree as re

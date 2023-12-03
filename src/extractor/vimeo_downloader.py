@@ -1,7 +1,5 @@
 import downloader
-import ree as re
 from io import BytesIO as IO
-from error_printer import print_error
 from utils import Downloader, LazyUrl, get_ext, format_filename, try_n
 import ytdl
 

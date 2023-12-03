@@ -1,4 +1,4 @@
-from utils import Downloader, File, Session, urljoin, get_ext, clean_title, Soup, check_alive
+from utils import Downloader, File, Session, urljoin, get_ext, clean_title, Soup
 import utils
 import ree as re
 import downloader

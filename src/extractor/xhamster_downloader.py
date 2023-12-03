@@ -1,5 +1,5 @@
 import downloader, ree as re
-from utils import Downloader, Soup, Session, LazyUrl, get_print, get_ext, try_n, format_filename, clean_title, get_resolution
+from utils import Downloader, Session, LazyUrl, get_print, get_ext, try_n, format_filename, clean_title, get_resolution
 from translator import tr_
 from io import BytesIO
 import ytdl
@@ -137,7 +137,6 @@ def read_page(type_, username, p, session, cw):
 
 
 def read_channel(url, session, cw=None):
-    print_ =  get_print(cw)
     type_, username = re.find(r'/(users|creators)/([^/]+)', url, err='no username')
 
     info = {}
@@ -205,7 +204,7 @@ def read_gallery(url, session, cw=None):
     h1 = soup.find('h1')
     if h1.find('a'):
         url = h1.find('a')['href']
-        return read_gallery(url, sesseion, cw)
+        return read_gallery(url, session, cw)
     info['title'] = h1.text.strip()
     info['url'] = setPage(url, 1)
 

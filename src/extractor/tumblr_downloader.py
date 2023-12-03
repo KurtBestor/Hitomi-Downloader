@@ -1,7 +1,7 @@
 #coding:utf8
 import downloader
 from translator import tr_
-from utils import Soup, Session, query_url, get_max_range, Downloader, clean_title, update_url_query, get_print, get_ext, LazyUrl, urljoin, check_alive
+from utils import Session, query_url, get_max_range, Downloader, clean_title, update_url_query, get_print, get_ext, LazyUrl, urljoin, check_alive
 import ree as re
 import errors
 from ratelimit import limits, sleep_and_retry
@@ -170,10 +170,8 @@ def get_name(username, session):
 
 
 def get_imgs(username, session, cw=None):
-    print_ = get_print(cw)
     artist = get_name(username, session)
     imgs = []
-    error_count = 0
     max_pid = get_max_range(cw)
     api = TumblrAPI(session, cw)
     for post in api.posts(username):

@@ -1,10 +1,7 @@
 import downloader
-from utils import Soup, Downloader, get_outdir, Session, LazyUrl, try_n, format_filename, cut_pair, File
+from utils import Soup, Downloader, Session, try_n, format_filename, cut_pair, File, get_print
 import ree as re
-from timee import sleep, time
-import os
 from io import BytesIO
-import shutil
 from m3u8_tools import playlist2stream, M3u8_stream
 import errors
 import json
@@ -57,6 +54,7 @@ class Video(File):
     type = 'afreeca'
 
     def get(self):
+        print_ = get_print(self.cw)
         url, session = self['referer'], self.session
 
         html = downloader.read_html(url, session=session)
@@ -71,7 +69,7 @@ class Video(File):
         url_thumb = soup.find('meta', {'property': 'og:image'}).attrs['content']
         print_('url_thumb: {}'.format(url_thumb))
 
-        vid = re.find(f'/player/([0-9]+)', url, err='no vid')
+        vid = re.find('/player/([0-9]+)', url, err='no vid')
         if f'{vid}/catch' in url: #6215
             url_api = 'https://api.m.afreecatv.com/station/video/a/catchview'
             r = session.post(url_api, data={'nPageNo': '1', 'nLimit': '10', 'nTitleNo': vid}, headers={'Referer': url})
@@ -105,7 +103,7 @@ class Video(File):
             else:
                 file = file['file']
             urls_m3u8.append(file)
-        self.cw.print_(f'urls_m3u8: {len(urls_m3u8)}')
+        print_(f'urls_m3u8: {len(urls_m3u8)}')
 
         streams = []
         for url_m3u8 in urls_m3u8:
@@ -119,4 +117,4 @@ class Video(File):
             streams[0] += stream
         stream = streams[0]
 
-        return {'url': stream, 'title': title, 'name': format_filename(title, id, '.mp4'), 'url_thumb': url_thumb}
+        return {'url': stream, 'title': title, 'name': format_filename(title, vid, '.mp4'), 'url_thumb': url_thumb}

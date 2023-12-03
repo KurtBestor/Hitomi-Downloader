@@ -1,12 +1,9 @@
 #coding:utf8
 import downloader
-from utils import Soup, urljoin, Downloader, cut_pair, LazyUrl, clean_title, format_filename
-from timee import sleep
-from translator import tr_
+from utils import Soup, Downloader, LazyUrl, clean_title, format_filename
 from io import BytesIO
 import ree as re
 import os
-
 
 
 class Downloader_tokyomotion(Downloader):
