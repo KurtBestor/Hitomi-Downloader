@@ -1,0 +1,249 @@
+{
+  "QShortcut": {
+    "+": "+",
+    "No": "Não",
+    "Up": "Cima",
+    "Alt": "Alt",
+    "F%1": "F%1",
+    "Del": "Delete",
+    "End": "End",
+    "Esc": "Esc",
+    "Ins": "Insert",
+    "Tab": "Tab",
+    "Yes": "Sim",
+    "Back": "Anterior",
+    "Ctrl": "Ctrl",
+    "Down": "Baixo",
+    "Flip": "Inverter",
+    "Help": "Ajuda",
+    "Home": "Home",
+    "Left": "Esquerda",
+    "Menu": "Menu",
+    "Meta": "Meta",
+    "PgUp": "PgUp",
+    "Stop": "Parar",
+    "Enter": "Enter",
+    "Pause": "Pause",
+    "Right": "Direita",
+    "Shift": "Shift",
+    "Print Screen": "Print Screen",
+    "Scroll Lock": "Scroll Lock",
+    "Volume Down": "Volume Cima",
+    "Volume Mute": "Volume Mute",
+    "Media Previous": "Média Anterior",
+    "Home Page": "Página Principal",
+    "Volume Up": "Volume Baixo",
+    "Delete": "Delete",
+    "Escape": "Escape",
+    "Insert": "Insert",
+    "PgDown": "PgDown",
+    "Return": "Return",
+    "Search": "Procurar",
+    "Select": "Select",
+    "NumLock": "Num Lock",
+    "ScrollLock": "ScrollLock",
+    "Page Up": "Page Up",
+    "Open URL": "Abrir Endereço",
+    "Caps Lock": "Caps Lock",
+    "CapsLock": "CapsLock",
+    "Backtab": "Backtab",
+    "Refresh": "Refrescar",
+    "Backspace": "Backspace",
+    "Standby": "Hibernação",
+    "Num Lock": "Num Lock",
+    "Number Lock": "Number Lock",
+    "Favorites": "Favoritos",
+    "Forward": "Seguinte",
+    "Page Down": "Page Down"
+  },
+  "QDialogButtonBox": {
+    "OK": "OK",
+    "&OK": "&OK",
+    "&No": "&Não",
+    "&Yes": "&Sim",
+    "Help": "Ajuda",
+    "Open": "Abrir",
+    "Save": "Gravar",
+    "&Save": "&Gravar",
+    "Abort": "Abortar",
+    "Apply": "Aplicar",
+    "Close": "Fechar",
+    "Reset": "Restaurar",
+    "Retry": "Tentar Novamente",
+    "Restore Defaults": "Restaurar Predefinições",
+    "&Close": "&Fechar",
+    "Cancel": "Cancelar",
+    "Ignore": "Ignorar",
+    "Close without Saving": "Fechar sem Gravar",
+    "N&o to All": "N&ão para Todos",
+    "Save All": "Gravar Todos",
+    "&Cancel": "&Cancelar",
+    "Discard": "Descartar",
+    "Yes to &All": "Sim para &Todos",
+    "Don't Save": "Não Gravar"
+  },
+  "QMessageBox": {
+    "OK": "OK",
+    "Help": "Ajuda",
+    "Show Details...": "Mostrar Detalhes...",
+    "Hide Details...": "Não Mostrar Detalhes..."
+  },
+  "QErrorMessage": {
+    "&OK": "&OK",
+    "Fatal Error:": "Erro Fatal:",
+    "&Show this message again": "&Mostrar esta mensagem novamente",
+    "Debug Message:": "Mensagem Depuração:",
+    "Warning:": "Aviso:"
+  },
+  "QScrollBar": {
+    "Top": "Topo",
+    "Scroll down": "Deslizar para baixo",
+    "Scroll here": "Deslizar aqui",
+    "Scroll left": "Deslizar para esquerda",
+    "Line up": "Linha acima",
+    "Line down": "Linha abaixo",
+    "Bottom": "Fundo",
+    "Page up": "Página para cima",
+    "Position": "Posição",
+    "Page right": "Página para direita",
+    "Scroll up": "Deslizar para cima",
+    "Scroll right": "Deslizar para a direita",
+    "Left edge": "Borda esquerda",
+    "Page down": "Página para baixo",
+    "Page left": "Página para esquerda",
+    "Right edge": "Borda direita"
+  },
+  "QFileDialog": {
+    "Back": "Recuar",
+    "File": "Ficheiro",
+    "Open": "Abrir",
+    "&Open": "&Abrir",
+    "&Save": "&Gravar",
+    "Drive": "Unidade",
+    "'%1' is write protected.\nDo you want to delete it anyway?": "'%1' está protegido contra escrita.\nDeseja apagar de qualquer forma?",
+    "File &name:": "&Nome do Ficheiro:",
+    "New Folder": "Nova Pasta",
+    "Parent Directory": "Pasta Mãe",
+    "My Computer": "O Meu Computador",
+    "Files of type:": "FIcheiros do tipo:",
+    "Find Directory": "Procurar Pasta",
+    "Show &hidden files": "Mostrar ficheiros &escondidos",
+    "Are sure you want to delete '%1'?": "Deseja mesmo apagar '%1'?",
+    "Save As": "Gravar Como",
+    "%1\nDirectory not found.\nPlease verify the correct directory name was given.": "%1\nPasta não encontrada.\nPor favor verifique o nome da pasta.",
+    "List View": "Vista Abreviada",
+    "&Delete": "&Apagar",
+    "All Files (*)": "Todos os Ficheiros (*)",
+    "Directories": "Pastas",
+    "All Files (*.*)": "Todos os Ficheiros (*.*)",
+    "&Rename": "&Mudar o Nome",
+    "Could not delete directory.": "Não foi possível apagar a pasta.",
+    "Directory:": "Pasta:",
+    "Unknown": "Desconhecido",
+    "%1 already exists.\nDo you want to replace it?": "%1 já existe.\nDeseja substituir?",
+    "Forward": "Seguinte",
+    "Create New Folder": "Criar Nova Pasta",
+    "Detail View": "Vista Detalhada",
+    "%1\nFile not found.\nPlease verify the correct file name was given.": "%1\nFicheiro não encontrado.\nPor favor verifique o nome do ficheiro."
+  },
+  "QLineEdit": {
+    "Cu&t": "Cor&tar",
+    "&Copy": "&Copiar",
+    "&Redo": "&Refazer",
+    "&Undo": "&Desfazer",
+    "&Paste": "Co&lar",
+    "Delete": "Apagar",
+    "Select All": "Seleccionar Tudo"
+  },
+  "QMdiSubWindow": {
+    "Help": "Ajuda",
+    "Menu": "Menu",
+    "&Move": "&Mover",
+    "&Size": "&Tamanho",
+    "Close": "Fechar",
+    "Minimize": "Minimizar",
+    "Stay on &Top": "Permanecer no &Topo",
+    "&Close": "&Fechar",
+    "%1 - [%2]": "%1 - [%2]",
+    "&Restore": "&Restaurar",
+    "Maximize": "Maximizar",
+    "Mi&nimize": "Mi&nimizar",
+    "Ma&ximize": "Ma&ximizar",
+    "Restore Down": "Restaurar Baixo"
+  },
+  "QWizard": {
+    "Help": "Ajuda",
+    "&Help": "&Ajuda",
+    "Cancel": "Cancelar",
+    "&Finish": "&Terminar",
+    "&Next >": "&Avançar >",
+    "< &Back": "< &Recuar"
+  },
+  "QDirModel": {
+    "Kind": "Tipo",
+    "Name": "Nome",
+    "Size": "Tamanho",
+    "Type": "Tipo",
+    "Date Modified": "Data de Modificação"
+  },
+  "QFileSystemModel": {
+    "Kind": "Tipo",
+    "Name": "Nome",
+    "Size": "Tamanho",
+    "Type": "Tipo",
+    "My Computer": "O Meu Computador",
+    "Date Modified": "Data de Modificação"
+  },
+  "QComboBox": {
+    "Open": "Abrir",
+    "True": "Verdadeiro",
+    "Close": "Fechar",
+    "False": "Falso"
+  },
+  "QUndoGroup": {
+    "Redo": "Refazer",
+    "Undo": "Desfazer"
+  },
+  "QUndoStack": {
+    "Redo": "Refazer",
+    "Undo": "Desfazer"
+  },
+  "QDockWidget": {
+    "Close": "Fechar"
+  },
+  "QDialog": {
+    "What's This?": "O Que é Isto?"
+  },
+  "QWhatsThisAction": {
+    "What's This?": "O Que é Isto?"
+  },
+  "QPageSetupWidget": {
+    "Paper source:": "Fonte papel:",
+    "Landscape": "Paisagem",
+    "Portrait": "Retrato",
+    "Page size:": "Tamanho página:"
+  },
+  "QAbstractSpinBox": {
+    "Step &down": "Passo &abaixo",
+    "&Step up": "&Passo acima"
+  },
+  "QTabBar": {
+    "Scroll Left": "Deslizar para Esquerda",
+    "Scroll Right": "Deslizar para Direita"
+  },
+  "QUndoModel": {
+    "<empty>": "<vazio>"
+  },
+  "QProgressDialog": {
+    "Cancel": "Cancelar"
+  },
+  "MAC_APPLICATION_MENU": {
+    "Hide Others": "Ocultar Outros",
+    "Quit %1": "Encerrar %1",
+    "About %1": "Sobre o %1",
+    "Preferences...": "Preferências…",
+    "Services": "Serviços",
+    "Hide %1": "Ocultar %1",
+    "Show All": "Mostrar Tudo"
+  }
+}

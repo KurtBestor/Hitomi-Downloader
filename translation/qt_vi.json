@@ -1,0 +1,247 @@
+{
+  "QMessageBox": {
+    "OK": "Đồng ý",
+    "Help": "Trợ giúp",
+    "Show Details...": "Hiện chi tiết...",
+    "Hide Details...": "Ẩn chi tiết..."
+  },
+  "QErrorMessage": {
+    "&OK": "Đồ&ng ý",
+    "Fatal Error:": "Lỗi nghiêm trọng:",
+    "&Show this message again": "&Hiện thông điệp này lần nữa",
+    "Debug Message:": "Thông điệp gỡ rối:",
+    "Warning:": "Chú ý:"
+  },
+  "QFontDatabase": {
+    "Any": "Tùy",
+    "Lao": "Lao",
+    "Bold": "Đậm",
+    "Demi": "Vừa",
+    "Thai": "Thai",
+    "Black": "Đen",
+    "Greek": "Greek",
+    "Khmer": "Khmer",
+    "Latin": "Latin",
+    "Light": "Sáng",
+    "Ogham": "Ogham",
+    "Oriya": "Oriya",
+    "Runic": "Runic",
+    "Tamil": "Tamil",
+    "Cyrillic": "Cyrillic",
+    "Kannada": "Kannada",
+    "Malayalam": "Malayalam",
+    "Simplified Chinese": "Simplified Chinese",
+    "Demi Bold": "Đậm vừa",
+    "Arabic": "Arabic",
+    "Hebrew": "Hebrew",
+    "Myanmar": "Myanmar",
+    "Italic": "Nghiêng",
+    "Korean": "Korean",
+    "Normal": "Bình thường",
+    "Oblique": "Lệch",
+    "Telugu": "Telugu",
+    "Thaana": "Thaana",
+    "Symbol": "Ký hiệu",
+    "Syriac": "Syriac",
+    "Devanagari": "Devanagari",
+    "Japanese": "Japanese",
+    "Bengali": "Bengali",
+    "Armenian": "Armenian",
+    "Sinhala": "Sinhala",
+    "Tibetan": "Tibetan",
+    "Vietnamese": "Vietnamese",
+    "Gujarati": "Gujarati",
+    "Traditional Chinese": "Traditional Chinese",
+    "Georgian": "Georgian",
+    "Gurmukhi": "Gurmukhi"
+  },
+  "QScrollBar": {
+    "Top": "Trên",
+    "Scroll down": "Cuộn xuống",
+    "Scroll here": "Cuộn ở đây",
+    "Scroll left": "Cuộn trái",
+    "Line up": "Dòng trên",
+    "Line down": "Dòng dưới",
+    "Bottom": "Dưới",
+    "Page up": "Trang trên",
+    "Position": "Vị trí",
+    "Page right": "Trang phải",
+    "Scroll up": "Cuộn lên",
+    "Scroll right": "Cuộn phải",
+    "Left edge": "Cạnh trái",
+    "Page down": "Trang dưới",
+    "Page left": "Trang trái",
+    "Right edge": "Cạnh phải"
+  },
+  "QFileDialog": {
+    "Back": "Quay lại",
+    "File": "Tập tin",
+    "Open": "Mở",
+    "&Open": "&Mở",
+    "&Save": "&Lưu trữ",
+    "Drive": "Ổ đĩa",
+    "Show ": "Hiển thị ",
+    "'%1' is write protected.\nDo you want to delete it anyway?": "'%1' được viết bảo vệ.\nBạn muốn xóa nó bằng mọi cách?",
+    "File &name:": "&Tên tập tin",
+    "New Folder": "Thư mục mới",
+    "Parent Directory": "Thư mục cha",
+    "&New Folder": "&Thư mục mới",
+    "Remove": "Loại bỏ",
+    "My Computer": "My Computer",
+    "Look in:": "Xem qua:",
+    "Files of type:": "Các tập tin kiểu:",
+    "Find Directory": "Tìm Thư mục",
+    "Show &hidden files": "Hiện tập tin ẩ&n",
+    "Are sure you want to delete '%1'?": "Bạn có chắc muốn xóa '%1'?",
+    "Save As": "Lưu với tên",
+    "%1\nDirectory not found.\nPlease verify the correct directory name was given.": "%1\nThư mục không tìm thấy.\nVui lòng kiểm lại chính xác tên thư mục đã nhập.",
+    "List View": "Xem dạng danh sách",
+    "&Choose": "&Chọn",
+    "&Delete": "&Xóa",
+    "All Files (*)": "Mọi tập tin (*)",
+    "Directories": "Các thư mục",
+    "&Rename": "Đổi &tên",
+    "Could not delete directory.": "Không thể xóa thư mục này.",
+    "Directory:": "Thư mục:",
+    "Unknown": "Không biết",
+    "%1 already exists.\nDo you want to replace it?": "%1 đã tồn tại.\nBạn có muốn thay thế nó không?",
+    "Forward": "Chuyển tiếp",
+    "Create New Folder": "Tạo thư mục mới",
+    "Detail View": "Xem dạng chi tiết",
+    "%1\nFile not found.\nPlease verify the correct file name was given.": "%1\nTập tin không tìm thấy.\nVui lòng kiểm lại chính xác tên tập tin đã nhập."
+  },
+  "QLineEdit": {
+    "Cu&t": "&Cắt ra",
+    "&Copy": "&Sao chép",
+    "&Redo": "&Làm lại",
+    "&Undo": "&Hoàn tác",
+    "&Paste": "&Dán vào",
+    "Delete": "Xóa",
+    "Select All": "Chọn tất cả"
+  },
+  "QDockWidget": {
+    "Dock": "Sáp nhập",
+    "Close": "Đóng",
+    "Float": "Tách rời"
+  },
+  "QDialog": {
+    "Done": "Hoàn tất",
+    "What's This?": "Đây là gì?"
+  },
+  "QWizard": {
+    "Done": "Hoàn thành",
+    "Help": "Trợ giúp",
+    "&Help": "&Trợ giúp",
+    "&Next": "&Tiếp theo",
+    "Cancel": "Hủy bỏ",
+    "Commit": "Xác nhận",
+    "Continue": "Tiếp tục",
+    "&Finish": "&Hoàn thành",
+    "&Next >": "&Tiếp theo >",
+    "Go Back": "Trở lại",
+    "< &Back": "< &Quay lại"
+  },
+  "QPageSetupWidget": {
+    "Form": "Dạng",
+    "bottom margin": "lề dưới",
+    "Paper": "Giấy",
+    "Paper source:": "Nguồn giấy",
+    "Centimeters (cm)": "Xen-ti-met (cm)",
+    "right margin": "lề phải",
+    "Margins": "Canh lề",
+    "Landscape": "Để Ngang",
+    "Width:": "Rộng",
+    "Orientation": "Hướng",
+    "Portrait": "Để dọc",
+    "top margin": "lề trên",
+    "left margin": "lề trái",
+    "Page size:": "Cỡ giấy",
+    "Reverse portrait": "Đảo chiều dọc",
+    "Millimeters (mm)": "Mi-li-met (mm)",
+    "Points (pt)": "Điểm (pt)",
+    "Inches (in)": "Inch (in)",
+    "Reverse landscape": "Đảo chiều ngang",
+    "Height:": "Cao"
+  },
+  "QMdiSubWindow": {
+    "Help": "Trợ giúp",
+    "Menu": "Trình đơn",
+    "&Move": "&Di chuyển",
+    "&Size": "&Cỡ",
+    "Close": "Đóng",
+    "Minimize": "Thật nhỏ",
+    "Shade": "Đổ bóng",
+    "Stay on &Top": "Đặt trên &cùng",
+    "&Close": "Đó&ng",
+    "- [%1]": "- [%1]",
+    "%1 - [%2]": "%1 - [%2]",
+    "&Restore": "&Trả lại",
+    "Restore": "Trả lại",
+    "Maximize": "Thật lớn",
+    "Unshade": "Không đổ bóng",
+    "Mi&nimize": "Thật &nhỏ",
+    "Ma&ximize": "Thật &lớn",
+    "Restore Down": "Cho nhỏ lại"
+  },
+  "QDirModel": {
+    "Kind": "Dạng",
+    "Name": "Tên",
+    "Size": "Kích cỡ",
+    "Type": "Kiểu",
+    "Date Modified": "Ngày giờ sửa đổi"
+  },
+  "QFileSystemModel": {
+    "Kind": "Dạng",
+    "Name": "Tên",
+    "Size": "Kích cỡ",
+    "Type": "Kiểu",
+    "%1 GB": "%1 GB",
+    "%1 KB": "%1 KB",
+    "%1 MB": "%1 MB",
+    "%1 TB": "%1 TB",
+    "<b>The name \"%1\" can not be used.</b><p>Try using another name, with fewer characters or no punctuations marks.": "<b>Cái tên \"%1\" không dùng được.</b><p>Thử một tên khác với một vài ký tự hoặc các dấu chấm câu.",
+    "%1 bytes": "%1 bytes",
+    "My Computer": "My Computer",
+    "Computer": "Computer",
+    "Invalid filename": "Tên tập tin không hợp lệ",
+    "Date Modified": "Ngày giờ sửa đổi"
+  },
+  "QComboBox": {
+    "Open": "Mở",
+    "True": "True",
+    "Close": "Đóng",
+    "False": "False"
+  },
+  "QUndoGroup": {
+    "Redo": "Làm lại",
+    "Undo": "Hoàn tác"
+  },
+  "QUndoStack": {
+    "Redo": "Làm lại",
+    "Undo": "Hoàn tác"
+  },
+  "QWhatsThisAction": {
+    "What's This?": "Đây là gì?"
+  },
+  "QAbstractSpinBox": {
+    "Step &down": "&Giảm",
+    "&Step up": "&Tăng",
+    "&Select All": "Chọn &tất cả"
+  },
+  "QTabBar": {
+    "Scroll Left": "Cuộn trái",
+    "Scroll Right": "Cuộn phải"
+  },
+  "QUndoModel": {
+    "<empty>": "<rỗng>"
+  },
+  "QProgressDialog": {
+    "Cancel": "Hủy bỏ"
+  },
+  "QShortcut": {
+    "Open URL": "Mở URL"
+  },
+  "QMdiArea": {
+    "(Untitled)": "(Không tên)"
+  }
+}
