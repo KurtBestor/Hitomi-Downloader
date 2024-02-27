@@ -1,13 +1,9 @@
 import downloader
 import ree as re
 import os
-from utils import Downloader, query_url, Soup, get_max_range, get_print, clean_title, try_n, check_alive
+from utils import Downloader, query_url, Soup, get_max_range, get_print, clean_title, try_n, check_alive, clean_url
 from translator import tr_
-try:
-    from urllib import quote # python2
-except:
-    from urllib.parse import quote # python3
-from constants import clean_url
+from urllib.parse import quote
 LIMIT = 100
 
 
@@ -33,6 +29,7 @@ class Downloader_rule34_xxx(Downloader):
     MAX_CORE = 8
     display_name = 'Rule34.xxx'
     _name = None
+    ACCEPT_COOKIES = [r'(.*\.)?rule34\.xxx']
 
     @classmethod
     def fix_url(cls, url):

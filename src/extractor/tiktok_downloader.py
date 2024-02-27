@@ -21,6 +21,7 @@ class Downloader_tiktok(Downloader):
     single = True
     URLS = ['tiktok.com', 'douyin.com']
     display_name = 'TikTok'
+    ACCEPT_COOKIES = [r'(.*\.)?(tiktok|douyin)\.com']
 
     def init(self):
         cw = self.cw

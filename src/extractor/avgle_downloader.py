@@ -1,10 +1,9 @@
 #coding: utf8
 import downloader
 from m3u8_tools import M3u8_stream
-from utils import Soup, Downloader, LazyUrl, get_print, try_n, check_alive, format_filename
+from utils import Soup, Downloader, LazyUrl, get_print, try_n, check_alive, format_filename, json
 from io import BytesIO
 import base64
-import json
 import webbrowser
 import errors
 
@@ -14,6 +13,7 @@ class Downloader_avgle(Downloader):
     type = 'avgle'
     single = True
     URLS = ['avgle.com']
+    ACCEPT_COOKIES = [r'(.*\.)?avgle\.com']
 
     def init(self):
         if not self.cw.data_:

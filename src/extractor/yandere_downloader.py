@@ -1,14 +1,12 @@
-from utils import Downloader, urljoin, clean_title, try_n, check_alive, LazyUrl, get_ext, get_max_range
+from utils import Downloader, urljoin, clean_title, try_n, check_alive, LazyUrl, get_ext, get_max_range, limits
 from translator import tr_
 import ree as re
 import downloader
-from ratelimit import limits, sleep_and_retry
 from urllib.parse import unquote
 
 
 @try_n(4)
-@sleep_and_retry
-@limits(4, 1)
+@limits(.25)
 def read_soup(url):
     return downloader.read_soup(url)
 
@@ -18,6 +16,7 @@ class Downloader_yandere(Downloader):
     type = 'yande.re'
     URLS = ['yande.re']
     MAX_CORE = 4
+    ACCEPT_COOKIES = [r'(.*\.)?yande\.re']
 
     @classmethod
     def fix_url(cls, url):

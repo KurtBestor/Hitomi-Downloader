@@ -1,9 +1,8 @@
 #coding:utf8
 import downloader
 import ree as re
-from utils import urljoin, LazyUrl, Downloader, try_n, join
+from utils import urljoin, LazyUrl, Downloader, try_n, join, json
 import os
-import json
 
 
 
@@ -12,6 +11,7 @@ class Downloader_nhentai_com(Downloader):
     URLS = [r'regex:https?://nhentai.com']
     MAX_CORE = 16
     display_name = 'nhentai.com'
+    ACCEPT_COOKIES = [r'(.*\.)?nhentai\.com']
 
     def init(self):
         self.info = get_info(self.url)

@@ -55,6 +55,7 @@ class Downloader_lhscan(Downloader):
         ]
     MAX_CORE = 16
     display_name = 'LHScan'
+    ACCEPT_COOKIES = [rf'(.*\.)?{domain}' for domain in URLS]
 
     def init(self):
         self.soup, self.session = get_soup_session(self.url, self.cw)

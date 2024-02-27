@@ -12,6 +12,7 @@ class Downloader_xhamster(Downloader):
     URLS = [rf'regex:{__name}\.[a-z0-9]+/(videos|users|creators|photos/gallery)/']
     single = True
     display_name = 'xHamster'
+    ACCEPT_COOKIES = __name
 
     def init(self):
         if re.search(r'xhamsterlive[0-9]*\.', self.url):

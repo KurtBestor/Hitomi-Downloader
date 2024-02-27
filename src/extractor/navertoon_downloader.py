@@ -1,10 +1,8 @@
 import downloader
-from utils import Soup, urljoin, Downloader, get_imgs_already, clean_title, get_ext, get_print, errors, check_alive, File
-from constants import try_n
+from utils import Soup, urljoin, Downloader, get_imgs_already, clean_title, get_ext, get_print, errors, check_alive, File, try_n, json
 import ree as re
 import page_selector
 from translator import tr_
-import json
 import utils
 
 

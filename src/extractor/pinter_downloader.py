@@ -1,9 +1,7 @@
-from utils import Session, Downloader, LazyUrl, clean_url, try_n, clean_title, get_ext, get_max_range, check_alive
-import json
+from utils import Session, Downloader, LazyUrl, clean_url, try_n, clean_title, get_ext, get_max_range, check_alive, limits, json
 import ree as re
 from translator import tr_
 import urllib
-from ratelimit import limits, sleep_and_retry
 from m3u8_tools import playlist2stream, M3u8_stream
 BASE_URL = 'https://www.pinterest.com'
 
@@ -145,8 +143,7 @@ class PinterestAPI:
         return self._pagination('UserActivityPins', options)
 
     @try_n(4)
-    @sleep_and_retry
-    @limits(1, 4) # 1000 calls per hour
+    @limits(4) # 1000 calls per hour
     def _call(self, resource, options):
         url = f'{BASE_URL}/resource/{resource}Resource/get/'
         params = {'data': json.dumps({'options': options}), 'source_url': ''}

@@ -5,11 +5,12 @@ from io import BytesIO as IO
 
 
 
-class Downloader_vlive(Downloader):
+class Downloader_kakaotv(Downloader):
     type = 'kakaotv'
     URLS = ['tv.kakao']
     single = True
     display_name = 'KakaoTV'
+    ACCEPT_COOKIES = [r'(.*\.)?kakao\.com']
 
     @classmethod
     def fix_url(cls, url):

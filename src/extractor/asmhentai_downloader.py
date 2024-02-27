@@ -1,9 +1,8 @@
 #coding: utf8
 import downloader
 import ree as re
-from utils import Soup, urljoin, Downloader, join, Session, File, clean_title
+from utils import Soup, urljoin, Downloader, join, Session, File, clean_title, limits
 import os
-from ratelimit import limits, sleep_and_retry
 import utils
 
 
@@ -19,8 +18,7 @@ class File_asmhentai(File):
     type = 'asmhentai'
     format = 'name'
 
-    @sleep_and_retry
-    @limits(4, 1)
+    @limits(.25)
     def get(self):
         soup = downloader.read_soup(self['referer'], self['rereferer'], session=self.session)
         img = soup.find('img', id='fimg')
@@ -38,6 +36,7 @@ class Downloader_asmhentai(Downloader):
     URLS = ['asmhentai.com']
     MAX_CORE = 8
     display_name = 'AsmHentai'
+    ACCEPT_COOKIES = [r'(.*\.)?asmhentai\.com']
 
     def init(self):
         self.session = Session()

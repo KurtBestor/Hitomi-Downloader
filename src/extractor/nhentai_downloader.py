@@ -1,9 +1,8 @@
 #coding:utf8
 import downloader
 import ree as re
-from utils import urljoin, File, Downloader, try_n, join, get_ext
+from utils import urljoin, File, Downloader, try_n, join, get_ext, json
 import utils
-import json
 import clf2
 
 

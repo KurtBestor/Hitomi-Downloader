@@ -1,6 +1,5 @@
 import downloader
-from utils import Downloader, File, clean_title, urljoin, get_ext
-from ratelimit import limits, sleep_and_retry
+from utils import Downloader, File, clean_title, urljoin, get_ext, limits
 import utils
 
 
@@ -9,8 +8,7 @@ class File_4chan(File):
     type = '4chan'
     format = 'page:04;'
 
-    @sleep_and_retry
-    @limits(2, 1)
+    @limits(.5)
     def get(self):
         return {}
 
@@ -21,6 +19,7 @@ class Downloader_4chan(Downloader):
     URLS = [r'regex:boards.(4chan|4channel).org']
     MAX_CORE = 4
     display_name = '4chan'
+    ACCEPT_COOKIES = [r'(.*\.)?(4chan|4channel)\.org']
 
     @classmethod
     def fix_url(cls, url):

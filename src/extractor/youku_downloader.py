@@ -10,6 +10,7 @@ class Downloader_youku(Downloader):
     type = 'youku'
     single = True
     URLS = ['v.youku.com']
+    ACCEPT_COOKIES = [r'(.*\.)?youku\.com']
 
     def read(self):
         video = Video(self.url, cw=self.cw)

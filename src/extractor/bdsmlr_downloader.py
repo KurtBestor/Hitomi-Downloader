@@ -15,6 +15,7 @@ class Downloader_bdsmlr(Downloader):
     type = 'bdsmlr'
     URLS = ['bdsmlr.com']
     display_name = 'BDSMlr'
+    ACCEPT_COOKIES = [r'(.*\.)?bdsmlr\.com']
 
     def init(self):
         if 'bdsmlr.com/post/' in self.url:

@@ -1,7 +1,6 @@
 #coding:utf8
 import downloader
-import json
-from utils import LazyUrl, Downloader, Session, get_print, clean_title, check_alive
+from utils import LazyUrl, Downloader, Session, get_print, clean_title, check_alive, json
 import os
 from translator import tr_
 

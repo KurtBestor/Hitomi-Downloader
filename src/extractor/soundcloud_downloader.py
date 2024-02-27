@@ -1,11 +1,10 @@
 #coding: utf8
 import downloader
 from io import BytesIO
-from utils import Downloader, LazyUrl, get_print, try_n, lock, get_max_range, format_filename
+from utils import Downloader, LazyUrl, get_print, try_n, lock, get_max_range, format_filename, limits
 import ffmpeg
 import ytdl
 from m3u8_tools import M3u8_stream
-from ratelimit import limits, sleep_and_retry
 CLIENT_ID = None
 
 
@@ -30,8 +29,7 @@ class Audio:
         self.url = LazyUrl(url, self.get, self, pp=self.pp)
 
     @try_n(2)
-    @sleep_and_retry
-    @limits(1, 1)
+    @limits(1)
     def get(self, url):
         print_ = get_print(self.cw)
         if self._url:
@@ -103,6 +101,7 @@ class Downloader_soundcloud(Downloader):
     #lock = True
     audio = None
     display_name = 'SoundCloud'
+    ACCEPT_COOKIES = [r'(.*\.)?soundcloud\.com']
 
     def init(self):
         if 'soundcloud.com' in self.url.lower():

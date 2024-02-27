@@ -1,8 +1,7 @@
-from utils import Downloader, File, Session, urljoin, get_ext, clean_title, Soup
+from utils import Downloader, File, Session, urljoin, get_ext, clean_title, Soup, limits
 import utils
 import ree as re
 import downloader
-from ratelimit import limits, sleep_and_retry
 import clf2
 from timee import time
 TIMEOUT = 10
@@ -12,8 +11,7 @@ class File_flickr(File):
     type = 'flickr'
     format = '[date] id'
 
-    @sleep_and_retry
-    @limits(1, 1)
+    @limits(1)
     def get(self):
         url = self['referer']
         soup = downloader.read_soup(url, session=self.session)
@@ -31,6 +29,7 @@ class Downloader_flickr(Downloader):
     type = 'flickr'
     URLS = ['flickr.com']
     MAX_CORE = 4
+    ACCEPT_COOKIES = [r'(.*\.)?flickr\.com']
 
     def init(self):
         self.session = Session()

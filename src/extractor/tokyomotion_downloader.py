@@ -12,6 +12,7 @@ class Downloader_tokyomotion(Downloader):
     single = True
     _type = None
     display_name = 'TOKYO Motion'
+    ACCEPT_COOKIES = [r'(.*\.)?tokyomotion\.net']
 
     def init(self):
         html = downloader.read_html(self.url)

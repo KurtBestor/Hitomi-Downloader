@@ -1,13 +1,10 @@
 #coding: utf-8
 import downloader
 import ree as re
-from utils import Downloader, urljoin, query_url, Soup, get_max_range, get_print, LazyUrl, get_ext, clean_title, Session, check_alive
+from utils import Downloader, urljoin, query_url, get_max_range, get_print, get_ext, clean_title, Session, check_alive, File, clean_url
 from translator import tr_
-try:
-    from urllib import quote # python2
-except:
-    from urllib.parse import quote # python3
-from constants import clean_url
+from urllib.parse import quote
+import utils
 
 
 def get_tags(url):
@@ -33,6 +30,9 @@ class Downloader_gelbooru(Downloader):
     _name = None
     ACCEPT_COOKIES = [r'(.*\.)?gelbooru\.com']
 
+    def init(self):
+        self.session = Session()
+
     @classmethod
     def fix_url(cls, url):
         if 'gelbooru.com' in url.lower():
@@ -56,57 +56,37 @@ class Downloader_gelbooru(Downloader):
     def read(self):
         self.title = self.name
 
-        imgs = get_imgs(self.url, self.name, cw=self.cw)
-
-        for img in imgs:
-            self.urls.append(img.url)
+        self.urls += get_imgs(self.url, self.session, self.name, cw=self.cw)
 
         self.title = self.name
 
 
-@LazyUrl.register
-class LazyUrl_gelbooru(LazyUrl):
+class File_gelbooru(File):
     type = 'gelbooru'
-    def dump(self):
-        return {
-            'id': self.image.id_,
-            'url': self.image._url,
-            }
-    @classmethod
-    def load(cls, data):
-        img = Image(data['id'], data['url'])
-        return img.url
+    format = 'id'
 
-
-class Image:
-    def __init__(self, id_, url):
-        self.id_ = id_
-        self._url = url
-        self.url = LazyUrl_gelbooru(url, self.get, self)
-
-    def get(self, url):
-        html = downloader.read_html(url)
-        soup = Soup(html)
+    def get(self):
+        soup = downloader.read_soup(self['referer'], session=self.session)
         for li in soup.findAll('li'):
             if li.text.strip() == 'Original image':
                 break
         else:
             raise Exception('no Original image')
         url = li.find('a')['href']
-        ext = get_ext(url)
-        self.filename = '{}{}'.format(self.id_, ext)
-        return url
+        d = {
+            'id': self['id'],
+            }
+        return {'url': url, 'name': utils.format('gelbooru', d, get_ext(url))}
+
+    def alter(self):
+        return self.get()['url']
 
 
 def setPage(url, page):
-    # Always use HTTPS
-    url = url.replace('http://', 'https://')
-
-    # Change the page
     if 'pid=' in url:
-        url = re.sub('pid=[0-9]*', 'pid={}'.format(page), url)
+        url = re.sub('pid=[0-9]*', f'pid={page}', url)
     else:
-        url += '&pid={}'.format(page)
+        url += f'&pid={page}'
 
     if page == 0:
         url = url.replace('&pid=0', '')
@@ -114,7 +94,7 @@ def setPage(url, page):
     return url
 
 
-def get_imgs(url, title=None, cw=None):
+def get_imgs(url, session, title=None, cw=None):
     print_ = get_print(cw)
     url = clean_url(url)
     if 's=view' in url and 'page=favorites' not in url:
@@ -123,14 +103,13 @@ def get_imgs(url, title=None, cw=None):
     tags = get_tags(url)
     tags = quote(tags, safe='/')
     tags = tags.replace('%20', '+')
-    url = 'https://gelbooru.com/index.php?page=post&s=list&tags={}'.format(tags)
+    url = f'https://gelbooru.com/index.php?page=post&s=list&tags={tags}'
 
     # 2566
-    user_id = Session().cookies.get('user_id', domain='gelbooru.com')
-    if user_id:
-        cookies = None
-    else:
+    user_id = session.cookies.get('user_id', domain='gelbooru.com')
+    if not user_id:
         cookies = {'fringeBenefits': 'yup'}
+        session.cookies.update(cookies)
     print_('user_id: {}'.format(user_id))
 
     # Range
@@ -143,9 +122,7 @@ def get_imgs(url, title=None, cw=None):
         check_alive(cw)
         url = setPage(url, len(ids))
         print_(url)
-        html = downloader.read_html(url, cookies=cookies)
-
-        soup = Soup(html)
+        soup = downloader.read_soup(url, session=session)
         posts = soup.findAll(class_='thumbnail-preview')
         imgs_new = []
         for post in posts:
@@ -155,7 +132,7 @@ def get_imgs(url, title=None, cw=None):
                 continue
             ids.add(id_)
             url_img = urljoin(url, post.find('a')['href'])
-            img = Image(id_, url_img)
+            img = File_gelbooru({'id': id_, 'referer': url_img, 'name_hint': f'{id_}{{ext}}'})
             imgs_new.append(img)
         if imgs_new:
             imgs += imgs_new

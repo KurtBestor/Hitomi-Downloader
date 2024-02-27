@@ -1,4 +1,4 @@
-from utils import Downloader, clean_title, lock
+from utils import Downloader, clean_title, lock, json
 import constants, os, downloader
 from size import Size
 from timee import sleep
@@ -10,7 +10,6 @@ import errors
 import ips
 import order
 from cacher import Cache
-import myjson as json
 torrent = None
 TIMEOUT = 1800
 CACHE_INFO = True
@@ -230,7 +229,7 @@ class Downloader_torrent(Downloader):
                 cw.pbar.setMaximum(self._info.total_size())
                 cw.setColor('reading')
                 if pr is None and utils.ui_setting.torrentSelectFiles.isChecked():
-                    from Qt import QApplication, QStyle, QIcon
+                    from utils import QApplication, QStyle, QIcon
                     cache_icon = Cache(1024)
                     files = torrent.get_files(self._info)
                     icon_size = QApplication.style().pixelMetric(QStyle.PM_ListViewIconSize)
@@ -407,7 +406,7 @@ class Downloader_torrent(Downloader):
                         index = alert['index']
                         index = self._torrent_index[index]
                         try:
-                            file = os.path.realpath(names[index])
+                            file = os.path.abspath(names[index])
                         except IndexError:
                             continue #???
                         cw.dones.add(file)

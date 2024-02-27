@@ -32,6 +32,33 @@ class Video(File):
     vcodec = None
     filename0 = None
     chapters = None
+    _yt = None
+    _thumb = None
+
+    @property
+    def yt(self):
+        print_ = get_print(self.cw)
+        if self._yt is None:
+            for try_ in range(4):
+                try:
+                    self._yt = ytdl.YouTube(self['referer'], cw=self.cw)
+                    break
+                except errors.Retry as e:
+                    raise e
+                except Exception as e:
+                    e_ = e
+                    s = print_error(e)
+                    print_('### youtube retry...\n{}'.format(s))
+                    sleep(try_, self.cw)
+            else:
+                raise e_
+        return self._yt
+
+    def thumb(self):
+        if self._thumb is None:
+            self.thumb_url, self._thumb = ytdl.download_thumb(self.yt.thumbnail_url, self.cw, self.session)
+        self._thumb.seek(0)
+        return self._thumb
 
     def get(self):
         type = self['type']
@@ -45,19 +72,7 @@ class Video(File):
         print_ = get_print(cw)
 
         print('max_res: {}'.format(max_res))
-        for try_ in range(4):
-            try:
-                self.yt = yt = ytdl.YouTube(url, cw=cw)
-                break
-            except errors.Retry as e:
-                raise e
-            except Exception as e:
-                e_ = e
-                s = print_error(e)
-                print_('### youtube retry...\n{}'.format(s))
-                sleep(try_, cw)
-        else:
-            raise e_
+        yt = self.yt
 
         if utils.ui_setting.chapterMarkerCheck.isChecked():
             self.chapters = yt.info.get('chapters')
@@ -147,7 +162,7 @@ class Video(File):
             for stream, res in zip(streams, ress):
                 if res == m:
                     if type == 'video':
-                        foo = (stream_final is not None) and (stream_final.audio_codec is None) and bool(stream.audio_codec)
+                        foo = (stream_final is not None) and (stream_final.audio_codec is None) and bool(stream.audio_codec) and stream_final.fps <= stream.fps #6911
                     elif type == 'audio':
                         foo = False
                     if stream_final is None or (foo or (stream_final.subtype.lower()!=prefer_format and stream.subtype.lower()==prefer_format)):
@@ -179,7 +194,6 @@ class Video(File):
         self.stream_audio = None
         self.audio = None
         self.thumb_url = None
-        self.subs = yt.subtitles
 
         if type == 'audio' and 'DASH' in self.stream.format:
             self.stream.setDashType('audio')
@@ -228,15 +242,6 @@ class Video(File):
             if callable(self.audio):
                 self.audio = self.audio()
 
-        # Thumbnail
-        self._thumb = None
-        def thumb():
-            if self._thumb is None:
-                self.thumb_url, self._thumb = ytdl.download_thumb(yt.thumbnail_url, cw, session)
-            self._thumb.seek(0)
-            return self._thumb
-        self.thumb = thumb
-
         #
         _url = self.stream.url
         if callable(_url):
@@ -269,8 +274,9 @@ class Video(File):
                 if not _ or _ == 'none':
                     d[token] = value
 
-        filename = format_filename(title, yt.video_id, ext, artist=yt.info['uploader'], date=time, d=d) #4953, #5529
-        filename = fix_dup(filename, CACHE_FILENAMES[self['uid_filenames']]) #6235
+        filename = format_filename(title, yt.video_id, ext, artist=yt.info['uploader'], date=None if self.stream.live else time, d=d, live=self.stream.live) #4953, #5529
+        if cw:
+            filename = fix_dup(filename, cw.downloader.cache_filenames) #6235
         print_(f'filename: {filename}')
 
         if type == 'audio':
@@ -363,22 +369,27 @@ class Video(File):
                 s = print_error(e)
                 print_(s)
 
+        return filename_new
+
+    def pp_always(self, filename):
+        cw = self.cw
+        print_ = get_print(cw)
         if utils.ui_setting.thumbCheck.isChecked():
             import filetype
             s = self.thumb().getvalue()
             ext = filetype.guess(s)
             if ext is None:
                 raise Exception('unknown ext')
-            filename_thumb = os.path.splitext(filename_new)[0] + '.' + ext.extension
+            filename_thumb = os.path.splitext(filename)[0] + '.' + ext.extension
             print_(f'filename_thumb: {filename_thumb}')
             with open(filename_thumb, 'wb') as f:
                 f.write(s)
             cw.imgs.append(filename_thumb)
-            cw.dones.add(os.path.realpath(filename_thumb))
-
-        utils.pp_subtitle(self, filename_new, cw)
-
-        return filename_new
+            cw.dones.add(os.path.abspath(filename_thumb))
+        if utils.ui_setting.subtitle.isChecked():
+            self.subs = self.yt.subtitles
+            utils.pp_subtitle(self, filename, cw)
+        return filename
 
 
 def get_id(url):
@@ -392,14 +403,16 @@ class Downloader_youtube(Downloader):
     type = 'youtube'
     single = True
     yt_type = None
-    URLS = ['youtube.co', 'youtu.be']
+    URLS = ['youtube.co', 'youtu.be', 'yewtu.be']
     lock = True
     display_name = 'YouTube'
     keep_date = True #3528
     __format = {}
     ACCEPT_COOKIES = [r'.*(youtube|youtu\.be|google).*']
+    atts = ['cache_filenames']
 
     def init(self):
+        self.cache_filenames = {}
         format = self.cw.format
         if format:
             if isinstance(format, str):
@@ -422,6 +435,7 @@ class Downloader_youtube(Downloader):
 
     @classmethod
     def fix_url(cls, url): #2033
+        url = url.replace('yewtu.be', 'youtube.com')
         if not re.match('https?://.+', url, re.I):
             url = 'https://www.youtube.com/watch?v={}'.format(url)
 
@@ -448,7 +462,11 @@ class Downloader_youtube(Downloader):
 
     @classmethod
     def is_channel_url(cls, url):
-        return '/channel/' in url or '/user/' in url or '/c/' in url or ''.join(url.split('/')[3:4]).startswith('@')
+        if '/channel/' in url or '/user/' in url or '/c/' in url:
+            return True
+        if ''.join(url.split('/')[3:4]).startswith('@'):
+            return not url.lower().endswith('/live')
+        return False
 
     def read(self):
         cw = self.cw
@@ -483,12 +501,18 @@ class Downloader_youtube(Downloader):
             video = self.process_playlist(info['title'], videos)
         else:
             self.urls.append(video)
-            self.title = video.title
+            self.title = os.path.splitext(video.filename0 or video['name'])[0].replace('：', ':') #4776
             if video.stream.live:
                 self.lock = False
 
         self.artist = video.username
         self.setIcon(video.thumb())
+        if video.stream.live:
+            d = {}
+            d['url'] = self.url
+            d['title'] = self.artist
+            d['thumb'] = video.thumb().getvalue()
+            utils.update_live(d, self.cw)
 
 
 def int_(x):
@@ -498,7 +522,6 @@ def int_(x):
         return 0
 
 
-CACHE_FILENAMES = {}
 @try_n(2, sleep=1)
 def get_videos(url, session, type='video', only_mp4=False, audio_included=False, max_res=None, max_abr=None, cw=None):
     info = {}
@@ -523,15 +546,13 @@ def get_videos(url, session, type='video', only_mp4=False, audio_included=False,
         if cw:
             info['urls'] = filter_range(info['urls'], cw.range)
             cw.fped = True
-    elif get_id(url):
+    elif get_id(url) or url.lower().endswith('/live'):
         info['type'] = 'single'
         info['urls'] = [url]
     else:
         raise NotImplementedError(url)
 
-    uid_filenames = uuid()
-    CACHE_FILENAMES[uid_filenames] = {}
-    info['videos'] = [Video({'referer':url, 'type':type, 'only_mp4':only_mp4, 'audio_included':audio_included, 'max_res':max_res, 'max_abr':max_abr, 'uid_filenames': uid_filenames}) for url in info['urls']]
+    info['videos'] = [Video({'referer':url, 'type':type, 'only_mp4':only_mp4, 'audio_included':audio_included, 'max_res':max_res, 'max_abr':max_abr}) for url in info['urls']]
 
     return info
 
@@ -640,7 +661,6 @@ def select():
         win.setWindowOpacity(constants.opacity_max)
         try:
             res = win.exec()
-            utils.log(f'youtube.select.res: {res}')
             if not res:
                 return selector.Cancel
             utils.windows.remove(win)
@@ -663,3 +683,39 @@ def options(urls):
 @selector.default_option('youtube')
 def default_option():
     return compatstr(utils.ui_setting.youtubeCombo_type.currentText()).lower().split()[0]
+
+
+def get_streamer_name(url):
+    if url.endswith('/live'):
+        url = url[:-len('/live')]
+    ydl = ytdl.YoutubeDL({'playlistend': 0}, type='youtube')
+    info = ydl.extract_info(url)
+    return info['channel']
+
+
+class Live_youtube(utils.Live):
+    type = 'youtube'
+
+    @classmethod
+    def is_live(cls, url):
+        return ''.join(url.split('/')[3:4]).startswith('@')
+
+    @classmethod
+    def fix_url(cls, url):
+        cn = url.split('/')[3].split('?')[0].split('#')[0]
+        return f'https://youtube.com/{cn}/live'
+
+    @classmethod
+    def check_live(cls, url, info=None):
+        if info is not None:
+            try:
+                info['title'] = get_streamer_name(url)
+            except Exception as e:
+                utils.log(print_error(e))
+        ydl = ytdl.YoutubeDL(type='youtube')
+        try:
+            _ = ydl.extract_info(url)
+            return _.get('live_status') == 'is_live'
+        except Exception as e:
+            print(e)
+            return False

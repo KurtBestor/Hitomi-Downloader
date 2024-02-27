@@ -1,6 +1,6 @@
 import downloader
-from utils import Session, Downloader, try_n, Soup, format_filename, get_print, get_resolution
-import ree as re, json
+from utils import Session, Downloader, try_n, Soup, format_filename, get_print, get_resolution, json
+import ree as re
 from io import BytesIO
 import os
 from timee import time
@@ -43,8 +43,11 @@ class Downloader_hanime(Downloader):
     display_name = 'hanime.tv'
     ACCEPT_COOKIES = [r'(.*\.)?hanime\.tv']
 
+    def init(self):
+        self.session = Session('chrome')
+
     def read(self):
-        video, session = get_video(self.url, cw=self.cw)
+        video = get_video(self.url, self.session, cw=self.cw)
         self.video = video
 
         self.urls.append(video.url)
@@ -55,11 +58,8 @@ class Downloader_hanime(Downloader):
 
 
 @try_n(8)
-def get_video(url, session=None, cw=None):
+def get_video(url, session, cw=None):
     print_ = get_print(cw)
-    if session is None:
-        session = Session()
-        session.headers['User-Agent'] = downloader.hdr['User-Agent']
     session.headers['X-Directive'] = 'api'
     html = downloader.read_html(url, session=session)
     soup = Soup(html)
@@ -79,14 +79,12 @@ def get_video(url, session=None, cw=None):
     query = info['slug']
     #url_api = 'https://members.hanime.tv/api/v3/videos_manifests/{}?'.format(query) # old
     url_api = 'https://hanime.tv/rapi/v7/videos_manifests/{}?'.format(query) # new
-    print(url_api)
     hdr = {
         'x-signature': ''.join('{:x}'.format(randrange(16)) for i in range(32)),
         'x-signature-version': 'web2',
         'x-time': str(int(time())),
         }
     r = session.get(url_api, headers=hdr)
-    print(r)
     data = json.loads(r.text)
     streams = []
     for server in data['videos_manifest']['servers']:
@@ -102,7 +100,6 @@ def get_video(url, session=None, cw=None):
 
     if not streams_good:
         raise Exception('No video available')
-    print('len(streams_good):', len(streams_good))
     res = get_resolution()
 
     def print_stream(stream):
@@ -121,4 +118,4 @@ def get_video(url, session=None, cw=None):
 
     print_('Final stream:')
     print_stream(stream)
-    return Video(info, stream), session
+    return Video(info, stream)

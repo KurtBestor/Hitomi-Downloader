@@ -1,14 +1,19 @@
 #coding:utf8
 import downloader
 import utils
-from utils import Soup, Downloader, LazyUrl, urljoin, try_n, clean_title, get_max_range
+from utils import Soup, Downloader, LazyUrl, urljoin, try_n, clean_title, get_max_range, json
 import ree as re
 import os
 from translator import tr_
 from io import BytesIO
-import json
 import clf2
+import errors
 downloader.REPLACE_UA[r'\.luscious\.net'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36'
+
+
+class LoginRequired(errors.LoginRequired):
+    def __init__(self, *args):
+        super().__init__(*args, method='browser', url='https://members.luscious.net/login/')
 
 
 class Image:
@@ -42,6 +47,7 @@ class Downloader_luscious(Downloader):
     type = 'luscious'
     URLS = ['luscious.net']
     MAX_CORE = 4
+    ACCEPT_COOKIES = [r'(.*\.)?luscious\.net']
 
     @classmethod
     def fix_url(cls, url):
@@ -67,6 +73,8 @@ class Downloader_luscious(Downloader):
         res = clf2.solve(self.url, f=f, cw=self.cw, show=True)
         self.url = res['url']
         soup = Soup(res['html'])
+        if soup.find(class_='http-error-404-page-container'):
+            raise LoginRequired(get_title(soup)) #6912
 
         title = clean_title(get_title(soup))
 

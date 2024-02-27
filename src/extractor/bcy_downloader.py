@@ -1,7 +1,6 @@
 #coding:utf8
 import downloader
-from utils import Soup, cut_pair, LazyUrl, Downloader, get_print, get_max_range, try_n, clean_title, check_alive
-import json
+from utils import Soup, cut_pair, LazyUrl, Downloader, get_print, get_max_range, try_n, clean_title, check_alive, json
 import os
 from translator import tr_
 
@@ -12,6 +11,7 @@ class Downloader_bcy(Downloader):
     URLS = ['bcy.net/item/detail/', 'bcy.net/u/']
     MAX_CORE = 8
     display_name = '半次元'
+    ACCEPT_COOKIES = [r'(.*\.)?bcy\.net']
 
     def init(self):
         self.html = downloader.read_html(self.url)

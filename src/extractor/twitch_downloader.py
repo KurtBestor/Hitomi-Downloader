@@ -1,12 +1,13 @@
 #coding: utf8
 import downloader
 import ytdl
-from utils import Downloader, LazyUrl, try_n, format_filename, get_ext, Session, get_print, get_resolution, get_max_range
+from utils import Downloader, LazyUrl, try_n, format_filename, get_ext, Session, get_print, get_resolution, get_max_range, print_error, json
 from io import BytesIO
 from m3u8_tools import M3u8_stream
 import ree as re
 import errors
 import utils
+import os
 
 
 
@@ -23,7 +24,7 @@ class Downloader_twitch(Downloader):
                 url = 'https://' + url
             self.url = url
         else:
-            url = 'https://www.twitch.tv/videos/{}'.format(url)
+            url = f'https://www.twitch.tv/videos/{url}'
             self.url = url
         self.session = Session()
 
@@ -57,7 +58,7 @@ class Downloader_twitch(Downloader):
 
     def read(self):
         if '/directory/' in self.url.lower():
-            raise errors.Invalid('[twitch] Directory is unsupported: {}'.format(self.url))
+            raise errors.Invalid(f'[twitch] Directory is unsupported: {self.url}')
 
         filter = self.get_filter(self.url)
 
@@ -70,7 +71,7 @@ class Downloader_twitch(Downloader):
             video = Video(self.url, self.session, self.cw, live=True)
             video.url()
             self.urls.append(video.url)
-            self.title = video.title
+            self.title = os.path.splitext(video.filename)[0].replace('：', ':')
         elif filter == 'clips':
             info = get_videos(self.url, cw=self.cw)
             video = self.process_playlist('[Clip] {}'.format(info['name']), info['videos'])
@@ -88,7 +89,7 @@ class Downloader_twitch(Downloader):
             d['url'] = self.url
             d['title'] = self.artist
             d['thumb'] = thumb.getvalue()
-            utils.update_live(d)
+            utils.update_live(d, self.cw)
 
 
 @try_n(2)
@@ -186,23 +187,51 @@ class Video:
         video = video_best['url']
 
         ext = get_ext(video)
-        self.title = info['title']
         id = info['display_id']
 
         if self._live:
+            self.title = info['description']
             if utils.SD['twitch']['strip_ads']:
                 video = M3u8_stream(video, n_thread=4, alter=alter, session=session)
             else:
                 video = utils.LiveStream(video, headers=video_best.get('http_headers', {}))
             ext = '.mp4'
         else:
+            self.title = info['title']
             if ext.lower() == '.m3u8':
                 video = M3u8_stream(video, n_thread=4, alter=alter, session=session)
                 ext = '.mp4'
-        self.filename = format_filename(self.title, id, ext, artist=self.artist)
+        self.filename = format_filename(self.title, id, ext, artist=self.artist, live=self._live)
         self.url_thumb = info['thumbnail']
         self._url = video
         return self._url
+
+
+def get_streamer_name(url):
+    session = Session()
+    session.purge('twitch')
+    graphql_url = 'https://gql.twitch.tv/gql'
+    headers = {
+        'Client-ID': 'kimne78kx3ncx6brgo4mv6wki5h1ko',
+        'Content-Type': 'application/json',
+    }
+    session.headers.update(headers)
+
+    id = url.split('/')[3]
+
+    payload = {'operationName': 'PlaybackAccessToken_Template', 'query': 'query PlaybackAccessToken_Template($login: String!, $isLive: Boolean!, $vodID: ID!, $isVod: Boolean!, $playerType: String!) {  streamPlaybackAccessToken(channelName: $login, params: {platform: "web", playerBackend: "mediaplayer", playerType: $playerType}) @include(if: $isLive) {    value    signature   authorization { isForbidden forbiddenReasonCode }   __typename  }  videoPlaybackAccessToken(id: $vodID, params: {platform: "web", playerBackend: "mediaplayer", playerType: $playerType}) @include(if: $isVod) {    value    signature   __typename  }}', 'variables': {'isLive': True, 'login': id, 'isVod': False, 'vodID': '', 'playerType': 'site'}}
+    r = session.post(graphql_url, json=payload)
+    r.raise_for_status()
+    data = r.json()
+    value = json.loads(data['data']['streamPlaybackAccessToken']['value'])
+    cid = value['channel_id']
+    utils.log(data)
+
+    payload = [{"operationName":"EmotePicker_EmotePicker_UserSubscriptionProducts","variables":{"channelOwnerID":f"{cid}"},"extensions":{"persistedQuery":{"version":1,"sha256Hash":"71b5f829a4576d53b714c01d3176f192cbd0b14973eb1c3d0ee23d5d1b78fd7e"}}}]
+    r = session.post(graphql_url, json=payload)
+    r.raise_for_status()
+    data = r.json()
+    return data[0]['data']['user']['displayName']
 
 
 class Live_twitch(utils.Live):
@@ -213,8 +242,13 @@ class Live_twitch(utils.Live):
         return Downloader.get('twitch').get_filter(url) == 'live'
 
     @classmethod
-    def check_live(cls, url):
-        ydl = ytdl.YoutubeDL()
+    def check_live(cls, url, info=None):
+        if info is not None:
+            try:
+                info['title'] = get_streamer_name(url)
+            except Exception as e:
+                utils.log(print_error(e))
+        ydl = ytdl.YoutubeDL(type='twitch')
         try:
             ydl.extract_info(url)
             return True

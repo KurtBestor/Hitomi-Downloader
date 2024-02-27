@@ -15,6 +15,7 @@ class Downloader_coub(Downloader):
     type = 'coub'
     URLS = ['coub.com', r'regex:'+PATTEN_IMAGIZER]
     single = True
+    ACCEPT_COOKIES = [r'(.*\.)?coub\.com']
 
     @classmethod
     def fix_url(cls, url):
