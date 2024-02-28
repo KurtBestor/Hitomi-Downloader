@@ -1,34 +1,41 @@
 #coding:utf8
 import downloader
 import utils
-from utils import Soup, urljoin, LazyUrl, try_n, Downloader, clean_title, Session
+from utils import urljoin, try_n, Downloader, clean_title, Session, File, check_alive, get_max_range
 import ree as re
 from io import BytesIO
 import os
 from translator import tr_
+from timee import sleep
 
 
-class Text:
+class Text(File):
+    type = 'syosetu'
+    format = 'title'
 
-    def __init__(self, title, update, url, session, single):
-        if single:
-            self.p = None
-            self.title = title
-        else:
-            self.p = int(re.findall('/([0-9]+)', url)[(-1)])
-            title = '[{:04}] {}'.format(self.p, title)
-            title = clean_title(title, n=-4)
-            self.title = title
-        self.filename = '{}.txt'.format(self.title)
+    def __init__(self, info):
+        title = info['subtitle']
+        if not info['single']:
+            p = int(re.findall('/([0-9]+)', info['referer'])[-1])
+            title = clean_title(f'[{p:04}] {title}')
+        info['title_all'] = title
+        d = {
+            'title': info['title_all'],
+            }
+        info['name'] = utils.format(self.type, d, '.txt')
+        super().__init__(info)
 
-        def f(url):
-            text = get_text(url, self.title, update, session)
-            f = BytesIO()
-            f.write(text.encode('utf8'))
-            f.seek(0)
-            return f
+    def get(self):
+        text = get_text(self['referer'], self['title_all'], self['update'], self.session)
+        f = BytesIO()
+        f.write(text.encode('utf8'))
+        f.seek(0)
+        return {'url': f}
 
-        self.url = LazyUrl(url, f, self)
+
+
+def get_id(url):
+    return re.find(r'.com/([^/]+)', url) or url
 
 
 
@@ -39,26 +46,19 @@ class Downloader_syosetu(Downloader):
     detect_removed = False
     display_name = '小説家になろう'
     ACCEPT_COOKIES = [r'(.*\.)?syosetu\.com']
+    atts = ['_title_', 'novel_ex']
 
-    def init(self):
-        self.url = 'https://ncode.syosetu.com/{}/'.format(self.id_)
-
-    @property
-    def id_(self):
-        ids = re.findall('.com/([^/]+)', self.url)
-        if ids:
-            id = ids[0]
-        else:
-            id = self.url
-        return id
+    @classmethod
+    def fix_url(cls, url):
+        return f'https://ncode.syosetu.com/{get_id(url)}/'
 
     def read(self):
         for try_ in range(8):
             self.print_('get_session')
             try:
-                session = get_session()
-                html = downloader.read_html(self.url, session=session)
-                soup = Soup(html)
+                self.session = get_session()
+                self.purge_cookies()
+                soup = downloader.read_soup(self.url, session=self.session)
                 get_title_artist(soup)
                 break
             except Exception as e:
@@ -68,48 +68,53 @@ class Downloader_syosetu(Downloader):
             raise
 
         title, self.artist = get_title_artist(soup)
-        self.__title = title
+        self._title_ = title
         ncode = re.find(r'syosetu.com/([^/]+)', self.url, err='no ncode') #3938
-        title_dir = clean_title('[{}] {} ({})'.format(self.artist, title, ncode))
+        title_dir = clean_title(f'[{self.artist}] {title} ({ncode})')
         ex = soup.find('div', id='novel_ex')
         self.novel_ex = utils.get_text(ex, '') if ex else None
         texts = []
-        subtitles = soup.findAll('dd', class_='subtitle')
-        if subtitles:
-            for subtitle in subtitles:
-                update = subtitle.parent.find('dt', class_='long_update')
-                update2 = None
-                if update:
-                    for span in update.findAll('span'):
-                        update2 = span.attrs['title']
-                        span.decompose()
 
-                    update = update.text.strip()
-                if update2:
-                    update += '  ({})'.format(update2)
-                a = subtitle.find('a')
-                subtitle = a.text.strip()
-                href = urljoin(self.url, a.attrs['href'])
-                if not re.search('ncode.syosetu.com/{}/[0-9]+'.format(self.id_), href):
-                    self.print_('skip: {}'.format(href))
-                    continue
-                text = Text(subtitle, update, href, session, False)
+        # Range
+        max_pid = get_max_range(self.cw)
+
+        while check_alive(self.cw):
+            subtitles = soup.findAll('dd', class_='subtitle')
+            if subtitles:
+                for subtitle in subtitles:
+                    update = subtitle.parent.find('dt', class_='long_update')
+                    update2 = None
+                    if update:
+                        for span in update.findAll('span'):
+                            update2 = span.attrs['title']
+                            span.decompose()
+
+                        update = update.text.strip()
+                    if update2:
+                        update += f'  ({update2})'
+                    a = subtitle.find('a')
+                    subtitle = a.text.strip()
+                    href = urljoin(self.url, a.attrs['href'])
+                    if not re.search(f'ncode.syosetu.com/{get_id(self.url)}/[0-9]+', href):
+                        self.print_(f'skip: {href}')
+                        continue
+                    text = Text({'referer': href, 'subtitle': subtitle, 'update': update, 'single': False})
+                    texts.append(text)
+            else:
+                self.single = True
+                text = Text({'referer': self.url, 'subtitle': title_dir, 'update': None, 'single': True})
                 texts.append(text)
-
-        else:
-            self.single = True
-            text = Text(title_dir, None, self.url, session, True)
-            texts.append(text)
-        self.print_('single: {}'.format(self.single))
-        for text in texts:
-            if self.single:
-                file = os.path.join(utils.dir(self.type, '', self.cw), text.filename)
+            if len(texts) >= max_pid:
+                break
+            if pager_next := soup.find('a', class_='novelview_pager-next'): #6830
+                sleep(1)
+                url_next = urljoin(self.url, pager_next['href'])
+                self.print_(f'url_next: {url_next}')
+                soup = downloader.read_soup(url_next, self.url, session=self.session)
             else:
-                file = os.path.join(utils.dir(self.type, title_dir, self.cw), text.filename)
-            if os.path.isfile(file):
-                self.urls.append(file)
-            else:
-                self.urls.append(text.url)
+                break
+        self.print_(f'single: {self.single}')
+        self.urls += texts
 
         self.title = title_dir
 
@@ -117,14 +122,14 @@ class Downloader_syosetu(Downloader):
         if self.single:
             return
         names = self.cw.names
-        filename = os.path.join(self.dir, '[merged] {}.txt'.format(self.title))
+        filename = os.path.join(self.dir, f'[merged] {self.title}.txt')
         try:
             with utils.open(filename, 'wb') as f:
-                f.write('    {}\n\n    \u4f5c\u8005\uff1a{}\n\n\n'.format(self.__title, self.artist).encode('utf8'))
+                f.write(f'    {self._title_}\n\n    \u4f5c\u8005\uff1a{self.artist}\n\n\n'.encode('utf8'))
                 if self.novel_ex:
                     f.write(self.novel_ex.encode('utf8'))
                 for i, file in enumerate(names):
-                    self.cw.pbar.setFormat(u"[%v/%m]  {} [{}/{}]".format(tr_('\ubcd1\ud569...'), i, len(names)))
+                    self.cw.pbar.setFormat(f'[%v/%m]  {tr_("병합...")} [{i}/{len(names)}]')
                     with open(file, 'rb') as f_:
                         text = f_.read()
                     f.write(b'\n\n\n\n')
@@ -141,8 +146,7 @@ def get_title_artist(soup):
 
 @try_n(22, sleep=30)
 def get_text(url, subtitle, update, session):
-    html = downloader.read_html(url, session=session)
-    soup = Soup(html)
+    soup = downloader.read_soup(url, session=session)
     if update:
         update = '        ' + update
     else:
@@ -153,22 +157,22 @@ def get_text(url, subtitle, update, session):
     p = soup.find('div', id='novel_p')
     p = '' if p is None else utils.get_text(p, '')
     if p:
-        story = '{}\n\n════════════════════════════════\n\n{}'.format(p, story)
+        story = f'{p}\n\n════════════════════════════════\n\n{story}'
 
     #2888
     a = soup.find('div', id='novel_a')
     a = '' if a is None else utils.get_text(a, '')
     if a:
-        story = '{}\n\n════════════════════════════════\n\n{}'.format(story, a)
+        story = f'{story}\n\n════════════════════════════════\n\n{a}'
 
-    text ='''────────────────────────────────
+    text = f'''────────────────────────────────
 
-  ◆  {}{}
+  ◆  {subtitle}{update}
 
 ────────────────────────────────
 
 
-{}'''.format(subtitle, update, story)
+{story}'''
     return text
 
 

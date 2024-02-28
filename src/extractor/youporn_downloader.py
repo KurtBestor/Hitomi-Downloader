@@ -1,7 +1,6 @@
 import downloader
 from io import BytesIO
-from constants import try_n
-from utils import Downloader, LazyUrl, get_ext, format_filename
+from utils import Downloader, LazyUrl, get_ext, format_filename, try_n
 import ytdl
 from m3u8_tools import M3u8_stream
 
@@ -12,6 +11,7 @@ class Downloader_youporn(Downloader):
     single = True
     URLS = ['youporn.com']
     display_name = 'YouPorn'
+    ACCEPT_COOKIES = [r'(.*\.)?youporn\.com']
 
     @classmethod
     def fix_url(cls, url):

@@ -1,9 +1,8 @@
 import downloader
-from utils import Soup, urljoin, Downloader, fix_title, Session, get_print, LazyUrl, clean_title, get_imgs_already, check_alive
+from utils import Soup, urljoin, Downloader, fix_title, Session, get_print, LazyUrl, clean_title, get_imgs_already, check_alive, try_n, clean_url
 import ree as re
 from timee import sleep
 from translator import tr_
-from constants import try_n, clean_url
 import page_selector
 import bs4
 import clf2

@@ -23,6 +23,8 @@
     "#combo_hours#": "{} 시간",
     "#combo_min#": "{} 분",
     "#combo_mins#": "{} 분",
+    "#combo_sec#": "{} 초",
+    "#combo_secs#": "{} 초",
     "#date01#": "1월 {d}일",
     "#date01y#": "1월 {d}일, {y}",
     "#date02#": "2월 {d}일",

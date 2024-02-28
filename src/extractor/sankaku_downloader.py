@@ -7,13 +7,11 @@
 #https://www.sankakucomplex.com/
 import downloader
 import ree as re
-from utils import Downloader, urljoin, query_url, get_max_range, get_print, Soup, lazy, Session, clean_title, check_alive, File, get_ext
+from utils import Downloader, urljoin, query_url, get_max_range, get_print, Soup, lazy, Session, clean_title, check_alive, File, get_ext, limits, clean_url
 from translator import tr_
 import os
 from timee import sleep
 from error_printer import print_error
-from constants import clean_url
-from ratelimit import limits, sleep_and_retry
 from urllib.parse import quote
 import errors
 import utils
@@ -111,7 +109,7 @@ class Downloader_sankaku(Downloader):
         if self.type_sankaku == 'www':
             id = '[www] ' + self.soup.find('h1', class_='entry-title').text.strip()
         else:
-            if '/post/show/' in self.url:
+            if '/post/show/' in self.url or '/posts/' in self.url: #6718
                 id = get_id(self.url, self.soup)
             else:
                 qs = query_url(self.url)
@@ -156,7 +154,7 @@ def get_imgs_www(url, soup):
     imgs = []
     view = soup.find('div', class_='entry-content')
     for img in view.findAll('img'):
-        img = img.attrs.get('data-lazy-src')
+        img = img.get('data-lazy-src')
         if not img: # no script
             continue
         img = urljoin(url, img)
@@ -180,8 +178,7 @@ def setPage(url, page):
     return url
 
 
-@sleep_and_retry
-@limits(1, 6)
+@limits(6)
 def wait(cw):
     check_alive(cw)
 
@@ -199,7 +196,7 @@ def get_imgs(url, title=None, cw=None, types=['img', 'gif', 'video'], session=No
     info = {}
     info['single'] = False
 
-    if '/post/show/' in url:
+    if '/post/show/' in url or '/posts/' in url: #6718
         info['single'] = True
         id = get_id(url)
         info['imgs'] = [File_sankaku({'type': type, 'id': id, 'referer': url})]
@@ -269,7 +266,7 @@ def get_imgs(url, title=None, cw=None, types=['img', 'gif', 'video'], session=No
 
         for article in articles:
             # 1183
-            tags = article.find('img', class_='preview').attrs['title'].split()
+            tags = article.find('img', class_='preview')['data-auto_page'].split() #6718
             if 'animated_gif' in tags:
                 type_ = 'gif'
             elif 'animated' in tags or 'webm' in tags or 'video' in tags or 'mp4' in tags: # 1697
@@ -279,7 +276,7 @@ def get_imgs(url, title=None, cw=None, types=['img', 'gif', 'video'], session=No
             if type_ not in types:
                 continue
 
-            url_img = article.a.attrs['href']
+            url_img = article.a['href']
             if not url_img.startswith('http'):
                 url_img = urljoin('https://{}.sankakucomplex.com'.format(type), url_img)
             if 'get.sankaku.plus' in url_img: # sankaku plus
@@ -305,7 +302,7 @@ def get_imgs(url, title=None, cw=None, types=['img', 'gif', 'video'], session=No
         try:
             # For page > 50
             pagination = soup.find('div', class_='pagination')
-            url = urljoin('https://{}.sankakucomplex.com'.format(type), utils.html.unescape(pagination.attrs['next-page-url'])) #6326
+            url = urljoin('https://{}.sankakucomplex.com'.format(type), utils.html.unescape(pagination['next-page-url'])) #6326
 ##            #3366
 ##            p = int(re.find(r'[?&]page=([0-9]+)', url, default=1))
 ##            if p > 100:
@@ -332,4 +329,6 @@ def get_id(url, soup=None):
     if soup is None:
         html = downloader.read_html(url)
         soup = Soup(html)
-    return soup.find('input', id='post_id')['value']
+    if x := soup.find('input', id='post_id'):
+        return x['value']
+    return soup.find('p', id='hidden_post_id').string

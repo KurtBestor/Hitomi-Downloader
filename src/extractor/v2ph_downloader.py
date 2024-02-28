@@ -1,10 +1,9 @@
 #coding:utf8
 import downloader
-from utils import get_ext, LazyUrl, Downloader, try_n, clean_title, get_print, print_error
+from utils import get_ext, LazyUrl, Downloader, try_n, clean_title, get_print, print_error, limits
 import ree as re
 from translator import tr_
 import errors
-from ratelimit import limits, sleep_and_retry
 import clf2
 
 
@@ -27,8 +26,7 @@ class Image:
         ext = get_ext(url)
         self.filename = '{:04}{}'.format(p, ext)
 
-    @sleep_and_retry
-    @limits(4, 1)
+    @limits(.25)
     def get(self, _):
         return self._url
 
@@ -68,8 +66,7 @@ def get_info(url, session):
 
 
 @try_n(4)
-@sleep_and_retry
-@limits(1, 5)
+@limits(5)
 def read_soup(url, session):
     return downloader.read_soup(url, session=session)
 
@@ -86,6 +83,8 @@ def get_imgs(url, session, title, cw=None):
         except Exception as e:
             if p > 1:
                 print_(print_error(e))
+                cw.showCookie() #6774
+                cw.showLogin('https://www.v2ph.com/login', None, None)
                 break
             else:
                 raise e

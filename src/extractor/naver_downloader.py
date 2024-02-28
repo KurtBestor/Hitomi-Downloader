@@ -1,19 +1,11 @@
 #coding:utf-8
 import downloader
 import ree as re
-from utils import urljoin, Downloader, Soup, LazyUrl, clean_title, get_ext, get_print
-import json
+from utils import urljoin, Downloader, Soup, LazyUrl, clean_title, get_ext, get_print, Session, json
 import errors
 PATTERNS = ['.*blog.naver.com/(?P<username>.+)/(?P<pid>[0-9]+)',
             '.*blog.naver.com/.+?blogId=(?P<username>[^&]+).+?logNo=(?P<pid>[0-9]+)',
             '.*?(?P<username>[0-9a-zA-Z_-]+)\.blog\.me/(?P<pid>[0-9]+)']
-HDR = {
-    'Accept': 'text/html, application/xhtml+xml, image/jxr, */*',
-    'Accept-Encoding': 'gzip, deflate',
-    'Accept-Language': 'ko, en-US; q=0.7, en; q=0.3',
-    'Connection': 'Keep-Alive',
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.79 Safari/537.36 Edge/14.14393',
-    }
 
 def get_id(url):
     for pattern in PATTERNS:
@@ -36,21 +28,21 @@ class Downloader_naver(Downloader):
     ACCEPT_COOKIES = [r'(.*\.)?naver\.com', r'(.*\.)?blog\.me']
 
     def init(self):
+        self.session = Session()
         username, pid = get_id(self.url)
         if username is None:
-            raise errors.Invalid('Invalid format: {}'.format(self.url))
-        self.url = 'https://blog.naver.com/{}/{}'.format(username, pid)
-        self.headers = {'User-Agent': downloader.hdr['User-Agent']}
+            raise errors.Invalid(f'Invalid format: {self.url}')
+        self.url = f'https://blog.naver.com/{username}/{pid}'
 
     @property
     def name(self):
         username, pid = get_id(self.url)
-        return clean_title('{}/{}'.format(username, pid))
+        return clean_title(f'{username}/{pid}')
 
     def read(self):
-        self.title = '읽는 중... {}'.format(self.name)
+        self.title = f'읽는 중... {self.name}'
 
-        imgs = get_imgs(self.url, self.cw)
+        imgs = get_imgs(self.url, self.session, self.cw)
 
         for img in imgs:
             self.urls.append(img.url)
@@ -63,26 +55,25 @@ class Image:
         self.url = LazyUrl(referer, lambda _: url, self)
         #3788, #3817
         ext = get_ext(url)
-        self.filename = '{:04}{}'.format(p, ext)
+        self.filename = f'{p:04}{ext}'
 
 
 class Video:
     def __init__(self, url, referer, p):
         self.url = LazyUrl(referer, lambda _: url, self)
-        self.filename = 'video_{}.mp4'.format(p)
+        self.filename = f'video_{p}.mp4'
 
 
-def read_page(url, depth=0):
+def read_page(url, session, depth=0):
     print('read_page', url, depth)
     if depth > 10:
         raise Exception('Too deep')
-    html = downloader.read_html(url, headers=HDR)
+    html = downloader.read_html(url, session=session)
 
     if len(html) < 5000:
         id = re.find('logNo=([0-9]+)', html, err='no id')
         username = re.find('blog.naver.com/([0-9a-zA-Z]+)', url) or re.find('blogId=([0-9a-zA-Z]+)', url, err='no username')
-        url = 'https://m.blog.naver.com/PostView.nhn?blogId={}&logNo={}&proxyReferer='.format(username, id)
-        print('###', username, id, url)
+        url = f'https://m.blog.naver.com/PostView.nhn?blogId={username}&logNo={id}&proxyReferer='
 
     soup = Soup(html)
     if soup.find('div', {'id': 'viewTypeSelector'}):
@@ -90,16 +81,16 @@ def read_page(url, depth=0):
     frame = soup.find('frame')
     if frame is None:
         print('frame is None')
-        return read_page(url, depth+1)
-    return read_page(urljoin('https://blog.naver.com', frame.attrs['src']), depth+1)
+        return read_page(url, session, depth+1)
+    return read_page(urljoin('https://blog.naver.com', frame.attrs['src']), session, depth+1)
 
 
 
-def get_imgs(url, cw):
+def get_imgs(url, session, cw):
     print_ = get_print(cw)
     url = url.replace('blog.naver', 'm.blog.naver')
     referer = url
-    url_frame, soup = read_page(url)
+    url_frame, soup = read_page(url, session)
 
     imgs = []
     urls = set()
@@ -109,11 +100,10 @@ def get_imgs(url, cw):
     imgs_ = view.findAll('span', class_='_img') + view.findAll('img')
 
     for img in imgs_:
-        url = img.attrs.get('src', None)
-        if url is None:
-            url = img.attrs.get('thumburl', None)
-        if url is None:
-            print('invalid img: {}'.format(url))
+        url = img.attrs.get('src')
+        if not url:
+            url = img.attrs.get('thumburl')
+        if not url:
             continue
 
         if 'ssl.pstatic.net' in url: #
@@ -161,8 +151,8 @@ def get_imgs(url, cw):
 
     videos = []
     for vid, key in pairs:
-        url_api = 'https://apis.naver.com/rmcnmv/rmcnmv/vod/play/v2.0/{}?key={}'.format(vid, key)
-        data_raw = downloader.read_html(url_api)
+        url_api = f'https://apis.naver.com/rmcnmv/rmcnmv/vod/play/v2.0/{vid}?key={key}'
+        data_raw = downloader.read_html(url_api, session=session)
         data = json.loads(data_raw)
         fs = data['videos']['list']
         fs = sorted(fs, key=lambda f: f['size'], reverse=True)

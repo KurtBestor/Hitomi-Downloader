@@ -7,6 +7,7 @@ from m3u8_tools import playlist2stream, M3u8_stream
 import utils
 import ffmpeg
 import clf2
+import os
 
 
 
@@ -42,7 +43,7 @@ class Downloader_etc(Downloader):
         if isinstance(video.url(), M3u8_stream):
             self.disableSegment()
 
-        self.title = '[{}] {}'.format(video.header, video.title)
+        self.title = os.path.splitext(video.filename)[0].replace('：', ':')
 
 
 def int_or_none(s):
@@ -101,9 +102,7 @@ def _get_video(url, session, cw, ie_key=None, allow_m3u8=True):
         ie_key = ytdl.get_extractor_name(url)
     info['ie_key'] = ie_key
     url_new = info.get('url')
-    print('url: {} -> {}'.format(url, url_new))
     formats = info.get('formats', [])
-    print(info.keys())
 
     if not formats and (info.get('entries') or 'title' not in info):
         if 'entries' in info:
@@ -116,7 +115,6 @@ def _get_video(url, session, cw, ie_key=None, allow_m3u8=True):
     #session.cookies.update(ydl.cookiejar)
 
     if not formats:
-        print('no formats')
         if url_new:
             f = {'url': url_new, 'format': ''}
             formats.append(f)
@@ -183,12 +181,13 @@ def get_ext_(url, session, referer):
     try:
         ext = downloader.get_ext(url, session, referer)
     except Exception as e:
-        print(e)
         ext = get_ext(url)
     return ext
 
 
 class Video:
+    live = False
+
     def __init__(self, f, f_audio, info, session, referer, cw=None):
         self.f_audio = f_audio
         self.cw = cw
@@ -212,10 +211,10 @@ class Video:
             hdr = session.headers.copy()
             if referer:
                 hdr['Referer'] = referer
+            self.live = True
             return utils.LiveStream(self.url, headers=hdr, fragments=f.get('fragments') if ytdl.LIVE_FROM_START.get('etc') else None)
 
         if not ext:
-            print('empty ext')
             if f['_resolution']:
                 ext = '.mp4'
             else:
@@ -227,11 +226,11 @@ class Video:
                 url = foo()
             else:
                 try:
-                    url = playlist2stream(self.url, referer, session=session, n_thread=4, res=res)
+                    url = playlist2stream(self.url, referer, session=session, n_thread=4)
                 except:
                     url = M3u8_stream(self.url, referer=referer, session=session, n_thread=4)
                 if url.live is not None: #5110
-                    url = url.live
+                    url = foo()
             ext = '.mp4'
         elif ext.lower() == '.mpd': # TVer
             url = foo()
@@ -242,7 +241,7 @@ class Video:
         info_ext = info.get('ext')
         if info_ext == 'unknown_video': #vk
             info_ext = None
-        self.filename = format_filename(title, self.id, info_ext or ext, header=self.header)
+        self.filename = format_filename(title, self.id, info_ext or ext, header=self.header, live=self.live)
 
     def pp(self, filename):
         if self.f_audio:

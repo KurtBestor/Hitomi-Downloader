@@ -1,10 +1,9 @@
 #coding:utf8
 import downloader
 from translator import tr_
-from utils import Session, query_url, get_max_range, Downloader, clean_title, update_url_query, get_print, get_ext, LazyUrl, urljoin, check_alive
+from utils import Session, query_url, get_max_range, Downloader, clean_title, update_url_query, get_print, get_ext, LazyUrl, urljoin, check_alive, limits
 import ree as re
 import errors
-from ratelimit import limits, sleep_and_retry
 from error_printer import print_error
 
 
@@ -17,8 +16,7 @@ class Image:
         self.cw = cw
         self.url = LazyUrl(referer, self.get, self)
 
-    @sleep_and_retry
-    @limits(4, 1)
+    @limits(.25)
     def get(self, _):
         print_ = get_print(self.cw)
         url = self._url
@@ -38,6 +36,7 @@ class Downloader_tumblr(Downloader):
     type = 'tumblr'
     URLS = ['tumblr.com']
     MAX_CORE = 4
+    ACCEPT_COOKIES = [r'(.*\.)?tumblr\.com']
 
     def init(self):
         if 'tumblr.com/post/' in self.url:
@@ -85,8 +84,7 @@ class TumblrAPI:
     def print_(self, s):
         get_print(self.cw)(s)
 
-    @sleep_and_retry
-    @limits(1, 1)
+    @limits(1)
     def call(self, path, qs, default_qs=True):
         if default_qs:
             qs_new = qs

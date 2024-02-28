@@ -64,7 +64,11 @@ class Video:
         else:
             raise e_
         if getattr(m, 'live', None) is not None: #5110
-            m = m.live
+            #m = m.live
+            hdr = session.headers.copy()
+            if referer:
+                hdr['Referer'] = referer
+            m = utils.LiveStream(url, headers=hdr)
             live = True
         else:
             live = False
@@ -74,8 +78,7 @@ class Video:
         tail = f' ({self.id_}).mp4'
         if live: #5110
             from datetime import datetime
-            now = datetime.now()
-            tail = ' ' + clean_title(now.strftime('%Y-%m-%d %H:%M')) + tail
+            tail = ' ' + clean_title(datetime.now().strftime('%Y-%m-%d %H:%M')) + tail
         self.filename = clean_title(self.title, n=-len(tail)) + tail
 
 

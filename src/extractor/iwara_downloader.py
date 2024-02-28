@@ -18,6 +18,7 @@ class Downloader_iwara(Downloader):
     MAX_CORE = 16#
     single = True
     display_name = 'Iwara'
+    ACCEPT_COOKIES = [r'(.*\.)?iwara\.tv']
 
     @classmethod
     def fix_url(cls, url):
@@ -50,9 +51,13 @@ class Downloader_iwara(Downloader):
         else:
             raise e_
 
-        self.urls += [file.url for file in videos]
         if info.get('playlist', False):
             video = self.process_playlist(info['title'], videos)
+        else: #6031
+            self.urls += [file.url for file in videos]
+
+        self.enableSegment()
+
         url_thumb = video.url_thumb
         self.print_(f'url_thumb: {url_thumb}')
         if url_thumb:
@@ -125,7 +130,7 @@ def get_info(url, session, cw, multi_post=False):
         if time() - t0 > 10 or '/profile/' in url.lower():
             for a in soup.findAll('a'):
                 if urljoin(url, a.get('href', '')) == urljoin(url, '/login'):
-                    raise errors.LoginRequired(method='browser', url='https://www.iwara.tv/login', cookie=False) #5794
+                    raise errors.LoginRequired(method='browser', url='https://www.iwara.tv/login', cookie=False, w=1460) #5794
         buttons = soup.findAll(class_='button--primary')
         if buttons:
             for i, button in enumerate(buttons):
@@ -138,7 +143,11 @@ def get_info(url, session, cw, multi_post=False):
         if '/profile/' in url.lower():
             return soup.find('div', class_='page-profile__header') is not None
         else:
-            details = soup.find('div', class_='page-video__details') or soup.find('div', class_='page-image__details')
+            details = soup.find('div', class_='page-video__details')
+            if details and not soup.find('div', class_='vjs-poster') and not soup.find(class_='embedPlayer__youtube'): #6737, #6836
+                print_('no poster')
+                return False
+            details = details or soup.find('div', class_='page-image__details')
             return details is not None and details.find('div', class_='text--h1') is not None
 
     html = clf2.solve(url, session=session, f=f, cw=cw, timeout=30)['html'] #5794
@@ -256,7 +265,8 @@ def get_info(url, session, cw, multi_post=False):
             x = sorted(j, key=key)[-1]
             print_(f'name: {x["name"]}')
             url_file = urljoin(url, x['src']['view'])
-            info['url_thumb'] = urljoin(url, re.find(r'url\("(.+?)"', soup.find('div', class_='vjs-poster')['style'], err='no poster'))
+            poster = soup.find('div', class_='vjs-poster')['style']
+            info['url_thumb'] = urljoin(url, re.find(r'url\("(.+?)"', poster, err='no poster'))
         else:
             name = file['name']
             url_file = f'https://i.iwara.tv/image/original/{id_}/{name}'

@@ -1,13 +1,10 @@
 import downloader
-from utils import Downloader, Soup, LazyUrl, urljoin, format_filename, Session, get_ext, get_print, get_max_range, html_unescape, get_resolution
+from utils import Downloader, Soup, LazyUrl, urljoin, format_filename, Session, get_ext, get_print, get_max_range, html_unescape, try_n, limits, json
 from io import BytesIO
-from constants import try_n
 import ree as re
 from m3u8_tools import playlist2stream
 from translator import tr_
-import json
 from timee import sleep
-from ratelimit import limits, sleep_and_retry
 CHANNEL_PATTERN = r'/(profiles|[^/]*channels)/([0-9a-zA-Z_-]+)'
 
 
@@ -31,8 +28,7 @@ class Video:
         return self._url
 
     @try_n(4)
-    @sleep_and_retry
-    @limits(1, 2)
+    @limits(2)
     def _get(self, url_page):
         id = get_id(url_page)
         html = downloader.read_html(url_page)
@@ -43,7 +39,7 @@ class Video:
             raise Exception('no video url')
         ext = get_ext(url)
         if ext.lower() == '.m3u8':
-            url = playlist2stream(url, n_thread=5, res=get_resolution()) #4773
+            url = playlist2stream(url, n_thread=5) #4773
         self.url_thumb = soup.find('meta', {'property': 'og:image'}).attrs['content']
         self.filename = format_filename(self.title, id, '.mp4')
         self._url= url
@@ -62,6 +58,7 @@ class Downloader_xvideo(Downloader):
     URLS = [r'regex:[./]xvideos[0-9]*\.(com|in|es)']
     single = True
     display_name = 'XVideos'
+    ACCEPT_COOKIES = [r'(.*\.)?xvideos[0-9]*\.(com|in|es)']
 
     def init(self):
         if 'xvideos.' in self.url.lower():

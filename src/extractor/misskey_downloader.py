@@ -1,7 +1,6 @@
-from utils import Downloader, Session, clean_title, get_ext, check_alive, tr_, try_n, File, get_max_range
+from utils import Downloader, Session, clean_title, get_ext, check_alive, tr_, try_n, File, get_max_range, limits
 import downloader
 import ree as re
-from ratelimit import limits, sleep_and_retry
 from datetime import datetime
 import utils
 import errors
@@ -54,8 +53,7 @@ class Downloader_misskey(Downloader):
             raise errors.Invalid(tr_('개별 다운로드는 지원하지 않습니다: {}').format(self.url))
 
     @try_n(4, sleep=5)
-    @sleep_and_retry
-    @limits(1, 2)
+    @limits(2)
     def call(self, path, payload):
         token = self.session.cookies.get('token', domain=DOMAIN)
         url_api = f'https://{DOMAIN}/api/{path}'

@@ -33,6 +33,7 @@ class Downloader_xnxx(Downloader):
     URLS = [r'regex:xnxx[0-9]*\.(com|es)']
     single = True
     display_name = 'XNXX'
+    ACCEPT_COOKIES = [r'(.*\.)?xnxx[0-9]*\.(com|es)']
 
     @classmethod
     def fix_url(cls, url):

@@ -1,11 +1,10 @@
 #coding: utf8
 import downloader
-from utils import Downloader, Session, Soup, LazyUrl, urljoin, get_ext, clean_title, try_n
+from utils import Downloader, Session, Soup, LazyUrl, urljoin, get_ext, clean_title, try_n, limits
 import utils
 import ree as re
 from translator import tr_
 import clf2
-from ratelimit import limits, sleep_and_retry
 from m3u8_tools import M3u8_stream
 from timee import sleep
 import os
@@ -21,8 +20,7 @@ class Image:
         self.session = session
 
     @try_n(3, 5)
-    @sleep_and_retry
-    @limits(1, 1)
+    @limits(1)
     def get(self, _=None):
         soup = downloader.read_soup(self._url, self._referer, session=self.session)
         div = soup.find('div', id='display_image_detail') or soup.find('ul', id='detail_list')
@@ -55,6 +53,7 @@ class Downloader_hentaicosplay(Downloader):
     display_name = 'Hentai Cosplay'
     MAX_PARALLEL = 1 # must be 1
     MAX_CORE = 4
+    ACCEPT_COOKIES = [rf'(.*\.)?{domain}' for domain in URLS]
 
     @classmethod
     def fix_url(cls, url):

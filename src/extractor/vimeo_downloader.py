@@ -9,6 +9,7 @@ class Downloader_vimeo(Downloader):
     type = 'vimeo'
     URLS = ['vimeo.com']
     single = True
+    ACCEPT_COOKIES = [r'(.*\.)?vimeo\.com']
 
     def init(self):
         if 'vimeo.com' not in self.url.lower():

@@ -1,5 +1,5 @@
 import downloader
-from utils import Downloader, urljoin, clean_title, LazyUrl, get_ext, get_print, try_n, compatstr, get_max_range, check_alive, query_url, Soup
+from utils import Downloader, urljoin, clean_title, LazyUrl, get_ext, get_print, try_n, compatstr, get_max_range, check_alive, query_url, Soup, limits
 import ffmpeg
 import utils
 import os
@@ -15,7 +15,6 @@ from timee import sleep
 from collections import deque
 from locker import lock
 import threading
-from ratelimit import limits, sleep_and_retry
 import clf2
 from PIL import Image as Image_
 ##import asyncio
@@ -66,7 +65,7 @@ class Downloader_pixiv(Downloader):
 
         err = soup.find('p', class_='error-message')
         if err: #5223
-            raise errors.Invalid('{}: {}'.format(err.text.strip(), self.url))
+            raise errors.Invalid(f'{err.text.strip()}: {self.url}')
 
     @classmethod
     def fix_url(cls, url):
@@ -75,20 +74,20 @@ class Downloader_pixiv(Downloader):
             url = urljoin(url, rt[0])
 
         if '/search_user.php?' in url:
-            url = 'https://pixiv.me/{}'.format(utils.query_url(url).get('nick')[0])
-
+            url = f'https://pixiv.me/{utils.query_url(url).get("nick")[0]}'
         if url.startswith('illust_'):
-            url = 'https://www.pixiv.net/en/artworks/{}'.format(url[len('illust_'):])
+            url = f'https://www.pixiv.net/en/artworks/{url[len("illust_"):]}'
         elif url.startswith('bmk_'):
-            url = 'https://www.pixiv.net/en/users/{}/bookmarks/artworks'.format(url[len('bmk_'):])
+            url = f'https://www.pixiv.net/en/users/{url[len("bmk_"):]}/bookmarks/artworks'
         elif url.startswith('search_'):
-            url = 'https://www.pixiv.net/en/tags/{}/artworks'.format(quote(url[len('search_'):].replace('+', ' ')))
+            _ = quote(url[len('search_'):].replace('+', ' '))
+            url = f'https://www.pixiv.net/en/tags/{_}/artworks'
         elif url.startswith('following_r18_'):
             url = 'https://www.pixiv.net/bookmark_new_illust_r18.php'
         elif url.startswith('following_'):
             url = 'https://www.pixiv.net/bookmark_new_illust.php'
         elif not re.find(r'^https?://', url) and '.' not in url:
-            url = 'https://www.pixiv.net/en/users/{}'.format(url)
+            url = f'https://www.pixiv.net/en/users/{url}'
 
         #3474
         url = re.sub(r'(users/[0-9]+)/artworks$', r'\1', url)
@@ -146,8 +145,7 @@ class PixivAPI:
         return re.find('/users/([0-9]+)', url) or re.find('[?&]id=([0-9]+)', url)
 
     @try_n(8, sleep=5)
-    @sleep_and_retry
-    @limits(2, 3) #3355, #5105
+    @limits(1.5) #3355, #5105
     def call(self, url):
         #print('call:', url)
         url = urljoin('https://www.pixiv.net/ajax/', url)
@@ -157,7 +155,7 @@ class PixivAPI:
         except requests.exceptions.HTTPError as e:
             code = e.response.status_code
             if code in (403, 404):
-                e_ = HTTPError('{} Client Error'.format(code))
+                e_ = HTTPError(f'{code} Client Error')
             else:
                 raise e
         if e_:
@@ -168,47 +166,47 @@ class PixivAPI:
         return info['body']
 
     def illust(self, id_):
-        return self.call('illust/{}'.format(id_))
+        return self.call(f'illust/{id_}')
 
     def pages(self, id_):
-        return self.call('illust/{}/pages'.format(id_))
+        return self.call(f'illust/{id_}/pages')
 
     def ugoira_meta(self, id_):
-        return self.call('illust/{}/ugoira_meta'.format(id_))
+        return self.call(f'illust/{id_}/ugoira_meta')
 
     def profile(self, id_):
-        return self.call('user/{}/profile/all'.format(id_))
+        return self.call(f'user/{id_}/profile/all')
 
     def top(self, id_):
-        return self.call('user/{}/profile/top'.format(id_))
+        return self.call(f'user/{id_}/profile/top')
 
     def bookmarks(self, id_, offset=0, limit=None, rest='show'):
         if limit is None:
             limit = LIMIT
-        return self.call('user/{}/illusts/bookmarks?tag=&offset={}&limit={}&rest={}'.format(id_, offset, limit, rest))
+        return self.call(f'user/{id_}/illusts/bookmarks?tag=&offset={offset}&limit={limit}&rest={rest}')
 
     def search(self, q, order='date_d', mode='all', p=1, s_mode='s_tag_full', type_='all', scd=None, ecd=None, wlt=None, wgt=None, hlt=None, hgt=None, blt=None, bgt=None, ratio=None, tool=None):
-        url = 'search/artworks/{0}?word={0}&order={1}&mode={2}&p={3}&s_mode={4}&type={5}'.format(quote(q), order, mode, p, s_mode, type_)
+        url = f'search/artworks/{quote(q)}?word={quote(q)}&order={order}&mode={mode}&p={p}&s_mode={s_mode}&type={type_}'
         if scd:
-            url += '&scd={}'.format(scd)
+            url += f'&scd={scd}'
         if ecd:
-            url += '&ecd={}'.format(ecd)
+            url += f'&ecd={ecd}'
         if wlt:
-            url += '&wlt={}'.format(wlt)
+            url += f'&wlt={wlt}'
         if wgt:
-            url += '&wgt={}'.format(wgt)
+            url += f'&wgt={wgt}'
         if hlt:
-            url += '&hlt={}'.format(hlt)
+            url += f'&hlt={hlt}'
         if hgt:
-            url += '&hgt={}'.format(hgt)
+            url += f'&hgt={hgt}'
         if blt:
-            url += '&blt={}'.format(blt)
+            url += f'&blt={blt}'
         if bgt:
-            url += '&bgt={}'.format(bgt)
+            url += f'&bgt={bgt}'
         if ratio:
-            url += '&ratio={}'.format(ratio)
+            url += f'&ratio={ratio}'
         if tool:
-            url += '&tool={}'.format(tool)
+            url += f'&tool={tool}'
         return self.call(url)
 
     def following(self, p, r18=False): #4077
@@ -244,8 +242,8 @@ class Image:
         self.filename = utils.format('pixiv', d, get_ext(self._url))
         if self.ugoira and self.ugoira['ext']: #3355
             filename_local = os.path.join(self.cw.dir, self.filename)
-            filename_local = '{}{}'.format(os.path.splitext(filename_local)[0], self.ugoira['ext'])
-            if os.path.realpath(filename_local) in self.cw.names_old or os.path.exists(filename_local): #4534
+            filename_local = f'{os.path.splitext(filename_local)[0]}{self.ugoira["ext"]}'
+            if os.path.abspath(filename_local) in self.cw.names_old or os.path.exists(filename_local): #4534
                 self.filename = os.path.basename(filename_local)
                 self.local = True
         return self._url
@@ -258,7 +256,7 @@ class Image:
             else:
                 dither = True
                 quality = 90
-            filename_new = '{}{}'.format(os.path.splitext(filename)[0], self.ugoira['ext'])
+            filename_new = f'{os.path.splitext(filename)[0]}{self.ugoira["ext"]}'
             ffmpeg.gif(filename, filename_new, self.ugoira['delay'], dither=dither, quality=quality, cw=self.cw)
             utils.removeDirList.append((filename, False))
             return filename_new
@@ -298,13 +296,13 @@ def tags_matched(tags_illust, tags_add, cw=None):
             cache['tags'] = list(tags)
             cache['tags_ex'] = list(tags_ex)
             cw.set_extra('pixiv_tag_cache', cache)
-        print_('tags: [{}]'.format(', '.join(tags)))
-        print_('tags_ex: [{}]'.format(', '.join(tags_ex)))
+        print_(f'tags: [{", ".join(tags)}]')
+        print_(f'tags_ex: [{", ".join(tags_ex)}]')
 
     if tags_add:
         tags.update((pretty_tag(tag) for tag in tags_add))
         if init:
-            print_('tags_add: {}'.format(tags_add))
+            print_(f'tags_add: {tags_add}')
 
     tags_illust = set(pretty_tag(tag) for tag in tags_illust)
     return (not tags or tags & tags_illust) and tags_ex.isdisjoint(tags_illust)
@@ -331,7 +329,7 @@ def get_info(url, session, cw=None, depth=0, tags_add=None):
         info['artist'] = data['userName']
         info['artist_id'] = data['userId']
         info['raw_title'] = data['illustTitle']
-        info['title'] = '{} (pixiv_illust_{})'.format(info['raw_title'], id_)
+        info['title'] = f'{info["raw_title"]} (pixiv_illust_{id_})'
         info['create_date'] = parse_time(data['createDate'])
         tags_illust = set(tag['tag'] for tag in data['tags']['tags'])
 
@@ -360,7 +358,7 @@ def get_info(url, session, cw=None, depth=0, tags_add=None):
         else:
             rests = ['show']
         process_user(id_, info, api)
-        info['title'] = '{} (pixiv_bmk_{})'.format(info['artist'], info['artist_id'])
+        info['title'] = f'{info["artist"]} (pixiv_bmk_{info["artist_id"]})'
         ids = []
         ids_set = set()
         for rest in rests:
@@ -382,7 +380,7 @@ def get_info(url, session, cw=None, depth=0, tags_add=None):
         process_ids(ids, info, imgs, session, cw, depth)
     elif '/tags/' in url or 'search.php' in url: # Search
         q = unquote(re.find(r'/tags/([^/]+)', url) or re.find('[?&]word=([^&]*)', url, err='no tags'))
-        info['title'] = '{} (pixiv_search_{})'.format(q, q.replace(' ', '+'))
+        info['title'] = f'{q} (pixiv_search_{q.replace(" ", "+")})'
         qs = query_url(url)
         order = qs.get('order', ['date_d'])[0]
         mode = qs.get('mode', ['all'])[0]
@@ -399,16 +397,16 @@ def get_info(url, session, cw=None, depth=0, tags_add=None):
         ratio = qs.get('ratio', [None])[0]
         tool = qs.get('tool', [None])[0]
         logs = [
-            'order: {}'.format(order),
-            'mode: {}'.format(mode),
-            's_mode: {}'.format(s_mode),
-            'scd / ecd: {} / {}'.format(scd, ecd),
-            'type: {}'.format(type_),
-            'wlt /  wgt: {} / {}'.format(wlt, wgt),
-            'hlt / hgt: {} / {}'.format(hlt, hgt),
-            'blt / bgt: {} / {}'.format(blt, bgt),
-            'ratio: {}'.format(ratio),
-            'tool: {}'.format(tool),
+            f'order: {order}',
+            f'mode: {mode}',
+            f's_mode: {s_mode}',
+            f'scd / ecd: {scd} / {ecd}',
+            f'type: {type_}',
+            f'wlt /  wgt: {wlt} / {wgt}',
+            f'hlt / hgt: {hlt} / {hgt}',
+            f'blt / bgt: {blt} / {bgt}',
+            f'ratio: {ratio}',
+            f'tool: {tool}',
                 ]
         print_('\n'.join(logs))
         ids = []
@@ -431,7 +429,7 @@ def get_info(url, session, cw=None, depth=0, tags_add=None):
         r18 = 'bookmark_new_illust_r18.php' in url
         id_ = my_id(session, cw)
         process_user(id_, info, api)
-        info['title'] = '{} (pixiv_following_{}{})'.format(info['artist'], 'r18_' if r18 else '', info['artist_id'])
+        info['title'] = f'{info["artist"]} (pixiv_following_{"r18_" if r18 else ""}{info["artist_id"]})'
         ids = []
         ids_set = set()
         p = 1
@@ -459,12 +457,12 @@ def get_info(url, session, cw=None, depth=0, tags_add=None):
             tag = unquote(m.groups()[1]) or None
         else:
             tag = None
-        print_('types: {}, tag: {}'.format(types, tag))
+        print_(f'types: {types}, tag: {tag}')
 
         id_ = api.user_id(url)
         process_user(id_, info, api)
         data = api.profile(id_)
-        info['title'] = '{} (pixiv_{})'.format(info['artist'], info['artist_id'])
+        info['title'] = f'{info["artist"]} (pixiv_{info["artist_id"]})'
 
         ids = []
         for type_ in types:
@@ -571,17 +569,17 @@ def process_ids(ids, info, imgs, session, cw, depth=0, tags_add=None):
                         res[i] = utils.natural_sort(names)
                         c_old += 1
                     else:
-                        info_illust = get_info('https://www.pixiv.net/en/artworks/{}'.format(id_), session, cw, depth=depth+1, tags_add=tags_add)
+                        info_illust = get_info(f'https://www.pixiv.net/en/artworks/{id_}', session, cw, depth=depth+1, tags_add=tags_add)
                         res[i] = info_illust['imgs']
                 except Exception as e:
                     if depth == 0 and (e.args and e.args[0] == '不明なエラーが発生しました' or isinstance(e, errors.LoginRequired)): # logout during extraction
                         res[i] = e
-                    print_('process_ids error (id: {}, d:{}):\n{}'.format(id_, depth, print_error(e)))
+                    print_(f'process_ids error (id: {id_}, d:{depth}):\n{print_error(e)}')
                 finally:
                     Thread.add_rem(-1)
     queue = deque()
     n, step = Downloader_pixiv.STEP
-    print_('{} / {}'.format(n, step))
+    print_(f'{n} / {step}')
     ts = []
     for i in range(n):
         t = Thread(queue)
@@ -598,7 +596,7 @@ def process_ids(ids, info, imgs, session, cw, depth=0, tags_add=None):
             if isinstance(imgs_, Exception):
                 raise imgs_
             imgs += imgs_
-        s = '{} {} - {}'.format(tr_('읽는 중...'), info['title'], len(imgs))
+        s = f'{tr_("읽는 중...")} {info["title"]} - {len(imgs)}'
         if cw:
             cw.setTitle(s)
         else:

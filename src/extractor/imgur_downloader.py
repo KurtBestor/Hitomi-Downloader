@@ -1,6 +1,7 @@
 import downloader
-from utils import Downloader, Soup, try_n, urljoin, get_max_range, clean_title, cut_pair, check_alive
-import ree as re, json, os
+from utils import Downloader, Soup, try_n, urljoin, get_max_range, clean_title, cut_pair, check_alive, json
+import ree as re
+import os
 from translator import tr_
 
 
@@ -9,6 +10,7 @@ class Downloader_imgur(Downloader):
     type = 'imgur'
     URLS = ['imgur.com']
     MAX_CORE = 16
+    ACCEPT_COOKIES = [r'(.*\.)?imgur\.com']
 
     def init(self):
         self.info = get_info(self.url)

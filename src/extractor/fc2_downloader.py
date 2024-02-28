@@ -11,6 +11,7 @@ class Downloader_fc2(Downloader):
     type = 'fc2'
     single = True
     URLS = ['video.fc2.com']
+    ACCEPT_COOKIES = [r'(.*\.)?fc2\.com']
 
     @classmethod
     def fix_url(cls, url):

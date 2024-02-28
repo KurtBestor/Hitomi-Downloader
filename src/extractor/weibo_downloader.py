@@ -1,14 +1,12 @@
 #coding:utf8
 import downloader
 import ree as re
-from timee import sleep, time
-from utils import Downloader, try_n, Session, get_print, clean_title, Soup, fix_protocol, domain, get_max_range
-import os
+from utils import Downloader, Session, get_print, clean_title, Soup, fix_protocol, domain, get_max_range, get_ext, File, check_alive, limits
 from translator import tr_
-import json
 import clf2
 import errors
 import utils
+import dateutil.parser
 
 
 def suitable(url):
@@ -28,7 +26,8 @@ class LoginRequired(errors.LoginRequired):
 class Downloader_weibo(Downloader):
     type = 'weibo'
     URLS = [suitable]
-    ACCEPT_COOKIES = [r'(.*\.)?(weibo\.com|sina\.com\.cn)']
+    MAX_PARALLEL = 2 #6739
+    ACCEPT_COOKIES = [r'(.*\.)?(weibo\.com|sina\.com\.cn|weibo\.cn)']
 
     def init(self):
         self.session = Session()
@@ -56,12 +55,9 @@ class Downloader_weibo(Downloader):
         uid, oid, name = get_id(self.url, self.cw)
         title = clean_title(f'{name} (weibo_{uid})')
 
-        for img in get_imgs(uid, oid, title, self.session, cw=self.cw, d=self, parent=self.mainWindow):
-            self.urls.append(img.url)
-            self.filenames[img.url] = img.filename
+        self.urls += get_imgs(uid, title, self.session, cw=self.cw)
 
         self.title = title
-        self.referer = self.url
 
 
 def checkLogin(session):
@@ -77,14 +73,15 @@ class Album:
         self.type = type
 
 
-class Image:
+@limits(1)
+def wait():
+    pass
 
-    def __init__(self, url, filename=None, timestamp=0):
-        self.url = url
-        if filename is None:
-            filename = os.path.basename(url)
-        self.filename = filename
-        self.timestamp = timestamp
+
+class Image(File):
+
+    type = 'weibo'
+    format = '[date] id_ppage'
 
 
 def _get_page_id(html):
@@ -118,82 +115,78 @@ def get_id(url, cw=None):
     return uid, oid, name
 
 
+def extract_video(d):
+    return d.get('stream_url_hd') or d['stream_url']
 
-def get_imgs(uid, oid, title, session, cw=None, d=None, parent=None):
+
+def get_imgs(uid, title, session, cw=None): #6739
     print_ = get_print(cw)
-    print_(f'uid: {uid}, oid:{oid}')
+    print_(f'uid: {uid}')
 
-    max_pid = get_max_range(cw)
+    olds = utils.process_olds(Image, title, r'([0-9]+)_p', cw)
+    mids = olds['ids']
+    imgs_old = olds['imgs']
 
-    @try_n(4)
-    def get_album_imgs(album, page):
-        url = 'https://photo.weibo.com/photos/get_all?uid={}&album_id={}&count=30&page={}&type={}&__rnd={}'.format(uid, album.id, page, album.type, int(time()*1000))
-        referer = f'https://photo.weibo.com/{uid}/talbum/index'
-        html = downloader.read_html(url, referer, session=session, timeout=30)
-        j = json.loads(html)
-        data = j['data']
-        imgs = []
-        for photo in data['photo_list']:
-            host = photo['pic_host']
-            name = photo['pic_name']
-            id = photo['photo_id']
-            timestamp = photo['timestamp']
-            url = f'{host}/large/{name}'
-            ext = os.path.splitext(name)[1]
-            d = {
-                'date': timestamp,
-                'id': id,
-                }
-            filename = utils.format('weibo', d, ext)
-            img = Image(url, filename, timestamp)
-            imgs.append(img)
+    referer = f'https://weibo.com/u/{uid}?tabtype=album'
+    imgs = []
+    sinceid = None
 
-        return imgs
+    while check_alive(cw):
+        if sinceid:
+            url_api = f'https://weibo.com/ajax/profile/getImageWall?uid={uid}&sinceid={sinceid}'
+        else:
+            url_api = f'https://weibo.com/ajax/profile/getImageWall?uid={uid}&sinceid=0&has_album=true'
+        wait()
+        d = downloader.read_json(url_api, referer, session=session)
+        sinceid = d['data']['since_id']
+        for item in d['data']['list']:
+            mid = int(item['mid'])
+            if mid in mids:
+                #print_(f'dup: {mid}')
+                continue
+            mids.add(mid)
+            url_api = f'https://weibo.com/ajax/statuses/show?id={mid}'
+            wait()
+            d = downloader.read_json(url_api, referer, session=session)
+            if d.get('ok') != 1:
+                print_(f'skip: {mid}')
+                continue
+            date = dateutil.parser.parse(d['created_at'])
+            structs = [d] + (d.get('url_struct') or [])
+            for struct in structs:
+                media_info = struct.get('mix_media_info', {}).get('items') or (struct.get('pic_infos').values() if 'pic_infos' in struct else None) #6739
+                if media_info:
+                    break
+            else:
+                print_(f'no media: {mid}') #6739
+                continue
+            for p, item in enumerate(media_info):
+                if data := item.get('data'):
+                    type = item.get('type')
+                    if type == 'video':
+                        img = extract_video(data['media_info'])
+                    elif type == 'pic':
+                        img = data['largest']['url']
+                    else:
+                        raise Exception(f'media type: {type}')
+                else:
+                    img = item['largest']['url']
+                ext = get_ext(img)
+                d = {
+                    'date': date,
+                    'id': mid,
+                    'page': p,
+                    }
+                filename = utils.format('weibo', d, ext)
+                img = Image({'referer': referer, 'url': img, 'name': filename})
+                imgs.append(img)
 
-    @try_n(2)
-    def get_albums(page):
-        url = 'https://photo.weibo.com/albums/get_all?uid={}&page={}&count=20&__rnd={}'.format(uid, page, int(time()*1000))
-        referer = f'https://photo.weibo.com/{uid}/albums?rd=1'
-        html = downloader.read_html(url, referer, session=session)
-        if '<title>新浪通行证</title>' in html:
-            raise LoginRequired()
-        j = json.loads(html)
-        data = j['data']
-        albums = []
-        for album in data['album_list']:
-            id = album['album_id']
-            type = album['type']
-            album = Album(id, type)
-            albums.append(album)
+            cw.setTitle(f'{tr_("읽는 중...")}  {title} - {len(imgs)}')
 
-        return albums
-
-    albums = []
-    for p in range(1, 101):
-        albums_new = get_albums(p)
-        albums += albums_new
-        print_(f'p:{p}, albums:{len(albums)}')
-        if not albums_new:
+        if not sinceid:
             break
 
-    imgs = []
-    for album in albums:
-        print('Album:', album.id, album.type)
-        imgs_album = []
-        for p in range(1, 101):
-            imgs_new = get_album_imgs(album, p)
-            imgs_album += imgs_new
-            s = '{} {}  -  {}'.format(tr_('읽는 중...'), title, len(imgs))
-            if cw:
-                cw.setTitle(s)
-            else:
-                print(s)
-            if len(imgs_album) >= max_pid:
-                break
-            if not imgs_new:
-                break
-            sleep(1, cw)
-        imgs += imgs_album
+        if len(imgs) >= get_max_range(cw):
+            break
 
-    imgs = sorted(imgs, key=lambda img: img.timestamp, reverse=True)
-    return imgs[:max_pid]
+    return imgs + imgs_old

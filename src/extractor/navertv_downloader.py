@@ -1,8 +1,7 @@
 import downloader
 import ree as re
 from io import BytesIO as IO
-from constants import try_n
-from utils import Downloader, LazyUrl, get_ext, format_filename
+from utils import Downloader, LazyUrl, get_ext, format_filename, try_n
 import ytdl
 
 

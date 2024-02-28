@@ -1,10 +1,9 @@
 import downloader
 from urllib.parse import quote
 from io import BytesIO
-from utils import Downloader, query_url, get_ext, clean_title, check_alive, lock, get_print, get_max_range, File
+from utils import Downloader, query_url, get_ext, clean_title, check_alive, lock, get_print, get_max_range, File, Session, limits
 import errors
 from translator import tr_
-from ratelimit import limits, sleep_and_retry
 import utils
 import os
 
@@ -16,7 +15,7 @@ class File_nozomi(File):
 
     def get(self):
         infos = []
-        for p, img in enumerate(read_post(self['id'], self['referer'], self.cw)):
+        for p, img in enumerate(read_post(self['id'], self['referer'], self.session, self.cw)):
             url = img['url']
             d = {
                 'id': img['id'],
@@ -28,16 +27,15 @@ class File_nozomi(File):
         return infos
 
 
-@sleep_and_retry
-@limits(4, 1)
-def read_post(id, referer, cw):
+@limits(.25)
+def read_post(id, referer, session, cw):
     print_ = get_print(cw)
     check_alive(cw)
     # https://j.nozomi.la/nozomi.js
     s_id = str(id)
     url_post = 'https://j.nozomi.la/post/{}/{}/{}.json'.format(s_id[-1], s_id[-3:-1], s_id)
     try:
-        j = downloader.read_json(url_post, referer)
+        j = downloader.read_json(url_post, referer, session=session)
     except Exception as e:
         print_(f'{id}: {e}')
         return [] #5989
@@ -64,6 +62,9 @@ class Downloader_nozomi(Downloader):
     ACC_MTIME = True
     ACCEPT_COOKIES = [r'(.*\.)?nozomi\.la']
 
+    def init(self):
+        self.session = Session()
+
     @classmethod
     def fix_url(cls, url):
         return url.split('#')[0]
@@ -83,7 +84,7 @@ class Downloader_nozomi(Downloader):
         self.title = '{} {}'.format(tr_('읽는 중...'), self.name)
         qs = query_url(self.url)
         q = qs['q'][0]
-        ids = get_ids_multi(q, self._popular, self.cw)
+        ids = get_ids_multi(q, self._popular, self.session, self.cw)
         self.print_(f'ids: {len(ids)}')
         max_pid = get_max_range(self.cw)
 
@@ -113,7 +114,7 @@ class Downloader_nozomi(Downloader):
 
 
 @lock
-def get_ids(q, popular, cw):
+def get_ids(q, popular, session, cw):
     check_alive(cw)
     if q is None:
         if popular:
@@ -128,7 +129,7 @@ def get_ids(q, popular, cw):
             url_api = 'https://j.nozomi.la/nozomi/{}.nozomi'.format(quote(q))
     #print_(url_api)
     f = BytesIO()
-    downloader.download(url_api, referer='https://nozomi.la/', buffer=f)
+    downloader.download(url_api, 'https://nozomi.la/', session=session, buffer=f)
     data = f.read()
     ids = []
     for i in range(0, len(data), 4):
@@ -138,19 +139,19 @@ def get_ids(q, popular, cw):
     return ids
 
 
-def get_ids_multi(q, popular, cw=None):
+def get_ids_multi(q, popular, session, cw=None):
     print_ = get_print(cw)
     max_pid = get_max_range(cw)
     qs = q.split(' ')
     qs_pos = [q for q in qs if not q.startswith('-')]
     qs_neg = [q[1:] for q in qs if q.startswith('-')]
     q = qs_pos[0] if qs_pos else None
-    ids = get_ids(q, popular, cw)
+    ids = get_ids(q, popular, session, cw)
     print_('{}: {}'.format(q, len(ids)))
 
     # Positive
     for q in qs_pos[1:]:
-        ids_ = get_ids(q, popular, cw)
+        ids_ = get_ids(q, popular, session, cw)
         set_ids_ = set(ids_)
         ids_old = ids
         ids = []
@@ -161,7 +162,7 @@ def get_ids_multi(q, popular, cw=None):
 
     # Negative
     for q in qs_neg:
-        ids_ = get_ids(q, popular, cw)
+        ids_ = get_ids(q, popular, session, cw)
         set_ids_ = set(ids_)
         ids_old = ids
         ids = []

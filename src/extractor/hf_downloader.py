@@ -52,6 +52,7 @@ class Downloader_hf(Downloader):
     URLS = ['hentai-foundry.com']
     MAX_CORE = 16
     display_name = 'Hentai Foundry'
+    ACCEPT_COOKIES = [r'(.*\.)?hentai-foundry\.com']
 
     def init(self):
         self.session = enter()

@@ -1,16 +1,15 @@
 #coding: utf-8
 import downloader
 import ree as re
-from utils import Downloader, get_max_range, clean_title, get_print, try_n, urljoin, check_alive, LazyUrl, get_ext
+from utils import Downloader, get_max_range, clean_title, get_print, try_n, urljoin, check_alive, LazyUrl, get_ext, limits
 from translator import tr_
 from urllib.parse import urlparse, parse_qs, quote
-from ratelimit import limits, sleep_and_retry
 import clf2
 
 
 
 class Downloader_danbooru(Downloader):
-    type='danbooru'
+    type = 'danbooru'
     URLS = ['danbooru.donmai.us']
     MAX_CORE = 6
     _name = None
@@ -27,7 +26,7 @@ class Downloader_danbooru(Downloader):
             url = url.replace(' ', '+')
             while '++' in url:
                 url = url.replace('++', '+')
-            url = 'https://danbooru.donmai.us/posts?tags={}'.format(quote(url))
+            url = f'https://danbooru.donmai.us/posts?tags={quote(url)}'
         if 'donmai.us/posts/' in url:
             url = url.split('?')[0]
         return url.strip('+')
@@ -39,10 +38,10 @@ class Downloader_danbooru(Downloader):
             qs = parse_qs(parsed_url.query)
             if 'donmai.us/favorites' in self.url:
                 id = qs.get('user_id', [''])[0]
-                print('len(id) =', len(id), '"{}"'.format(id))
+                print('len(id) =', len(id), f'"{id}"')
                 if not id:
                     raise AssertionError('[Fav] User id is not specified')
-                id = 'fav_{}'.format(id)
+                id = f'fav_{id}'
             elif 'donmai.us/explore/posts/popular' in self.url: #4160
                 soup = read_soup(self.url, self.session, self.cw)
                 id = soup.find('h1').text
@@ -92,30 +91,25 @@ class Image:
         img = urljoin(url, img)
         ext = get_ext(img)
 
-        self.filename = '{}{}'.format(self.id, ext)
-        return img
+        self.filename = f'{self.id}{ext}'
+        return img, None
 
 
-
-@sleep_and_retry
-@limits(2, 1)
+@limits(.5)
 def wait(cw):
     check_alive(cw)
 
 
 def setPage(url, page):
-    # Always use HTTPS
-    url = url.replace('http://', 'https://')
-
     # Main page
     if re.findall(r'https://[\w]*[.]?donmai.us/?$', url):
-        url = 'https://{}donmai.us/posts?page=1'.format('danbooru.' if 'danbooru.' in url else '')
+        url = f"https://{'danbooru.' if 'danbooru.' in url else ''}donmai.us/posts?page=1"
 
     # Change the page
     if 'page=' in url:
-        url = re.sub('page=[0-9]*', 'page={}'.format(page), url)
+        url = re.sub('page=[0-9]*', f'page={page}', url)
     else:
-        url += '&page={}'.format(page)
+        url += f'&page={page}'
 
     return url
 
@@ -162,7 +156,7 @@ def get_imgs(url, session, title=None, range_=None, cw=None):
         else:
             empty_count += 1
             if empty_count < 4:
-                s = 'empty page; retry... {}'.format(p)
+                s = f'empty page; retry... {p}'
                 print_(s)
                 continue
             else:
@@ -188,7 +182,7 @@ def get_imgs(url, session, title=None, range_=None, cw=None):
             break
 
         if cw is not None:
-            cw.setTitle('{}  {} - {}'.format(tr_('읽는 중...'), title, len(imgs)))
+            cw.setTitle(f'{tr_("읽는 중...")}  {title} - {len(imgs)}')
         i += 1
 
     return imgs[:max_pid]

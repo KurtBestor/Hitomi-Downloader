@@ -1,10 +1,9 @@
-from utils import Soup, try_n, Downloader, urljoin, get_print, Session, clean_title, get_ext, fix_title, lazy, get_imgs_already, check_alive, File
+from utils import Soup, try_n, Downloader, urljoin, get_print, Session, clean_title, get_ext, fix_title, lazy, get_imgs_already, check_alive, File, limits
 from translator import tr_
 import page_selector
 import utils
 import clf2
 import ree as re
-from ratelimit import limits, sleep_and_retry
 from PIL import Image
 
 
@@ -26,8 +25,7 @@ class File_manatoki(File):
 
         super().__init__(info)
 
-    @sleep_and_retry
-    @limits(2, 1)
+    @limits(.5)
     def get(self):
         return {}
 
@@ -124,8 +122,7 @@ def get_artist(soup):
     return artist
 
 
-@sleep_and_retry
-@limits(1, 10)
+@limits(10)
 def get_soup(url, session=None, cw=None, win=None):
     if session is None:
         session = Session()
