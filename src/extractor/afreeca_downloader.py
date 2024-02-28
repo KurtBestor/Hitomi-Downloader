@@ -26,6 +26,8 @@ class Downloader_afreeca(Downloader):
 
     @classmethod
     def fix_url(cls, url):
+        if Live_afreeca.is_live(url):
+            url = Live_afreeca.fix_url(url)
         return url.rstrip(' /')
 
     def read(self):
@@ -174,7 +176,7 @@ class Live_afreeca(utils.Live):
 
     @classmethod
     def is_live(cls, url):
-        return bool(re.match(r'https?://(play|bj).afreecatv.com/([^/?#]+)', url))
+        return bool(re.match(r'https?://(play|bj).afreecatv.com/([^/?#]+)', url)) and url.strip('/').count('/') <= 4
 
     @classmethod
     def fix_url(cls, url):
