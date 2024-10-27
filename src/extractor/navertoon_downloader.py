@@ -128,7 +128,7 @@ def get_pages(url, cw=None):
             html = downloader.read_html(url_page)
         print('read page:', url_page)
         soup = Soup(html)
-        view = soup.findAll('ul', class_='section_episode_list')[(-1)]
+        view = soup.findAll('ul', class_='section_episode_list')[-1]
         for lst in view.findAll('li'):
             url_page = urljoin(url, lst.find('a').attrs['href'])
             if 'detail.nhn' not in url_page.lower() and 'detail?' not in url_page.lower(): #3540

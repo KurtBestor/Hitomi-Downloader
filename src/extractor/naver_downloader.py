@@ -34,20 +34,14 @@ class Downloader_naver(Downloader):
             raise errors.Invalid(f'Invalid format: {self.url}')
         self.url = f'https://blog.naver.com/{username}/{pid}'
 
-    @property
-    def name(self):
-        username, pid = get_id(self.url)
-        return clean_title(f'{username}/{pid}')
-
     def read(self):
-        self.title = f'읽는 중... {self.name}'
+        info = get_imgs(self.url, self.session, self.cw)
 
-        imgs = get_imgs(self.url, self.session, self.cw)
-
-        for img in imgs:
+        for img in info['imgs']:
             self.urls.append(img.url)
 
-        self.title = self.name
+        username, pid = get_id(self.url)
+        self.title = clean_title(f'[{username}] {info["title"]} ({pid})')
 
 
 class Image:
@@ -82,27 +76,29 @@ def read_page(url, session, depth=0):
     if frame is None:
         print('frame is None')
         return read_page(url, session, depth+1)
-    return read_page(urljoin('https://blog.naver.com', frame.attrs['src']), session, depth+1)
+    return read_page(urljoin('https://blog.naver.com', frame['src']), session, depth+1)
 
 
 
 def get_imgs(url, session, cw):
     print_ = get_print(cw)
+    info = {}
     url = url.replace('blog.naver', 'm.blog.naver')
     referer = url
     url_frame, soup = read_page(url, session)
 
+    info['title'] = soup.find('meta', {'property': 'og:title'})['content'].strip()
+
     imgs = []
     urls = set()
     view = soup.find('div', {'id': 'viewTypeSelector'})
-    print('view', view is not None)
 
-    imgs_ = view.findAll('span', class_='_img') + view.findAll('img')
+    imgs_ = view.findAll('span', class_='_img') + view.findAll(['img', 'video']) #7062
 
     for img in imgs_:
-        url = img.attrs.get('src')
+        url = img.get('data-gif-url') or img.get('src')
         if not url:
-            url = img.attrs.get('thumburl')
+            url = img.get('thumburl')
         if not url:
             continue
 
@@ -135,8 +131,8 @@ def get_imgs(url, session, cw):
     pairs = []
 
     for video in soup.findAll(class_='_naverVideo'):
-        vid = video.attrs['vid']
-        key = video.attrs['key']
+        vid = video['vid']
+        key = video['key']
         pairs.append((vid, key))
     print_(f'pairs: {pairs}')
 
@@ -159,4 +155,6 @@ def get_imgs(url, session, cw):
         video = Video(fs[0]['source'], url_frame, len(videos))
         videos.append(video)
 
-    return imgs + videos
+    info['imgs'] = imgs + videos
+
+    return info

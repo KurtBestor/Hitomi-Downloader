@@ -1,7 +1,7 @@
 #coding:utf8
 import downloader
 import utils
-from utils import Soup, Downloader, LazyUrl, urljoin, try_n, clean_title, get_max_range, json
+from utils import Soup, Downloader, LazyUrl, urljoin, try_n, clean_title, get_max_range, json, print_error
 import ree as re
 import os
 from translator import tr_
@@ -36,7 +36,7 @@ class Video:
         self.url = url
         self.title = title
         ext = os.path.splitext(url.split('?')[0])[1]
-        self.filename = '{}{}'.format(clean_title(title), ext)
+        self.filename = '{}{}'.format(title, ext)
         self.url_thumb = url_thumb
         self.thumb = BytesIO()
         downloader.download(self.url_thumb, buffer=self.thumb)
@@ -59,24 +59,31 @@ class Downloader_luscious(Downloader):
         return '/'.join(url.split('/')[3:])
 
     def read(self):
+        shown = True
         def f(html, browser=None):
+            nonlocal shown
             soup = Soup(html)
-            if soup.find('input', type='password'):
-                browser.show()
+            if soup.find(class_='http-error-404-page-container'):
+                raise LoginRequired(get_title(soup, False)) #6912
+            if soup.find('input', type='password') or soup.find('img', class_='warning-page-image'):
+                if not shown:
+                    shown = True
+                    browser.show()
                 return False
-            browser.hide()
+            if shown:
+                shown = False
+                browser.hide()
             try:
                 get_title(soup)
-            except:
+            except Exception as e:
+                self.print_(print_error(e))
                 return False
             return True
         res = clf2.solve(self.url, f=f, cw=self.cw, show=True)
         self.url = res['url']
         soup = Soup(res['html'])
-        if soup.find(class_='http-error-404-page-container'):
-            raise LoginRequired(get_title(soup)) #6912
 
-        title = clean_title(get_title(soup))
+        title = get_title(soup)
 
         self.title = tr_('읽는 중... {}').format(title)
 
@@ -162,5 +169,10 @@ def get_video(url, soup):
     return video
 
 
-def get_title(soup):
-    return soup.find('h1').text.strip()
+def get_title(soup, id=True):
+    title = soup.find('h1').text.strip()
+    if not id:
+        return title
+    id = re.find(r'/moderation/flag/album/[0-9]+/.+id=([0-9]+)', soup.html, err='no id') #7026
+    title = clean_title(title, n=-len(f' ({id})'))
+    return f'{title} ({id})'

@@ -287,6 +287,8 @@
     "#recomm_artist#": "作者",
     "#recomm_main#": "保存フォルダ内の作品を分析して作者をお勧めします。\n\nその精度は提供された情報によります。\n作品数が多いほど良くなります。(100以上を推奨)\n\n{item} 個の作品があります。",
     "#recomm_score#": "スコア",
+    "#server_t_ehen#": "E(x)Hentai",
+    "#server_t_hitomi#": "Hitomi.la",
     "#setting_MB/s#": "MB/秒",
     "#setting_autosaveL#": "",
     "#setting_autosaveR#": "ごと",

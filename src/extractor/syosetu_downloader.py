@@ -26,7 +26,7 @@ class Text(File):
         super().__init__(info)
 
     def get(self):
-        text = get_text(self['referer'], self['title_all'], self['update'], self.session)
+        text = get_text(self['referer'], self['title_all'], self['update'], self.session, self.cw)
         f = BytesIO()
         f.write(text.encode('utf8'))
         f.seek(0)
@@ -63,26 +63,26 @@ class Downloader_syosetu(Downloader):
                 break
             except Exception as e:
                 print(e)
-
+                e_ = e
         else:
-            raise
+            raise e_
 
         title, self.artist = get_title_artist(soup)
         self._title_ = title
         ncode = re.find(r'syosetu.com/([^/]+)', self.url, err='no ncode') #3938
         title_dir = clean_title(f'[{self.artist}] {title} ({ncode})')
         ex = soup.find('div', id='novel_ex')
-        self.novel_ex = utils.get_text(ex, '') if ex else None
+        self.novel_ex = utils.get_text(ex, '', self.cw) if ex else None
         texts = []
 
         # Range
         max_pid = get_max_range(self.cw)
 
         while check_alive(self.cw):
-            subtitles = soup.findAll('dd', class_='subtitle')
+            subtitles = soup.findAll(class_='p-eplist__sublist')
             if subtitles:
                 for subtitle in subtitles:
-                    update = subtitle.parent.find('dt', class_='long_update')
+                    update = subtitle.find(class_='p-eplist__update') #7502
                     update2 = None
                     if update:
                         for span in update.findAll('span'):
@@ -106,7 +106,7 @@ class Downloader_syosetu(Downloader):
                 texts.append(text)
             if len(texts) >= max_pid:
                 break
-            if pager_next := soup.find('a', class_='novelview_pager-next'): #6830
+            if pager_next := soup.find('a', class_='c-pager__item c-pager__item--next'): #6830
                 sleep(1)
                 url_next = urljoin(self.url, pager_next['href'])
                 self.print_(f'url_next: {url_next}')
@@ -139,29 +139,34 @@ class Downloader_syosetu(Downloader):
 
 
 def get_title_artist(soup):
-    artist = soup.find('div', class_='novel_writername').text.replace('\u4f5c\u8005', '').replace('\uff1a', '').replace(':', '').replace('\u3000', ' ').strip()
+    #artist = soup.find('div', class_='novel_writername').text.replace('\u4f5c\u8005', '').replace('\uff1a', '').replace(':', '').replace('\u3000', ' ').strip()
+    artist = soup.find('meta', {'name': 'twitter:creator'})['content']
     rem = len(artist.encode('utf8', 'ignore')) + len('[merged] [] .txt') + len(' (n8273ds)')
-    return clean_title(soup.find('p', class_='novel_title').text.strip(), n=-rem), clean_title(artist)
+    title = soup.find('title').text.strip()
+    return clean_title(title, n=-rem), clean_title(artist)
 
 
 @try_n(22, sleep=30)
-def get_text(url, subtitle, update, session):
+def get_text(url, subtitle, update, session, cw):
     soup = downloader.read_soup(url, session=session)
     if update:
         update = '        ' + update
     else:
         update = ''
 
-    story = utils.get_text(soup.find('div', id='novel_honbun'), '')
+    p = soup.find(class_='p-novel__text--preface')
+    if p:
+        p_ = p
+        p = utils.get_text(p, '', cw)
+        p_.decompose()
+    story = utils.get_text(soup.find(class_='p-novel__text'), '', cw)
 
-    p = soup.find('div', id='novel_p')
-    p = '' if p is None else utils.get_text(p, '')
     if p:
         story = f'{p}\n\n════════════════════════════════\n\n{story}'
 
     #2888
-    a = soup.find('div', id='novel_a')
-    a = '' if a is None else utils.get_text(a, '')
+    a = soup.find(class_='p-novel__text--afterword')
+    a = '' if a is None else utils.get_text(a, '', cw)
     if a:
         story = f'{story}\n\n════════════════════════════════\n\n{a}'
 

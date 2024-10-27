@@ -56,7 +56,7 @@ class Downloader_iwara(Downloader):
         else: #6031
             self.urls += [file.url for file in videos]
 
-        self.enableSegment()
+        self.enableSegment(n_threads=8)
 
         url_thumb = video.url_thumb
         self.print_(f'url_thumb: {url_thumb}')
@@ -80,7 +80,7 @@ class File:
         ext = get_ext(url) or downloader.get_ext(url, session=session)
         if type == 'video':
             id_ = re.find(PATTERN_ID, referer, err='no video id')[1]
-            self.filename = format_filename(title, id_, ext) #4287
+            self.filename = format_filename(title, id_, ext, artist=info.get('username')) #4287, #7127
         else:
             name = '{}_p{}'.format(clean_title(title), p) if multi_post else p
             self.filename = '{}{}'.format(name, ext)
@@ -101,7 +101,7 @@ class LazyFile:
         return file.url()
 
 
-def get_token(session, cw=None):
+def get_token(session, cw=None): #5794, #6031, #7030
     token = None
     def f(html, browser=None):
         def callback(r):
@@ -138,7 +138,7 @@ def get_info(url, session, cw, multi_post=False):
                 if not button_text:
                     continue
                 print_(f'button: {button_text}')
-                if button_text.lower() in ['i am over 18', 'continue']:
+                if button_text.lower() in ['i am over 18', 'continue', '私は18歳以上です', '続ける', '继续', '我已满年满 18 岁']: #7534
                     browser.runJavaScript(f'btns=document.getElementsByClassName("button--primary");btns[{i}].click();') #5794#issuecomment-1517879513
         if '/profile/' in url.lower():
             return soup.find('div', class_='page-profile__header') is not None
@@ -152,6 +152,15 @@ def get_info(url, session, cw, multi_post=False):
 
     html = clf2.solve(url, session=session, f=f, cw=cw, timeout=30)['html'] #5794
     soup = Soup(html)
+
+    try:
+        token = get_token(session, cw=cw)
+    except Exception as e:
+        print_(print_error(e))
+        token = None
+    hdr = {}
+    if token:
+        session.headers['Authorization'] = f'Bearer {token}'
 
     info = {}
     info['files'] = []
@@ -173,7 +182,7 @@ def get_info(url, session, cw, multi_post=False):
         if sub == 'videos':
             info['playlist'] = True
             for p in range(100):
-                url_api = f'https://api.iwara.tv/videos?page={p}&sort=date&user={id}'
+                url_api = f'https://api.iwara.tv/videos?sort=date&page={p}&user={id}'
                 j = downloader.read_json(url_api, session=session)
                 for post in j['results']:
                     id_ = post['id']
@@ -221,17 +230,8 @@ def get_info(url, session, cw, multi_post=False):
 
     id = re.find(PATTERN_ID, url, err='no id')[1]
 
-    try:
-        token = get_token(session, cw=cw)
-    except Exception as e:
-        print_(print_error(e))
-        token = None
-
     url_api = f'https://api.iwara.tv/{type}/{id}'
-    hdr = {}
-    if token:
-        hdr['authorization'] = f'Bearer {token}'
-    data = downloader.read_json(url_api, url, session=session, headers=hdr)
+    data = downloader.read_json(url_api, url, session=session)
 
     if data.get('embedUrl'):
         if cw and not cw.downloader.single:

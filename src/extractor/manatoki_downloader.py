@@ -136,7 +136,8 @@ def get_soup(url, session=None, cw=None, win=None):
                 virgin = False
                 browser.runJavaScript('window.scrollTo({top: document.getElementsByClassName("form-box")[0].getBoundingClientRect().top-150})') #5504
             return False
-        browser.hide()
+        if not virgin: #7158
+            browser.hide()
         return True
     res = clf2.solve(url, session=session, f=f, cw=cw, win=win)
     soup = Soup(res['html'], apply_css=True)

@@ -287,6 +287,8 @@
     "#recomm_artist#": "艺术家",
     "#recomm_main#": "通过分析存储文件夹中的作品推荐作者。\n\n结果的准确性是给定作品内的准确性。\n作品越多越好。（推荐 100 或更多）\n\n有 {item} 个作品：",
     "#recomm_score#": "评分",
+    "#server_t_ehen#": "E(x)Hentai",
+    "#server_t_hitomi#": "Hitomi.la",
     "#setting_MB/s#": "MB/s",
     "#setting_autosaveL#": "每个",
     "#setting_autosaveR#": "",

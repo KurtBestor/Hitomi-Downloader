@@ -31,7 +31,7 @@ class Downloader_bdsmlr(Downloader):
         if 'bdsmlr.com' in url:
             if 'www.bdsmlr.com' in url:
                 raise Exception('www.bdsmlr.com')
-            gal_num = url.split('.bdsmlr.com')[0].split('/')[(-1)]
+            gal_num = url.split('.bdsmlr.com')[0].split('/')[-1]
         else:
             gal_num = url
         return gal_num

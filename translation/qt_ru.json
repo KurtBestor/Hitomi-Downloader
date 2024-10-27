@@ -119,7 +119,8 @@
     "Wake Up": "Пробуждение",
     "Power Off": "Отключение питания",
     "Hankaku": "Ханкаку",
-    "Hangul End": "Хангыль конец"
+    "Hangul End": "Хангыль конец",
+    "Space": "Пробел"
   },
   "QPageSetupWidget": {
     "Form": "Форма",

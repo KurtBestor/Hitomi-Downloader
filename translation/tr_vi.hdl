@@ -287,6 +287,8 @@
     "#recomm_artist#": "Tác giả",
     "#recomm_main#": "It analyzes the galleries in the download folder and recommends artists.\n\nThe accuracy shown in the results is within the given galleries.\nThe more galleries you have, the better (100+ is recommended).\n\nYou currently have {item} galleries:",
     "#recomm_score#": "Điểm",
+    "#server_t_ehen#": "E(x)Hentai",
+    "#server_t_hitomi#": "Hitomi.la",
     "#setting_MB/s#": "MB/s",
     "#setting_autosaveL#": "Tất cả",
     "#setting_autosaveR#": "",

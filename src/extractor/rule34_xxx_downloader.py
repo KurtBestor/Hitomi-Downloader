@@ -33,16 +33,14 @@ class Downloader_rule34_xxx(Downloader):
 
     @classmethod
     def fix_url(cls, url):
-        if 'rule34.xxx' in url.lower():
-            url = url.replace('http://', 'https://')
-        else:
+        if 'rule34.xxx' not in url.lower():
             url = url.replace(' ', '+')
             while '++' in url:
                 url = url.replace('++', '+')
             url = quote(url)
             url = url.replace('%2B', '+')
             url = 'https://rule34.xxx/index.php?page=post&s=list&tags={}'.format(url)
-        return url
+        return url.replace('http://', 'https://')
 
     @property
     def name(self):

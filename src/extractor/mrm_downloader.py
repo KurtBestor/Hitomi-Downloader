@@ -155,9 +155,7 @@ def get_imgs_page(page, session=None, cw=None):
 
     imgs = []
     for img in view.findAll('img'):
-        img = img.attrs.get('data-lazy-src') or img.attrs.get('data-src')
-        if img is None:
-            continue
+        img = img.get('data-lazy-src') or img.get('data-src') or img['src'] #7125
         img = urljoin(url, img)
         img = Image(img, len(imgs), page, cw)
         imgs.append(img)

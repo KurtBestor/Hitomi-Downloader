@@ -2,7 +2,7 @@
 import downloader
 from io import BytesIO
 import ree as re
-from utils import Downloader, get_print, format_filename, try_n, LazyUrl, get_abr, Session, get_resolution, print_error, urljoin
+from utils import Downloader, get_print, format_filename, try_n, LazyUrl, get_abr, Session, get_resolution, print_error, urljoin, uuid
 import utils
 import ffmpeg
 import os
@@ -11,6 +11,7 @@ import threading
 import errors
 import websockets # for nama
 from m3u8_tools import M3u8_stream
+import putils
 
 
 def get_id(url):
@@ -79,6 +80,10 @@ class Video:
         return url
 
     def pp(self, filename):
+        if thread_audio := self.info.get('thread_audio'):
+            thread_audio.start()
+            thread_audio.join()
+            ffmpeg.merge(filename, self.info['audio_path'], cw=self.cw)
         if self.format == 'mp4':
             return
         name, ext_old = os.path.splitext(filename)
@@ -190,8 +195,8 @@ def get_video(session, url, format, cw=None, d=None):
     fs = [f for f in fs if f.get('height', 0) <= res]
     for f in fs:
         print_(f"{f.get('height')} {f['protocol']} {f['format']} - {f['url']}")
-##    if not live:
-##        fs = [f for f in fs if f['url'].startswith('niconico_dm')]#
+    if not live:
+        fs = [f for f in fs if f['url'].startswith('niconico_dmc')] or fs#
     f = fs[-1]
     print_(f'f_url: {f["url"]}')
     if f['url'].startswith('niconico_dmc:'):
@@ -200,23 +205,34 @@ def get_video(session, url, format, cw=None, d=None):
         info_dict, heartbeat_info_dict = ie._get_heartbeat_info(f)
         f = info_dict
         hb = {'info': heartbeat_info_dict, 'ydl': ydl}
-    elif f['url'].startswith('niconico_dms:'):
-        ie = ytdl.get_extractor(url)
-        ie._downloader = ydl
-        url_m3u8 = ie._get_dms_manifest_url(info)
-        print_(f'url_m3u8: {url_m3u8}')
-        f['url'] = url_m3u8
-        f['protocol'] = 'm3u8'
-        _ = info.copy()
-        _['formats'] = [f]
-        m = ytdl.Downloader(ydl, _, _, cw=cw)
-        f['url'] = m
-        hb = None
     elif f['protocol'].startswith('m3u8'):
-        m = M3u8_stream(f['url'], referer=url, session=session)
+##        m = M3u8_stream(f['url'], referer=url, session=session)
+
 ##        session.headers.update(f.get('http_headers', {}))
 ##        hdr = session.headers.copy()
 ##        m = ffmpeg.Stream(f['url'], headers=hdr, cw=cw)
+
+        m = ytdl.Downloader(ydl, f.copy(), f.copy(), cw=cw)
+        def acodec(f):
+            ac = f.get('acodec')
+            if ac == 'none':
+                ac = None
+            return ac
+        ac = acodec(f)
+        print_(f'acodec: {ac}')
+        if not ac:
+            fs = [f for f in info['formats'] if f.get('acodec')]
+            fs = [f for f in fs if f['protocol'].startswith('m3u8') and acodec(f)]
+            f_audio = fs[-1]
+            def _():
+                path = os.path.join(getattr(putils, 'DIRf', putils.DIR), f'{uuid()}_a.tmp') #7006
+                if cw is not None:
+                    cw.trash_can.append(path)
+                audio = ytdl.Downloader(ydl, f_audio.copy(), f_audio.copy(), cw=cw)
+                downloader.download(audio, session=session, outdir=os.path.dirname(path), fileName=os.path.basename(path), customWidget=cw, overwrite=True)
+                info['audio_path'] = path
+                print_('audio done')
+            info['thread_audio'] = threading.Thread(target=_, daemon=True)
         f['url'] = m
         hb = None
     else:

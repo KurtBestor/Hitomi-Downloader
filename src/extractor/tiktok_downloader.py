@@ -136,7 +136,7 @@ def read_channel(url, session, cw=None, title=None):
     info_ = ydl.extract_info(url)
 
     for e in info_['entries']:
-        info['items'].append({'url': e['webpage_url']})
+        info['items'].append({'url': e.get('webpage_url') or e['url']})
 
     if not info['items']:
         raise Exception('no items')

@@ -8,8 +8,7 @@ DEFAULT_N_THREAD = 2
 
 
 def suitable(url):
-    ext = get_ext(url).lower()
-    return ext in ('.m3u8', '.mpd')
+    return get_ext(url).lower() in ('.m3u8', '.mpd')
 
 
 class Downloader_m3u8(Downloader):

@@ -181,6 +181,7 @@ class PinterestAPI:
 
 
 class Image:
+    live = False
 
     def __init__(self, img):
         self.id = img['id']
@@ -197,6 +198,8 @@ class Image:
                 src = playlist2stream(src)
             except:
                 src = M3u8_stream(src)
+            if src.live: #7541
+                self.live = True
             ext = '.mp4'
 
         self.url = LazyUrl(f'{BASE_URL}/pin/{self.id}/', lambda _: src, self)
@@ -225,15 +228,17 @@ def get_imgs(id, api, cw=None, title=None, type='board'):
             print('skip img:', img['id'])
             continue
         img = Image(img)
+        if img.live:
+            if type == 'pin':
+                raise Exception('live')
+            print('live:', img.id)
+            continue
         if type == 'pin' and img.id != id:
             raise AssertionError('id mismatch')
         if img.id in ids:
             print('duplicate:', img.id)
             continue
         ids.add(img.id)
-        print(img.url)
-        print(img.filename)
-        print()
         imgs.append(img)
         if len(imgs) >= n:
             break

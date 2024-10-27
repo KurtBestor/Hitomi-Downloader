@@ -1,22 +1,23 @@
 #coding: utf-8
 import downloader
 import ree as re
-from utils import Downloader, get_max_range, clean_title, get_print, try_n, urljoin, check_alive, LazyUrl, get_ext, limits
+from utils import Downloader, Session, get_max_range, clean_title, get_print, try_n, urljoin, check_alive, LazyUrl, get_ext, limits
 from translator import tr_
 from urllib.parse import urlparse, parse_qs, quote
 import clf2
 
 
-
 class Downloader_danbooru(Downloader):
     type = 'danbooru'
     URLS = ['danbooru.donmai.us']
-    MAX_CORE = 6
+    MAX_CORE = 4
     _name = None
     ACCEPT_COOKIES = [r'(.*\.)?donmai\.us']
 
     def init(self):
-        self.session = clf2.solve(self.url, cw=self.cw)['session'] #5336
+        self.session = Session('chrome')
+        clf2.solve(self.url, session=self.session, cw=self.cw) #5336
+        self.session.headers['User-Agent'] = 'Mozilla/5.' #7034
 
     @classmethod
     def fix_url(cls, url):
@@ -95,7 +96,7 @@ class Image:
         return img, None
 
 
-@limits(.5)
+@limits(1)
 def wait(cw):
     check_alive(cw)
 

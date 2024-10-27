@@ -48,7 +48,7 @@ class Video:
 
 class Downloader_hentaicosplay(Downloader):
     type = 'hentaicosplay'
-    URLS = ['hentai-cosplays.com', 'porn-images-xxx.com', 'hentai-img.com']
+    URLS = ['hentai-cosplays.com', 'porn-images-xxx.com', 'hentai-img.com', 'porn-video-xxx.com']
     icon = None
     display_name = 'Hentai Cosplay'
     MAX_PARALLEL = 1 # must be 1
@@ -69,7 +69,7 @@ class Downloader_hentaicosplay(Downloader):
     @try_n(2)
     def read(self):
         #4961
-        ua = downloader.random_ua()
+        ua = downloader.ua.random
         self.print_(f'read start ua: {ua}')
         downloader.REPLACE_UA[r'hentai-cosplays\.com'] = ua
         downloader.REPLACE_UA[r'porn-images-xxx\.com'] = ua

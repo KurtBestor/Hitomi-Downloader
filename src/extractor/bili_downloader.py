@@ -8,7 +8,7 @@ import math
 import ree as re
 import ytdl
 import constants
-from putils import DIR
+import putils
 import threading
 import errors
 _VALID_URL = r'''(?x)
@@ -76,17 +76,19 @@ class File_bili(File):
 
         mobj = re.match(_VALID_URL, self['referer'])
         video_id = mobj.group('id')
+        artist = info.get('uploader') or None
 
         info = {
             'url': f_video['url'],
             'url_thumb': url_thumb,
-            'name': format_filename(title, video_id, ext),
+            'artist': artist,
+            'name': format_filename(title, video_id, ext, artist=artist), #7127
             }
 
         if f_audio:
             def f():
                 audio = f_audio['url']
-                path = os.path.join(DIR, f'{uuid()}_a.tmp')
+                path = os.path.join(putils.DIRf, f'{uuid()}_a.tmp')
                 if cw is not None:
                     cw.trash_can.append(path)
                 if constants.FAST:
@@ -211,3 +213,4 @@ class Downloader_bili(Downloader):
         n = int(math.ceil(8.0 / len(self.urls)))
         self.print_(f'n_threads: {n}')
         self.enableSegment(n_threads=n, overwrite=True)
+        self.artist = file['artist']

@@ -5,7 +5,7 @@ import downloader_v3
 from error_printer import print_error
 from timee import sleep
 import ree as re
-from utils import urljoin, Downloader, try_n, get_print, filter_range, compatstr, uuid, get_max_range, format_filename, get_resolution, get_abr, Session, fix_dup, File, clean_title
+from utils import urljoin, Downloader, try_n, get_print, filter_range, compatstr, uuid, get_max_range, format_filename, get_resolution, get_abr, Session, fix_dup, File, clean_title, display_url
 import ffmpeg
 import constants
 import os
@@ -13,7 +13,7 @@ import utils
 from translator import tr, tr_
 from datetime import datetime
 import threading
-from putils import DIR
+import putils
 import errors
 MODE = 'query'
 utils.TOKENS['youtube'] = ['title', 'id', 'artist', 'date'] + utils.ADD_TOKENS
@@ -127,7 +127,8 @@ class Video(File):
                 except ValueError:
                     i = 999
                 pr = 'premium' in stream.format.lower() #6350
-                return not pr, i, -fps, -stream.tbr
+                dash = 'dash' in stream.format.lower() #7508
+                return dash, not pr, i, -fps, -stream.tbr
             streams = sorted(streams, key=key) #6079
             print_('')
         elif type == 'audio':
@@ -135,7 +136,10 @@ class Video(File):
             # Maximum abr
             abrs = [stream.abr for stream in streams]
             max_abr = min(max(abrs), max_abr)
-            streams_ = list(streams)
+            def key(stream):
+                dash = 'dash' in stream.format.lower() #7508
+                return dash
+            streams_ = sorted(streams, key=key)
             streams[:] = []
             for stream in streams_:
                 if stream.abr is None:
@@ -195,27 +199,34 @@ class Video(File):
         self.audio = None
         self.thumb_url = None
 
-        if type == 'audio' and 'DASH' in self.stream.format:
+        if type == 'audio' and 'dash' in self.stream.format.lower():
             self.stream.setDashType('audio')
 
         # Audio
         if type=='video' and stream.audio_codec is None:
             print('audio required')
-            streams = [stream for stream in yt.streams.all() if stream.abr]
+            def isAudio(stream):
+                if stream.abr:
+                    return True
+                #7392
+                return stream.video_codec is None and not stream.abr
+            streams = [stream for stream in yt.streams.all() if isAudio(stream)]
             print_streams(streams, cw)
             # only mp4; https://github.com/KurtBestor/Hitomi-Downloader/issues/480
             def isGood(stream):
-                return stream.audio_codec.lower().startswith('mp4')
+                ac = stream.audio_codec or ''
+                return ac.lower().startswith('mp4')
             streams_good = [stream for stream in streams if isGood(stream)]
             if streams_good:
                 streams = streams_good
                 print_streams(streams, cw)
+            print_(f'streams_all: {len(yt.streams.all())}, streams: {len(streams)}, streams_good: {len(streams_good)}')
             # only audio?
             if any(stream.resolution is None for stream in streams):
                 streams = [stream for stream in streams if stream.resolution is None]
                 print_streams(streams, cw)
             def key(stream):
-                abr = stream.abr
+                abr = stream.abr or 0
                 format_note = stream.video.get('format_note')
                 if format_note and 'original' in format_note.lower():
                     org = 0
@@ -231,16 +242,22 @@ class Video(File):
                         lang = 1
                 else:
                     lang = 1
-                return lang, org, -abr
+                dash = 'dash' in stream.format.lower() #7508
+                return dash, lang, org, -abr
             streams = sorted(streams, key=key) #6332
             best_audio = streams[0]
             print_streams([best_audio], cw)
             self.stream_audio = best_audio
-            if 'DASH' in self.stream_audio.format:
+            if 'dash' in self.stream_audio.format.lower():
                 self.stream_audio.setDashType('audio')
-            self.audio = best_audio.url
-            if callable(self.audio):
-                self.audio = self.audio()
+            if self.stream.live: #7392
+                video = self.stream.video
+                options = f'-i "{best_audio.video["url"]}" {{default}}'
+                self.stream.url = lambda: utils.LiveStream(video['url'], headers=video.get('http_headers', {}), fragments=video.get('fragments') if ytdl.LIVE_FROM_START.get('youtube') else None, options=options)
+            else:
+                self.audio = best_audio.url
+                if callable(self.audio):
+                    self.audio = self.audio()
 
         #
         _url = self.stream.url
@@ -258,7 +275,7 @@ class Video(File):
         if type != 'audio':
             d['width'] = v['width']
             d['height'] = v['height']
-        tokens = ['fps',  'vcodec', 'acodec', 'audio_channels', 'language', 'vbr', 'abr', 'tbr']
+        tokens = ['fps',  'vcodec', 'acodec', 'audio_channels', 'language', 'vbr', 'abr', 'tbr', 'channel_id', 'uploader_id'] #6688
         for token in tokens:
             value = v.get(token)
             if isinstance(value, str):
@@ -291,16 +308,20 @@ class Video(File):
 
         if self.audio is not None: #5015
             def f(audio):
-                print_('Download audio: {}'.format(audio))
-                path = os.path.join(DIR, f'{uuid()}_a.tmp')
-                if cw is not None:
-                    cw.trash_can.append(path)
-                if constants.FAST:
-                    downloader_v3.download(audio, session=session, chunk=1024*1024, n_threads=2, outdir=os.path.dirname(path), fileName=os.path.basename(path), customWidget=cw, overwrite=True, mode=MODE)
-                else:
-                    downloader.download(audio, session=session, outdir=os.path.dirname(path), fileName=os.path.basename(path), customWidget=cw, overwrite=True)
-                self.audio_path = path
-                print_('audio done')
+                try: #7394
+                    print_(f'Download audio: {display_url(audio)}')
+                    DIRf = getattr(putils, 'DIRf', putils.DIR)
+                    path = os.path.join(DIRf, f'{uuid()}_a.tmp')
+                    if cw is not None:
+                        cw.trash_can.append(path)
+                    if constants.FAST:
+                        downloader_v3.download(audio, session=session, chunk=1024*1024, n_threads=2, outdir=os.path.dirname(path), fileName=os.path.basename(path), customWidget=cw, overwrite=True, mode=MODE)
+                    else:
+                        downloader.download(audio, session=session, outdir=os.path.dirname(path), fileName=os.path.basename(path), customWidget=cw, overwrite=True)
+                    self.audio_path = path
+                    print_('audio done')
+                except Exception as e:
+                    print_(print_error(e))
             self.thread_audio = threading.Thread(target=f, args=(self.audio,), daemon=True)
             self.thread_audio.start()
 

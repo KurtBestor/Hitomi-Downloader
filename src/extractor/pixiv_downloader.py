@@ -1,5 +1,5 @@
 import downloader
-from utils import Downloader, urljoin, clean_title, LazyUrl, get_ext, get_print, try_n, compatstr, get_max_range, check_alive, query_url, Soup, limits
+from utils import Downloader, urljoin, clean_title, LazyUrl, get_ext, get_print, try_n, compatstr, get_max_range, check_alive, query_url, Soup, limits, json
 import ffmpeg
 import utils
 import os
@@ -11,14 +11,15 @@ from urllib.parse import quote, unquote
 import constants
 from datetime import datetime
 import requests
-from timee import sleep
-from collections import deque
 from locker import lock
-import threading
+from multiprocessing.pool import ThreadPool
 import clf2
 from PIL import Image as Image_
+import zipfile
+import weakref
 ##import asyncio
 LIMIT = 48
+N_ERR = 4
 for header in ['pixiv_illust', 'pixiv_bmk', 'pixiv_search', 'pixiv_following', 'pixiv_following_r18']:
     if header not in constants.available_extra:
         constants.available_extra.append(header)
@@ -144,7 +145,7 @@ class PixivAPI:
     def user_id(self, url):
         return re.find('/users/([0-9]+)', url) or re.find('[?&]id=([0-9]+)', url)
 
-    @try_n(8, sleep=5)
+    @try_n(4, sleep=5)
     @limits(1.5) #3355, #5105
     def call(self, url):
         #print('call:', url)
@@ -226,7 +227,7 @@ class Image:
         self.artistid = info['artist_id'] #3636
         self.title = info['raw_title']
         self.utime = info['create_date']
-        self.cw = cw
+        self.cw = weakref.ref(cw)
         self.ugoira = ugoira
         self.url = LazyUrl(referer, self.get, self, pp=self.pp, detect_local=not ugoira)
 
@@ -241,9 +242,9 @@ class Image:
             }
         self.filename = utils.format('pixiv', d, get_ext(self._url))
         if self.ugoira and self.ugoira['ext']: #3355
-            filename_local = os.path.join(self.cw.dir, self.filename)
+            filename_local = os.path.join(self.cw().dir, self.filename)
             filename_local = f'{os.path.splitext(filename_local)[0]}{self.ugoira["ext"]}'
-            if os.path.abspath(filename_local) in self.cw.names_old or os.path.exists(filename_local): #4534
+            if os.path.abspath(filename_local) in self.cw().names_old or os.path.exists(filename_local): #4534
                 self.filename = os.path.basename(filename_local)
                 self.local = True
         return self._url
@@ -257,8 +258,14 @@ class Image:
                 dither = True
                 quality = 90
             filename_new = f'{os.path.splitext(filename)[0]}{self.ugoira["ext"]}'
-            ffmpeg.gif(filename, filename_new, self.ugoira['delay'], dither=dither, quality=quality, cw=self.cw)
-            utils.removeDirList.append((filename, False))
+            if self.ugoira['ext'] == '.ugoira': #6986
+                file = json.dumps(self.ugoira['frames'], separators=(',', ':')).encode('utf8')
+                with zipfile.ZipFile(filename, 'a', zipfile.ZIP_STORED, allowZip64=True) as f:
+                    f.writestr('animation.json', file)
+                os.rename(filename, filename_new)
+            else:
+                ffmpeg.gif(filename, filename_new, self.ugoira['delay'], dither=dither, quality=quality, cw=self.cw())
+                utils.submit_remove(filename, False)
             return filename_new
 
 
@@ -314,7 +321,7 @@ def get_info(url, session, cw=None, depth=0, tags_add=None):
     info = {}
     imgs = []
 
-    ugoira_ext = [None, '.gif', '.webp', '.png'][utils.ui_setting.ugoira_convert.currentIndex()] if utils.ui_setting else None
+    ugoira_ext = [None, '.gif', '.webp', '.ugoira'][utils.ui_setting.ugoira_convert.currentIndex()] if utils.ui_setting else None #6986
 
     max_pid = get_max_range(cw)
 
@@ -339,6 +346,7 @@ def get_info(url, session, cw=None, depth=0, tags_add=None):
                 ugoira = {
                     'ext': ugoira_ext,
                     'delay': [frame['delay'] for frame in data['frames']],
+                    'frames': data['frames'],
                     }
                 img = Image(data['originalSrc'], url, id_, 0, info, cw, ugoira=ugoira)
                 imgs.append(img)
@@ -516,6 +524,8 @@ def process_user(id_, info, api):
 def process_ids(ids, info, imgs, session, cw, depth=0, tags_add=None):
     print_ = get_print(cw)
     max_pid = get_max_range(cw)
+    errs = []
+    empty = True
 
     names = cw.names_old
     table = {}
@@ -542,70 +552,45 @@ def process_ids(ids, info, imgs, session, cw, depth=0, tags_add=None):
 
     c_old = 0
 
-    class Thread(threading.Thread):
-        alive = True
-        rem = 0
-
-        def __init__(self, queue):
-            super().__init__(daemon=True)
-            self.queue = queue
-
-        @classmethod
-        @lock
-        def add_rem(cls, x):
-            cls.rem += x
-
-        def run(self):
-            nonlocal c_old
-            while self.alive:
-                try:
-                    id_, res, i = self.queue.popleft()
-                except:
-                    sleep(.1)
-                    continue
-                try:
-                    names = table.get(str(id_))
-                    if names is not None:
-                        res[i] = utils.natural_sort(names)
-                        c_old += 1
-                    else:
-                        info_illust = get_info(f'https://www.pixiv.net/en/artworks/{id_}', session, cw, depth=depth+1, tags_add=tags_add)
-                        res[i] = info_illust['imgs']
-                except Exception as e:
-                    if depth == 0 and (e.args and e.args[0] == '不明なエラーが発生しました' or isinstance(e, errors.LoginRequired)): # logout during extraction
-                        res[i] = e
-                    print_(f'process_ids error (id: {id_}, d:{depth}):\n{print_error(e)}')
-                finally:
-                    Thread.add_rem(-1)
-    queue = deque()
+    def f(id_):
+        nonlocal c_old
+        if len(errs) >= N_ERR and empty: #7472
+            return errs[0]
+        try:
+            names = table.get(str(id_))
+            if names is not None:
+                c_old += 1
+                return utils.natural_sort(names)
+            else:
+                info_illust = get_info(f'https://www.pixiv.net/en/artworks/{id_}', session, cw, depth=depth+1, tags_add=tags_add)
+                return info_illust['imgs']
+        except Exception as e:
+            if depth == 0 and (e.args and e.args[0] == '不明なエラーが発生しました' or isinstance(e, errors.LoginRequired)): # logout during extraction
+                return e
+            print_(f'process_ids error (id: {id_}, d:{depth}):\n{print_error(e)}')
+            errs.append(e)
+            return []
     n, step = Downloader_pixiv.STEP
     print_(f'{n} / {step}')
-    ts = []
-    for i in range(n):
-        t = Thread(queue)
-        t.start()
-        ts.append(t)
-    for i in range(0, len(ids), step):
-        res = [[]]*step
-        for j, id_illust in enumerate(ids[i:i+step]):
-            queue.append((id_illust, res, j))
-            Thread.add_rem(1)
-        while Thread.rem:
-            sleep(.01, cw)
-        for imgs_ in res:
-            if isinstance(imgs_, Exception):
-                raise imgs_
-            imgs += imgs_
-        s = f'{tr_("읽는 중...")} {info["title"]} - {len(imgs)}'
-        if cw:
-            cw.setTitle(s)
-        else:
-            print(s)
-        if len(imgs) >= max_pid:
-            break
-        if depth == 0:
-            check_alive(cw)
-    for t in ts:
-        t.alive = False
-
-    print_(f'c_old: {c_old}')
+    pool = ThreadPool(n)
+    try:
+        for i in range(0, len(ids), step):
+            for imgs_ in pool.map(f, ids[i:i+step]):
+                if isinstance(imgs_, Exception):
+                    raise imgs_
+                if imgs_:
+                    empty = False
+                imgs += imgs_
+            s = f'{tr_("읽는 중...")} {info["title"]} - {len(imgs)}'
+            if cw:
+                cw.setTitle(s)
+            else:
+                print(s)
+            if len(imgs) >= max_pid:
+                break
+            if depth == 0:
+                check_alive(cw)
+    finally:
+        pool.close()
+        print_(f'c_old: {c_old}')
+        print_(f'empty: {empty}')

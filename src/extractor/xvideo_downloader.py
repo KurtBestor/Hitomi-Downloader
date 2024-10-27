@@ -5,6 +5,7 @@ import ree as re
 from m3u8_tools import playlist2stream
 from translator import tr_
 from timee import sleep
+import os
 CHANNEL_PATTERN = r'/(profiles|[^/]*channels)/([0-9a-zA-Z_-]+)'
 
 
@@ -12,7 +13,7 @@ def get_id(url):
     url = url.lower()
     if '/prof-video-click/' in url:
         return url.split('/prof-video-click/')[1].split('/')[2]
-    return re.find(r'xvideos[0-9]*\.[^/]+/video([0-9]+)', url, err='no id')
+    return re.find(r'xvideos[0-9]*\.[^/]+/video\.([0-9a-z]+)', url, err='no id') #7041
 
 
 class Video:
@@ -89,7 +90,7 @@ class Downloader_xvideo(Downloader):
         else:
             video = Video(self.url)
             video.url()
-            self.title = video.title
+            self.title = os.path.splitext(video.filename)[0]
             self.urls.append(video.url)
 
         self.setIcon(video.thumb)

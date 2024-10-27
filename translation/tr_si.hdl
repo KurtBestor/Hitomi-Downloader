@@ -287,6 +287,8 @@
     "#recomm_artist#": "කලාකරු",
     "#recomm_main#": "සුරැකීමේ ෆෝල්ඩරය තුළ ඇති කෘතීන් විශ්ලේෂණය කිරීමෙන් අපි කතුවරුන් නිර්දේශ කරමු.\n\nප්‍රතිඵලයේ නිරවද්‍යතාවය යනු දී ඇති කාර්යයක් තුළ ඇති නිරවද්‍යතාවයයි.\nවැඩි වැඩ කරන තරමට වඩා හොඳය. (100+ නිර්දේශිත)\n\n {item} වැඩ ඇත:",
     "#recomm_score#": "එදිරිය",
+    "#server_t_ehen#": "E(x)Hentai",
+    "#server_t_hitomi#": "Hitomi.la",
     "#setting_MB/s#": "MB/s",
     "#setting_autosaveL#": "සෑම",
     "#setting_autosaveR#": "",

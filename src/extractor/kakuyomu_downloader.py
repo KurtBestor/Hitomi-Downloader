@@ -74,7 +74,7 @@ def get_text(page):
     html = downloader.read_html(page['referer'])
     soup = Soup(html)
     view = soup.find('div', class_='widget-episodeBody')
-    story = view.text.strip()
+    story = utils.get_text(view, '')
     text = '''────────────────────────────────
 
   ◆  {}        {}

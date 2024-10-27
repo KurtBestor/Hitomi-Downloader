@@ -17,6 +17,12 @@ import errors
 import utils
 
 
+class LoginRequired(errors.LoginRequired):
+    def __init__(self, *args):
+        super().__init__(*args, method='browser', url='https://login.sankakucomplex.com/login')
+
+
+
 class File_sankaku(File):
     type = 'sankaku'
     format = 'id'
@@ -62,6 +68,7 @@ class Downloader_sankaku(Downloader):
     type = 'sankaku'
     URLS = ['chan.sankakucomplex.com', 'idol.sankakucomplex.com', 'www.sankakucomplex.com']
     MAX_CORE = 4
+    MAX_PARALLEL = 1
     display_name = 'Sankaku Complex'
     ACCEPT_COOKIES = [r'(.*\.)?(sankakucomplex\.com|sankaku\.app)']
 
@@ -78,8 +85,7 @@ class Downloader_sankaku(Downloader):
 
     @lazy
     def soup(self):
-        html = downloader.read_html(self.url, session=self.session)
-        return Soup(html)
+        return downloader.read_soup(self.url, session=self.session)
 
     @classmethod
     def fix_url(cls, url):
@@ -126,6 +132,14 @@ class Downloader_sankaku(Downloader):
         return self.id
 
     def read(self):
+        get0 = self.session.get
+        def get(*args, **kwargs):
+            r = get0(*args, **kwargs)
+            if kwargs.get('stream') and 'redirect.png' in r.url: #7043
+                raise Exception('Sankaku plus')
+            return r
+        self.session.get = get
+
         ui_setting = self.ui_setting
         self.title = self.name
 
@@ -248,8 +262,8 @@ def get_imgs(url, title=None, cw=None, types=['img', 'gif', 'video'], session=No
             banner.decompose()
         err = soup.find('div', class_='post-premium-browsing_error')
         if err and not imgs:
-            raise errors.LoginRequired(err.text.strip())
-        articles = soup.findAll('span', {'class': 'thumb'})
+            raise LoginRequired(err.text.strip())
+        articles = soup.findAll('article', class_='post-preview')
 
         if not articles:
             if soup.find(class_='post-premium-browsing_error'): #6418
@@ -266,7 +280,7 @@ def get_imgs(url, title=None, cw=None, types=['img', 'gif', 'video'], session=No
 
         for article in articles:
             # 1183
-            tags = article.find('img', class_='preview')['data-auto_page'].split() #6718
+            tags = article.find('img', class_='post-preview-image')['data-auto_page'].split() #6718
             if 'animated_gif' in tags:
                 type_ = 'gif'
             elif 'animated' in tags or 'webm' in tags or 'video' in tags or 'mp4' in tags: # 1697
@@ -281,9 +295,9 @@ def get_imgs(url, title=None, cw=None, types=['img', 'gif', 'video'], session=No
                 url_img = urljoin('https://{}.sankakucomplex.com'.format(type), url_img)
             if 'get.sankaku.plus' in url_img: # sankaku plus
                 continue
-            id = int(re.find(r'p([0-9]+)', article['id'], err='no id')) #5892
+            id = re.find(r'p([0-9a-zA-Z]+)', article['id'], err='no id') #5892
             #print_(article)
-            if str(id) in local_ids:
+            if id in local_ids:
                 #print('skip', id)
                 local = True
             else:
@@ -292,7 +306,7 @@ def get_imgs(url, title=None, cw=None, types=['img', 'gif', 'video'], session=No
             if id not in ids:
                 ids.add(id)
                 if local:
-                    img = local_ids[str(id)]
+                    img = local_ids[id]
                 else:
                     img = File_sankaku({'type':type, 'id':id, 'referer':url_img})
                 imgs.append(img)

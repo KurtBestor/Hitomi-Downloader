@@ -86,7 +86,6 @@ class Downloader_artstation(Downloader):
 
 @try_n(2)
 def get_imgs(id_, title, session, cw=None):
-    print_ = get_print(cw)
     referer = f'https://www.artstation.com/{id_}'
     downloader.read_html(referer, session=session)
     #print(session.cookies.keys())

@@ -1,6 +1,6 @@
 import downloader
 import ytdl
-from utils import Downloader, Session, try_n, LazyUrl, get_ext, format_filename, get_print, get_resolution
+from utils import Downloader, Session, try_n, LazyUrl, get_ext, format_filename, get_print, get_resolution, print_error, cut_pair, json
 from io import BytesIO
 import ree as re
 from m3u8_tools import playlist2stream, M3u8_stream
@@ -19,7 +19,8 @@ class Downloader_etc(Downloader):
     display_name = 'Etc'
     PRIORITY = 10
 
-    def init(self):
+    @try_n(2)
+    def read(self):
         self.session = Session()
         name = ytdl.get_extractor_name(self.url)
         self.print_('extractor: {}'.format(name))
@@ -28,20 +29,19 @@ class Downloader_etc(Downloader):
         #if name == 'generic':
         #    raise NotImplementedError()
 
-    def read(self):
         video = get_video(self.url, self.session, self.cw)
 
         if video.artist:
             self.artist = video.artist
 
-        self.urls.append(video.url)
-
         self.print_('url_thumb: {}'.format(video.url_thumb))
         self.setIcon(video.thumb)
-        if video.header.lower() not in ['yourporn', 'spankbang']:
+        if video.header.lower() not in ['yourporn']:
             self.enableSegment()#
         if isinstance(video.url(), M3u8_stream):
             self.disableSegment()
+
+        self.urls.append(video.url)
 
         self.title = os.path.splitext(video.filename)[0].replace('：', ':')
 
@@ -69,17 +69,52 @@ def get_video(url, session, cw, ie_key=None):
         if isinstance(video, Exception):
             raise video
         if isinstance(video.url(), M3u8_stream):
-            c = video.url().segs[0].download(2, cw)
+            c = video.url().urls[0][1].download(cw)
             if not c:
                 raise Exception('invalid m3u8')
         return video
     except Exception as e:
         if isinstance(e, UnSupportedError):
             raise e
-        print_(e)
+        print_(print_error(e))
         return _get_video(url, session, cw, ie_key, allow_m3u8=False)
 
-@try_n(4)
+
+def extract_info_spankbang(url, session, cw): # temp fix
+    print_ = get_print(cw)
+    soup = downloader.read_soup(url, session=session)
+
+    for script in soup.findAll('script'):
+        script = script.string
+        if script and 'var stream_data'in script:
+            s = cut_pair(script.split('var stream_data')[-1].strip(' \t=').replace("'", '"'))
+            break
+    else:
+        raise Exception('no stream_data')
+
+    info = {}
+    info['url'] = url
+    info['title'] = soup.find('h1').text.strip()
+    info['id'] = re.find(r'spankbang\.com/([^/]+)', soup.find('meta', {'property': 'og:url'})['content'], err='no id')
+    info['thumbnail'] = soup.find('meta', {'property': 'og:image'})['content']
+    info['formats'] = []
+    data = json.loads(s)
+    for res, item in data.items():
+        if res == 'main':
+            continue
+        if item and isinstance(item,  list):
+            item = item[0]
+        else:
+            continue
+        ext = get_ext_(item, session, url)
+        res = {'4k': '2160p', '8k': '4320p', '16k': '8640p'}.get(res, res)
+        f = {'url': item, 'format': res}
+        info['formats'].append(f)
+
+    return info
+
+
+@try_n(2)
 def _get_video(url, session, cw, ie_key=None, allow_m3u8=True):
     print_ = get_print(cw)
     print_('get_video: {}, {}'.format(allow_m3u8, url))
@@ -90,14 +125,15 @@ def _get_video(url, session, cw, ie_key=None, allow_m3u8=True):
         'writesubtitles': True,
         }
     if ytdl.get_extractor_name(url) == 'spankbang':
-        options['legacyserverconnect'] = True #6545
-    ydl = ytdl.YoutubeDL(options, cw=cw)
-    try:
-        info = ydl.extract_info(url)
-    except Exception as e:
-        if 'ERROR: Unsupported URL' in str(e):
-            return UnSupportedError(str(e))
-        raise e
+        info = extract_info_spankbang(url, session, cw)
+    else:
+        ydl = ytdl.YoutubeDL(options, cw=cw)
+        try:
+            info = ydl.extract_info(url)
+        except Exception as e:
+            if 'ERROR: Unsupported URL' in str(e):
+                return UnSupportedError(str(e))
+            raise e
     if not ie_key:
         ie_key = ytdl.get_extractor_name(url)
     info['ie_key'] = ie_key
@@ -191,6 +227,7 @@ class Video:
     def __init__(self, f, f_audio, info, session, referer, cw=None):
         self.f_audio = f_audio
         self.cw = cw
+        print_ = get_print(cw)
         self.title = title = info['title']
         self.id = info['id']
         self.url = f['url']
@@ -222,15 +259,19 @@ class Video:
 
         if ext.lower() == '.m3u8':
             res = get_resolution() #4773
-            if info.get('live_status') == 'is_live':
+            ls = info.get('live_status')
+            print_(f'live_status: {ls}')
+            if ls == 'is_live':
                 url = foo()
             else:
                 try:
-                    url = playlist2stream(self.url, referer, session=session, n_thread=4)
+                    url = playlist2stream(self.url, referer, session=session)
                 except:
-                    url = M3u8_stream(self.url, referer=referer, session=session, n_thread=4)
-                if url.live is not None: #5110
-                    url = foo()
+                    url = M3u8_stream(self.url, referer=referer, session=session)
+                print_(f'mpegts: {url.mpegts}')
+                if url.ms or url.mpegts == False: #5110
+                    url = url.live
+                    url._cw = cw
             ext = '.mp4'
         elif ext.lower() == '.mpd': # TVer
             url = foo()

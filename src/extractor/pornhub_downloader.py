@@ -59,6 +59,7 @@ class Video:
     _url = None
     filename = None
     thumb = None
+    artist = None
 
     def __init__(self, url, cw, session):
         url = Downloader_pornhub.fix_url(url)
@@ -101,6 +102,7 @@ class Video:
         soup = Soup(html)
         soup = fix_soup(soup, url, session, cw)
         html = soup.html
+        artist = None
 
         # removed
         if soup.find('div', class_='removed'):
@@ -172,6 +174,7 @@ class Video:
         self.title = file.title
         self.filename = file.filename
         self.thumb = file.thumb
+        self.artist = artist
         return self._url
 
 
@@ -277,12 +280,14 @@ class Downloader_pornhub(Downloader):
             videos = [Video(href, cw, session) for href in hrefs]
             video = self.process_playlist(info['title'], videos)
             self.setIcon(video.thumb())
+            self.artist = video.artist #7127
             self.enableSegment()
         else:
             video = Video(self.url, cw, session)
             video.url()
             self.urls.append(video.url)
             self.setIcon(video.thumb())
+            self.artist = video.artist #7127
             self.title = video.title
             self.enableSegment()
 

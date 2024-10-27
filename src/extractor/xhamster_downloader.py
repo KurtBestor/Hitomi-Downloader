@@ -9,7 +9,7 @@ import ytdl
 class Downloader_xhamster(Downloader):
     type = 'xhamster'
     __name = r'([^/]*\.)?(xhamster|xhwebsite|xhofficial|xhlocal|xhopen|xhtotal|megaxh|xhwide|xhtab|xhtime)([0-9]*)' #3881, #4332, #4826, #5029, #5696, #5893
-    URLS = [rf'regex:{__name}\.[a-z0-9]+/(videos|users|creators|photos/gallery)/']
+    URLS = [rf'regex:{__name}\.[a-z0-9]+/(shemale/)?(videos|users|creators|photos/gallery)/'] #6755
     single = True
     display_name = 'xHamster'
     ACCEPT_COOKIES = __name
@@ -113,10 +113,8 @@ def read_page(type_, username, p, session, cw):
     print_ = get_print(cw)
     if type_ == 'users':
         url = f'https://xhamster.com/users/{username}/videos/{p}'
-    elif type_ == 'creators':
-        url = f'https://xhamster.com/creators/{username}/exclusive/{p}'
     else:
-        raise NotImplementedError(type_)
+        url = f'https://xhamster.com/{type_}/{username}/exclusive/{p}' #6755
     print_(url)
     n = 4
     for try_ in range(n):
@@ -139,6 +137,9 @@ def read_page(type_, username, p, session, cw):
 
 def read_channel(url, session, cw=None):
     type_, username = re.find(r'/(users|creators)/([^/]+)', url, err='no username')
+    sub = url.split('/')[3] #6755
+    if sub not in ['users', 'creators']:
+        type_ = f'{sub}/{type_}'
 
     info = {}
     soup = downloader.read_soup(url, session=session)
