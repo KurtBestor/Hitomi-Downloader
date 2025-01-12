@@ -147,8 +147,9 @@ class PinterestAPI:
     def _call(self, resource, options):
         url = f'{BASE_URL}/resource/{resource}Resource/get/'
         params = {'data': json.dumps({'options': options}), 'source_url': ''}
+        headers = {'X-Pinterest-PWS-Handler': 'www/[username]/[slug].js'}
         #print(f'_call: {url}, {params}')
-        r = self.session.get(url, params=params)
+        r = self.session.get(url, params=params, headers=headers)
         s = r.text
         status_code = r.status_code
         try:
