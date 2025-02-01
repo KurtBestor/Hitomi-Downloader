@@ -19,7 +19,7 @@
     "Copy": "コピー",
     "Ctrl": "Ctrl",
     "Down": "↓",
-    "Flip": "フリップ",
+    "Flip": "反転",
     "Help": "Help",
     "Home": "Home",
     "Left": "←",
@@ -49,9 +49,9 @@
     "Zenkaku": "全角",
     "Print Screen": "プリントスクリーン",
     "Zoom In": "拡大",
-    "Hangul Special": "ハングル スペシャル",
+    "Hangul Special": "ハングル 特殊",
     "Scroll Lock": "スクロールロック",
-    "Media Pause": "メディアの一時停止",
+    "Media Pause": "メディアの停止",
     "Volume Down": "音量を下げる",
     "Volume Mute": "消音",
     "Kana Shift": "カナシフト",
@@ -128,18 +128,18 @@
     "Paper source:": "給紙装置:",
     "right margin": "右端余白",
     "Margins": "余白",
-    "Landscape": "横 (ランドスケープ)",
+    "Landscape": "横",
     "Width:": "幅:",
     "Orientation": "印刷の向き",
-    "Portrait": "縦 (ポートレート)",
+    "Portrait": "縦",
     "top margin": "上端余白",
     "left margin": "左端余白",
     "Page size:": "用紙サイズ:",
-    "Reverse portrait": "縦 反転 (リバースポートレート)",
+    "Reverse portrait": "縦 反転",
     "Millimeters (mm)": "ミリメートル (mm)",
     "Points (pt)": "ポイント (pt)",
     "Inches (in)": "インチ (in)",
-    "Reverse landscape": "横 反転 (リバースランドスケープ)",
+    "Reverse landscape": "横 反転",
     "Height:": "高さ:"
   },
   "QDialogButtonBox": {
@@ -271,7 +271,7 @@
     "&Undo": "元に戻す(&U)",
     "&Paste": "貼り付け(&P)",
     "Delete": "削除",
-    "Select All": "すべてを選択"
+    "Select All": "すべて選択"
   },
   "QWizard": {
     "Done": "終了",
@@ -280,7 +280,7 @@
     "&Next": "次へ(&N)",
     "Cancel": "キャンセル",
     "Commit": "適用",
-    "Continue": "続き",
+    "Continue": "続行",
     "&Finish": "完了(&F)",
     "&Next >": "次へ(&N) >",
     "Go Back": "戻る",
@@ -301,7 +301,7 @@
     "&Restore": "元に戻す(&R)",
     "Restore": "元に戻す",
     "Maximize": "最大化",
-    "Unshade": "展開する",
+    "Unshade": "展開",
     "Mi&nimize": "最小化(&N)",
     "Ma&ximize": "最大化(&X)",
     "Restore Down": "元に戻す"
@@ -310,14 +310,14 @@
     "Kind": "種類",
     "Name": "名前",
     "Size": "サイズ",
-    "Type": "タイプ",
+    "Type": "種類",
     "Date Modified": "更新日"
   },
   "QFileSystemModel": {
     "Kind": "種類",
     "Name": "名前",
     "Size": "サイズ",
-    "Type": "タイプ",
+    "Type": "種類",
     "%1 GB": "%1 GB",
     "%1 KB": "%1 KB",
     "%1 MB": "%1 MB",
@@ -359,7 +359,7 @@
   "QAbstractSpinBox": {
     "Step &down": "下(&D)",
     "&Step up": "上(&S)",
-    "&Select All": "すべてを選択(&S)"
+    "&Select All": "すべて選択(&S)"
   },
   "QInputDialog": {
     "Enter a value:": "値を入力:"
