@@ -77,7 +77,7 @@ def get_info(url, session, cw=None):
         pairs.append((vid, key))
 
     for script in soup.findAll('script', class_='__se_module_data'):
-        data_raw = script['data-module']
+        data_raw = script.get('data-module') or script.get('data-module-v2')
         data = json.loads(data_raw)['data']
         vid = data.get('vid')
         if not vid:
