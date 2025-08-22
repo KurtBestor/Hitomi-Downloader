@@ -52,7 +52,7 @@ class Video:
         for f in info['formats']:
             print_(format_(f))
         fs = [f for f in info['formats'] if f['protocol'] in ['http', 'https']]
-        fs = sorted(fs, key=lambda f: int(f.get('width', 0)), reverse=True)
+        fs = sorted(fs, key=lambda f: int(f.get('width') or 0), reverse=True)
         if not fs:
             raise Exception('No MP4 videos')
         f = fs[0]
