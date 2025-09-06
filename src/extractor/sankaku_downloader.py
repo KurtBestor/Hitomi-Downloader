@@ -8,6 +8,7 @@
 import downloader
 import ree as re
 from utils import Downloader, urljoin, query_url, get_max_range, get_print, Soup, lazy, Session, clean_title, check_alive, File, get_ext, limits, clean_url
+from datetime import datetime, timezone, timedelta
 from translator import tr_
 import os
 from timee import sleep
@@ -39,6 +40,17 @@ class File_sankaku(File):
                 soup = Soup(html)
                 highres = soup.find(id='highres')
                 url = urljoin(referer, highres['href'] if highres else soup.find(id='image')['src'])
+                #add timestamp as name Start
+                time_str=soup.find('div', id='stats').find(text="Posted:").find_next('a').get('title')
+                time_format = "%Y-%m-%d %H:%M:%S.%f"
+                dt = datetime.strptime(time_str, time_format)
+                ny_offset = timedelta(hours=-5)
+                ny_tz = timezone(ny_offset)
+                dt = dt.replace(tzinfo=ny_tz)
+                timestamp = dt.timestamp()
+                dt = str(round(timestamp)).replace('.','')
+                dt += '_'
+                #add timestamp as name End
                 break
             except Exception as e:
                 e_msg = print_error(e)
@@ -58,7 +70,7 @@ class File_sankaku(File):
         soup = Soup('<p>{}</p>'.format(url))
         url = soup.string
         d = {
-            'id': self['id'],
+            'id': dt+self['id'], #add timestamp as name
             }
         return {'url': url, 'name': utils.format('sankaku', d, get_ext(url))}
 
@@ -259,6 +271,12 @@ def get_imgs(url, title=None, cw=None, types=['img', 'gif', 'video'], session=No
             banner.decompose()
         banner = soup.find('div', class_='popular-previews')
         if banner: #6171
+            banner.decompose()
+        banner = soup.find('div', class_='carousel-data-ai')
+        if banner: #remove sankaku AI ads
+            banner.decompose()
+        banner = soup.find('div', class_='carousel-data carousel-data-ai')
+        if banner: #remove sankaku AI ads
             banner.decompose()
         err = soup.find('div', class_='post-premium-browsing_error')
         if err and not imgs:
