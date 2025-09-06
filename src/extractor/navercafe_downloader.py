@@ -1,4 +1,4 @@
-#coding:utf8
+# coding:utf8
 from utils import Downloader, get_print, urljoin, Soup, get_ext, File, clean_title, downloader, re, try_n, errors, json, Session
 import utils
 
@@ -19,9 +19,27 @@ class Downloader_navercafe(Downloader):
 
     @classmethod
     def fix_url(cls, url):
-        m = re.find(r'cafe\.naver\.com/([^/?#]+).+?articleid%3D([0-9]+)', url)
-        if m:
-            url = 'https://cafe.naver.com/{}/{}'.format(*m)
+        print('origin_url', url)
+
+        # 신형 우선 처리 (성능 최적화)
+        patterns = [
+            # REST API 스타일
+            (r'cafe\.naver\.com/[^/]+/cafes/([0-9]+)/articles/([0-9]+)',
+             lambda m: f'https://cafe.naver.com/ArticleRead.nhn?articleid={m[1]}&clubid={m[0]}'),
+
+            # 구형 스타일
+            (r'cafe\.naver\.com/([^/?#]+).+?articleid%3D([0-9]+)',
+             lambda m: f'https://cafe.naver.com/{m[0]}/{m[1]}'),
+        ]
+
+        for pattern, formatter in patterns:
+            m = re.search(pattern, url)
+            if m:
+                fixed_url = formatter(m.groups())
+                print('fixed_url', fixed_url)
+                return fixed_url
+
+        print('no_fix_needed', url)
         return url
 
     def read(self):
@@ -37,11 +55,18 @@ def get_info(url, session, cw=None):
     print_ = get_print(cw)
     info = {}
 
-    html = downloader.read_html(url, 'http://search.naver.com', session=session)
+    html = downloader.read_html(
+        url, 'http://search.naver.com', session=session)
     soup = Soup(html)
     if '"cafe_cautionpage"' in html:
         raise LoginRequired()
-    url_article = re.find(r'''//cafe\.naver\.com/ArticleRead\.nhn\?articleid=[0-9]+[^'"]*''', html, err='no articleid')
+    PATTERN = r"//cafe\.naver\.com/ArticleRead\.nhn\?[^'\"]*articleid=[0-9]+[^'\"]*"
+    matches = [match.group()
+               for src in [html, url]
+               for match in [re.search(PATTERN, src)]
+               if match]
+
+    url_article = matches[0] if matches else "no articleid"
     url_article = urljoin(url, url_article)
 
     print_(url_article)
@@ -56,7 +81,7 @@ def get_info(url, session, cw=None):
 
     j = downloader.read_json(url_api, url_article, session=session)
 
-    if j['result'].get('errorCode'): #6358
+    if j['result'].get('errorCode'):  # 6358
         raise LoginRequired(j['result'].get('reason'))
 
     info['title'] = j['result']['article']['subject']
@@ -77,7 +102,7 @@ def get_info(url, session, cw=None):
         pairs.append((vid, key))
 
     for script in soup.findAll('script', class_='__se_module_data'):
-        data_raw = script['data-module']
+        data_raw = script.get('data-module') or script.get('data-module-v2')
         data = json.loads(data_raw)['data']
         vid = data.get('vid')
         if not vid:
@@ -91,11 +116,13 @@ def get_info(url, session, cw=None):
         data = json.loads(data_raw)
         fs = data['videos']['list']
         fs = sorted(fs, key=lambda f: f['size'], reverse=True)
-        video = Image({'url': fs[0]['source'], 'referer': url_article, 'p': len(imgs)})
+        video = Image(
+            {'url': fs[0]['source'], 'referer': url_article, 'p': len(imgs)})
         imgs.append(video)
 
     for img in soup.findAll('img'):
-        img = Image({'url': urljoin(url_article, img['src']), 'referer': url, 'p': len(imgs)})
+        img = Image(
+            {'url': urljoin(url_article, img['src']), 'referer': url, 'p': len(imgs)})
         imgs.append(img)
 
     info['imgs'] = imgs
@@ -109,11 +136,11 @@ class Image(File):
 
     def __init__(self, info):
         self._url = info['url']
-        info['url'] = re.sub(r'[?&]type=[wh0-9]+', '', self._url) #6460
+        info['url'] = re.sub(r'[?&]type=[wh0-9]+', '', self._url)  # 6460
         ext = get_ext(info['url'])
         d = {
             'page': info['p'],
-            }
+        }
         info['name'] = utils.format('navercafe', d, ext)
         super().__init__(info)
 
